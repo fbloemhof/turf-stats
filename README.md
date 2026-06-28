@@ -116,6 +116,26 @@ add_filter( 'turf_visitor_country', function ( $country, $ip ) {
 }, 10, 2 );
 ```
 
+## Updates
+
+Turf isn't on the WordPress.org plugin directory, so it bundles
+[Plugin Update Checker](https://github.com/YahnisElsts/plugin-update-checker)
+(MIT licensed, vendored in `vendor/plugin-update-checker/`) pointed at this
+repo's [releases](https://github.com/fbloemhof/turf-stats/releases). Install
+once, and you'll get the normal "update available" notice on the Plugins page
+whenever a new release is published here - same as a wordpress.org-hosted
+plugin.
+
+To cut a release: bump the `Version` header in `turf-stats.php` (and
+`TURF_VERSION`), tag it (`vX.Y.Z`), and attach a zip of the plugin folder
+(with that exact folder structure - `turf-stats/turf-stats.php`, not the
+files at the zip root) to a GitHub release. Pre-releases are ignored.
+
+This is the only network request Turf itself makes that isn't part of
+tracking a visitor - it's a periodic "is there a newer version" check, the
+same thing WordPress already does for every wordpress.org-hosted plugin,
+just pointed at GitHub instead. No visitor or site data is included.
+
 ## Requirements
 
 WordPress 6.0+, PHP 7.4+. No other plugins required.
