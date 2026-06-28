@@ -25,7 +25,10 @@ tracked and stored on your own database.
   instead of a normal page load (e.g. a companion mobile app), shown as its
   own "App / REST API" bucket in the Herkomst breakdown. Only single-item
   `GET` requests count (e.g. `/wp/v2/posts/123`) - list/collection requests
-  and block-editor "edit" context requests don't.
+  and block-editor "edit" context requests don't. To find out exactly what a
+  specific app's requests look like (so you can recognize it by name later),
+  set `define( 'TURF_DEBUG_REST', true );` in `wp-config.php` for a while and
+  watch your PHP error log - remove it again once you've got what you need.
 - **Generic click tracking** for any UI element, via a `data-turf-click="<key>"`
   attribute — no extra JS or AJAX wiring needed per element.
 - **Comment counts per period** and a "most discussed" table — reads

@@ -651,9 +651,11 @@ function turf_admin_inline_style() {
 			.bk-stats-bar-row__track { flex-basis: 100%; order: 2; }
 			.bk-stats-bar-row__value { width: 100%; order: 3; text-align: left; margin-top: 2px; }
 		}
-		.bk-stats-online-now { display: inline-flex; align-items: center; gap: 8px; background: #fff; border: 1px solid #c3c4c7; border-radius: 20px; padding: 6px 14px; margin-bottom: 16px; font-size: 13px; }
-		.bk-stats-online-now__dot { width: 8px; height: 8px; border-radius: 50%; background: #2e7d4f; box-shadow: 0 0 0 0 rgba(46,125,79,0.6); animation: bk-stats-pulse 2s infinite; }
-		.bk-stats-online-now__value { font-weight: 600; font-size: 16px; }
+		.bk-stats-header-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 6px; }
+		.bk-stats-header-row h1 { margin: 0; }
+		.bk-stats-online-now { display: inline-flex; align-items: center; gap: 7px; background: #fff; border: 1px solid #c3c4c7; border-radius: 20px; padding: 4px 12px; font-size: 13px; line-height: 1.4; }
+		.bk-stats-online-now__dot { flex-shrink: 0; width: 8px; height: 8px; border-radius: 50%; background: #2e7d4f; box-shadow: 0 0 0 0 rgba(46,125,79,0.6); animation: bk-stats-pulse 2s infinite; }
+		.bk-stats-online-now__value { font-weight: 600; }
 		.bk-stats-online-now__label { color: #646970; }
 		@keyframes bk-stats-pulse {
 			0% { box-shadow: 0 0 0 0 rgba(46,125,79,0.5); }
@@ -684,9 +686,10 @@ function turf_render_admin_page() {
 	turf_admin_inline_style();
 	?>
 	<div class="wrap">
-		<h1><?php esc_html_e( 'Statistieken', 'turf-stats' ); ?></h1>
-
-		<?php turf_render_online_now(); ?>
+		<div class="bk-stats-header-row">
+			<h1><?php esc_html_e( 'Statistieken', 'turf-stats' ); ?></h1>
+			<?php turf_render_online_now(); ?>
+		</div>
 
 		<ul class="subsubsub">
 			<?php foreach ( array( '7' => '7 dagen', '30' => '30 dagen', '90' => '90 dagen', 'all' => 'Alles' ) as $key => $label ) : ?>
