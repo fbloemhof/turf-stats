@@ -97,6 +97,20 @@ function turf_views_register_metaboxes() {
 		turf_render_trending();
 	}, $hook, 'normal' );
 
+	add_meta_box( 'turf_authors', __( 'Per auteur', 'turf-stats' ), function () use ( $days ) {
+		turf_render_author_breakdown( $days );
+	}, $hook, 'normal' );
+
+	add_meta_box( 'turf_forms', __( 'Formulieren', 'turf-stats' ), function () use ( $days ) {
+		turf_forms_render_top_forms( $days );
+	}, $hook, 'normal' );
+
+	if ( turf_woo_active() ) {
+		add_meta_box( 'turf_woo_funnel', __( 'WooCommerce-funnel', 'turf-stats' ), function () use ( $days ) {
+			turf_woo_render_funnel( $days );
+		}, $hook, 'normal' );
+	}
+
 	$post_types = turf_trackable_post_types();
 	usort( $post_types, function ( $a, $b ) {
 		return strnatcasecmp( turf_get_post_type_label( $a ), turf_get_post_type_label( $b ) );

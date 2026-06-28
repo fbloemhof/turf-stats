@@ -57,6 +57,18 @@ tracked and stored on your own database.
   happen, in the site's own local time.
 - **Trending content** — what's rising fastest right now (last 24h vs. the
   24h before that), independent of the page's period filter.
+- **Per-author statistics** — views, post count, and average reading
+  time/scroll depth grouped by post author.
+- **WooCommerce integration** (only when WooCommerce is active) — product
+  views need no setup (products are just a public CPT, already covered),
+  plus add-to-cart and completed-checkout events for a full
+  views → cart → checkout funnel. No external services involved.
+- **Form-submission tracking** for Contact Form 7 and/or Gravity Forms - a
+  submission counts as a conversion event, shown with a conversion rate
+  against the page the form last appeared on.
+- **Social-share helper** (`turf_social_share_links()`) - ready-made
+  Facebook/X/WhatsApp/LinkedIn/email share links, pre-wired into the
+  existing click tracking.
 - **Bots & LLM's** — a separate "Bots & LLM's" page tracking how often
   crawlers visit and what they look at: search engines (Googlebot, Bingbot,
   ...), AI/LLM crawlers (GPTBot, ClaudeBot, Google-Extended, PerplexityBot,
@@ -101,6 +113,18 @@ Add the attribute to anything you want to measure:
 <a href="..." data-turf-click="homepage-cta-button">...</a>
 ```
 
+### Optional: ready-made social-share links
+
+```php
+turf_social_share_links(); // current post, all networks
+turf_social_share_links( $post_id, array( 'facebook', 'whatsapp' ) ); // specific post, specific networks
+```
+
+Outputs Facebook/X/WhatsApp/LinkedIn/email share links, each already wired
+with `data-turf-click="social-share-<network>"` - no extra setup needed for
+those clicks to show up on the Klikken page. Customize or add networks via
+the `turf_social_share_networks` filter.
+
 ### Optional: importing historical view counts
 
 ```
@@ -144,6 +168,7 @@ Midnight/Ocean/Sunrise) instead of a fixed color.
 | `turf_visitor_country` | `''` | Supply a country code when Cloudflare's `CF-IPCountry` header isn't present |
 | `turf_session_gap_seconds` | 30 minutes | How long a gap between two pageviews from the same visitor still counts as the same session |
 | `turf_session_row_limit` | 20000 | Max rows pulled into PHP for session reconstruction (bounce rate, visitor routes) |
+| `turf_social_share_networks` | Facebook/X/WhatsApp/LinkedIn/email | Customize or add networks for `turf_social_share_links()` |
 
 ### Country detection without Cloudflare
 

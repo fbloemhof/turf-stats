@@ -53,6 +53,18 @@ function turf_prune_old_events() {
 		'DELETE FROM ' . turf_search_table() . ' WHERE searched_at < %s',
 		$cutoff
 	) );
+
+	if ( turf_woo_active() ) {
+		$wpdb->query( $wpdb->prepare(
+			'DELETE FROM ' . turf_woo_table() . ' WHERE occurred_at < %s',
+			$cutoff
+		) );
+	}
+
+	$wpdb->query( $wpdb->prepare(
+		'DELETE FROM ' . turf_forms_table() . ' WHERE submitted_at < %s',
+		$cutoff
+	) );
 }
 add_action( 'turf_prune_old_events', 'turf_prune_old_events' );
 
