@@ -28,21 +28,21 @@ function turf_bots_register_metaboxes() {
 
 	add_meta_box( 'turf_bots_overview', __( 'Overzicht', 'turf-stats' ), function () use ( $days ) {
 		turf_bots_render_overview( $days );
-	}, $hook, 'normal' );
+	}, $hook, 'turf_bots_overview' );
 
 	add_meta_box( 'turf_bots_category', __( 'Categorie', 'turf-stats' ), function () use ( $days ) {
 		turf_bots_render_simple_breakdown( turf_bots_get_category_breakdown( $days ), 'turf_bots_category_label' );
-	}, $hook, 'normal' );
+	}, $hook, 'turf_col_a' );
 
 	add_meta_box( 'turf_bots_specific', __( 'Specifieke bots', 'turf-stats' ), function () use ( $days ) {
 		turf_bots_render_simple_breakdown( turf_bots_get_top_bots( $days ), function ( $raw ) {
 			return $raw;
 		} );
-	}, $hook, 'normal' );
+	}, $hook, 'turf_col_b' );
 
 	add_meta_box( 'turf_bots_pages', __( "Meest gecrawlde pagina's", 'turf-stats' ), function () use ( $days ) {
 		turf_bots_render_top_crawled_pages( $days );
-	}, $hook, 'normal' );
+	}, $hook, 'turf_bots_wide' );
 }
 
 function turf_bots_category_label( $category ) {
@@ -278,7 +278,12 @@ function turf_bots_render_admin_page() {
 
 		<?php turf_render_period_tabs( admin_url( 'admin.php?page=turf-bots' ) ); ?>
 
-		<?php turf_render_postboxes( get_current_screen()->id ); ?>
+		<?php $hook = get_current_screen()->id; ?>
+		<div id="poststuff">
+			<?php turf_render_postbox_column( $hook, 'turf_bots_overview' ); ?>
+			<?php turf_render_postbox_columns( $hook, array( 'turf_col_a', 'turf_col_b' ) ); ?>
+			<?php turf_render_postbox_column( $hook, 'turf_bots_wide' ); ?>
+		</div>
 	</div>
 	<?php
 }

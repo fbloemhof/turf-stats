@@ -10,7 +10,7 @@
  * recorded since this plugin went live.
  */
 
-define( 'TURF_PER_PAGE', 10 );
+define( 'TURF_PER_PAGE', 5 );
 
 function turf_admin_menu() {
 	$hook = add_menu_page(
@@ -27,6 +27,15 @@ function turf_admin_menu() {
 }
 add_action( 'admin_menu', 'turf_admin_menu' );
 
+/**
+ * Three sections, each its own context group so they can render as
+ * separate areas on the page (one full-width box, a row of compact
+ * breakdowns in two columns, then the rest full-width again) while still
+ * being one continuous drag/drop scope for postboxes.js: 'turf_overview'
+ * (the chart + stat boxes), 'turf_col_a'/'turf_col_b' (the compact
+ * device/browser/etc. breakdowns, split into two columns), and
+ * 'turf_wide' (peak hours, then the per-post-type/taxonomy tables).
+ */
 function turf_views_register_metaboxes() {
 	$hook = get_current_screen()->id;
 	turf_register_postbox_hook( $hook );
@@ -35,81 +44,50 @@ function turf_views_register_metaboxes() {
 
 	add_meta_box( 'turf_overview', __( 'Overzicht', 'turf-stats' ), function () use ( $days ) {
 		turf_render_overview( $days );
-	}, $hook, 'normal' );
+	}, $hook, 'turf_overview' );
 
-	add_meta_box( 'turf_device', __( 'Apparaat', 'turf-stats' ), function () use ( $days ) {
-		turf_render_breakdown( 'device_type', $days );
-	}, $hook, 'normal' );
+	$compact_boxes = array(
+		array( 'turf_device', __( 'Apparaat', 'turf-stats' ), function () use ( $days ) {
+			turf_render_breakdown( 'device_type', $days );
+		} ),
+		array( 'turf_browser', __( 'Browser', 'turf-stats' ), function () use ( $days ) {
+			turf_render_breakdown( 'browser', $days );
+		} ),
+		array( 'turf_os', __( 'Besturingssysteem', 'turf-stats' ), function () use ( $days ) {
+			turf_render_breakdown( 'os', $days );
+		} ),
+		array( 'turf_language', __( 'Taal', 'turf-stats' ), function () use ( $days ) {
+			turf_render_breakdown( 'language', $days );
+		} ),
+		array( 'turf_country', __( 'Land van herkomst', 'turf-stats' ), function () use ( $days ) {
+			turf_render_breakdown( 'country', $days );
+		} ),
+		array( 'turf_new_returning', __( 'Nieuw vs. terugkerend', 'turf-stats' ), function () use ( $days ) {
+			turf_render_new_vs_returning( $days );
+		} ),
+		array( 'turf_referrer', __( 'Herkomst', 'turf-stats' ), function () use ( $days ) {
+			turf_render_referrer_breakdown( $days );
+		} ),
+		array( 'turf_top_referrers', __( 'Top verwijzende sites', 'turf-stats' ), function () use ( $days ) {
+			turf_render_top_referrer_hosts( $days );
+		} ),
+		array( 'turf_utm_source', __( 'Campagnebron (UTM)', 'turf-stats' ), function () use ( $days ) {
+			turf_render_breakdown( 'utm_source', $days, true );
+		} ),
+		array( 'turf_utm_medium', __( 'Campagnemedium (UTM)', 'turf-stats' ), function () use ( $days ) {
+			turf_render_breakdown( 'utm_medium', $days, true );
+		} ),
+	);
 
-	add_meta_box( 'turf_browser', __( 'Browser', 'turf-stats' ), function () use ( $days ) {
-		turf_render_breakdown( 'browser', $days );
-	}, $hook, 'normal' );
-
-	add_meta_box( 'turf_os', __( 'Besturingssysteem', 'turf-stats' ), function () use ( $days ) {
-		turf_render_breakdown( 'os', $days );
-	}, $hook, 'normal' );
-
-	add_meta_box( 'turf_language', __( 'Taal', 'turf-stats' ), function () use ( $days ) {
-		turf_render_breakdown( 'language', $days );
-	}, $hook, 'normal' );
-
-	add_meta_box( 'turf_country', __( 'Land van herkomst', 'turf-stats' ), function () use ( $days ) {
-		turf_render_breakdown( 'country', $days );
-	}, $hook, 'normal' );
-
-	add_meta_box( 'turf_new_returning', __( 'Nieuw vs. terugkerend', 'turf-stats' ), function () use ( $days ) {
-		turf_render_new_vs_returning( $days );
-	}, $hook, 'normal' );
-
-	add_meta_box( 'turf_referrer', __( 'Herkomst', 'turf-stats' ), function () use ( $days ) {
-		turf_render_referrer_breakdown( $days );
-	}, $hook, 'normal' );
-
-	add_meta_box( 'turf_top_referrers', __( 'Top verwijzende sites', 'turf-stats' ), function () use ( $days ) {
-		turf_render_top_referrer_hosts( $days );
-	}, $hook, 'normal' );
-
-	add_meta_box( 'turf_utm_source', __( 'Campagnebron (UTM)', 'turf-stats' ), function () use ( $days ) {
-		turf_render_breakdown( 'utm_source', $days, true );
-	}, $hook, 'normal' );
-
-	add_meta_box( 'turf_utm_medium', __( 'Campagnemedium (UTM)', 'turf-stats' ), function () use ( $days ) {
-		turf_render_breakdown( 'utm_medium', $days, true );
-	}, $hook, 'normal' );
-
-	add_meta_box( 'turf_search_terms', __( 'Zoekwoorden', 'turf-stats' ), function () use ( $days ) {
-		turf_search_render_top_terms( $days );
-	}, $hook, 'normal' );
-
-	add_meta_box( 'turf_search_zero_results', __( 'Zoekopdrachten zonder resultaat', 'turf-stats' ), function () use ( $days ) {
-		turf_search_render_zero_results( $days );
-	}, $hook, 'normal' );
-
-	add_meta_box( 'turf_session_routes', __( 'Bezoekersroutes', 'turf-stats' ), function () use ( $days ) {
-		turf_render_session_routes( $days );
-	}, $hook, 'normal' );
+	foreach ( $compact_boxes as $i => $box ) {
+		list( $id, $title, $callback ) = $box;
+		$context = ( 0 === $i % 2 ) ? 'turf_col_a' : 'turf_col_b';
+		add_meta_box( $id, $title, $callback, $hook, $context );
+	}
 
 	add_meta_box( 'turf_peak_hours', __( 'Piekuren', 'turf-stats' ), function () use ( $days ) {
 		turf_render_peak_hours( $days );
-	}, $hook, 'normal' );
-
-	add_meta_box( 'turf_trending', __( 'Trending', 'turf-stats' ), function () {
-		turf_render_trending();
-	}, $hook, 'normal' );
-
-	add_meta_box( 'turf_authors', __( 'Per auteur', 'turf-stats' ), function () use ( $days ) {
-		turf_render_author_breakdown( $days );
-	}, $hook, 'normal' );
-
-	add_meta_box( 'turf_forms', __( 'Formulieren', 'turf-stats' ), function () use ( $days ) {
-		turf_forms_render_top_forms( $days );
-	}, $hook, 'normal' );
-
-	if ( turf_woo_active() ) {
-		add_meta_box( 'turf_woo_funnel', __( 'WooCommerce-funnel', 'turf-stats' ), function () use ( $days ) {
-			turf_woo_render_funnel( $days );
-		}, $hook, 'normal' );
-	}
+	}, $hook, 'turf_wide' );
 
 	$post_types = turf_trackable_post_types();
 	usort( $post_types, function ( $a, $b ) {
@@ -124,13 +102,13 @@ function turf_views_register_metaboxes() {
 				turf_render_admin_table( $post_type, $days );
 			},
 			$hook,
-			'normal'
+			'turf_wide'
 		);
 	}
 
 	add_meta_box( 'turf_comments', __( 'Meest besproken', 'turf-stats' ), function () use ( $days ) {
 		turf_render_top_commented_posts( $days );
-	}, $hook, 'normal' );
+	}, $hook, 'turf_wide' );
 
 	$taxonomies = turf_trackable_taxonomies();
 	usort( $taxonomies, function ( $a, $b ) {
@@ -145,7 +123,7 @@ function turf_views_register_metaboxes() {
 				turf_render_admin_terms_table( $taxonomy, $days );
 			},
 			$hook,
-			'normal'
+			'turf_wide'
 		);
 	}
 }
@@ -775,21 +753,25 @@ function turf_admin_inline_style() {
 		.bk-stats-chart__bar--views { background: color-mix(in srgb, var(--wp-admin-theme-color, #2271b1) 35%, #fff); }
 		.bk-stats-chart__bar--visitors { background: var(--wp-admin-theme-color, #2271b1); }
 		.bk-stats-chart__label { margin-top: 6px; font-size: 11px; color: #646970; }
-		.bk-stats-bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; font-size: 13px; }
-		.bk-stats-bar-row__label { width: 110px; flex-shrink: 0; }
-		.bk-stats-bar-row__track { position: relative; flex: 1; background: #f0f0f1; border-radius: 3px; height: 10px; overflow: hidden; }
+		.bk-stats-bar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 12px; }
+		.bk-stats-bar-row__label { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+		.bk-stats-bar-row__track { position: relative; width: 50px; flex-shrink: 0; background: #f0f0f1; border-radius: 3px; height: 8px; overflow: hidden; }
 		.bk-stats-bar-row__fill { position: absolute; top: 0; left: 0; height: 100%; border-radius: 3px; }
 		.bk-stats-bar-row__fill--views { background: color-mix(in srgb, var(--wp-admin-theme-color, #2271b1) 35%, #fff); }
 		.bk-stats-bar-row__fill--visitors { background: var(--wp-admin-theme-color, #2271b1); }
-		.bk-stats-bar-row__value { width: 210px; flex-shrink: 0; text-align: right; color: #646970; }
+		.bk-stats-bar-row__value { flex-shrink: 0; text-align: right; color: #646970; white-space: nowrap; }
+		.bk-stats-more-link { display: block; margin: 2px 0 4px; background: none; border: none; padding: 0; color: var(--wp-admin-theme-color, #2271b1); cursor: pointer; font-size: 12px; text-decoration: underline; }
+		.bk-stats-more-link:hover { text-decoration: none; }
+		.turf-postbox-columns { display: flex; gap: 20px; align-items: flex-start; }
+		.turf-postbox-columns > .postbox-container { flex: 1 1 0; min-width: 0; }
 
+		@media (max-width: 900px) {
+			.turf-postbox-columns { flex-direction: column; }
+			.turf-postbox-columns > .postbox-container { width: 100%; }
+		}
 		@media (max-width: 600px) {
 			.bk-stats-overview__totals { flex-wrap: wrap; }
 			.bk-stats-box { flex: 1 1 auto; }
-			.bk-stats-bar-row { flex-wrap: wrap; }
-			.bk-stats-bar-row__label { width: 100%; }
-			.bk-stats-bar-row__track { flex-basis: 100%; order: 2; }
-			.bk-stats-bar-row__value { width: 100%; order: 3; text-align: left; margin-top: 2px; }
 		}
 		.bk-stats-online-now__dot {
 			display: inline-block; flex-shrink: 0; width: 7px; height: 7px; border-radius: 50%;
@@ -829,7 +811,14 @@ function turf_render_admin_page() {
 			</p>
 		<?php endif; ?>
 
-		<?php turf_render_postboxes( get_current_screen()->id ); ?>
+		<?php
+		$hook = get_current_screen()->id;
+		?>
+		<div id="poststuff">
+			<?php turf_render_postbox_column( $hook, 'turf_overview' ); ?>
+			<?php turf_render_postbox_columns( $hook, array( 'turf_col_a', 'turf_col_b' ) ); ?>
+			<?php turf_render_postbox_column( $hook, 'turf_wide' ); ?>
+		</div>
 	</div>
 	<?php
 }

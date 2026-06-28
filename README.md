@@ -139,9 +139,15 @@ you want to keep that history.
 
 ## Admin pages
 
-- **Statistieken** — overview chart, device/browser/OS/language/country
-  breakdowns, referrers, UTM campaigns, new vs. returning, and per-post-type
-  and per-taxonomy tables (with average reading time/scroll depth).
+- **Statistieken** — the core audience picture: overview chart, the compact
+  device/browser/OS/language/country/referrer/UTM breakdowns (in two
+  columns), a peak-hours heatmap, and per-post-type/per-taxonomy tables
+  (with average reading time/scroll depth).
+- **Analyse** — the deeper, more diagnostic stats: search terms (+
+  zero-result searches), visitor routes, trending content, per-author
+  stats, form submissions, and the WooCommerce funnel (when applicable).
+  Kept on its own page so Statistieken doesn't turn into an overwhelming
+  wall of boxes.
 - **Klikken** — top `data-turf-click` keys.
 - **404's** — top requested-but-missing paths.
 - **Bots & LLM's** — see above.
@@ -151,7 +157,8 @@ Every block on every Turf admin page is a real wp-admin postbox: collapsible
 per user - the same mechanism the Dashboard widgets use), and individually
 hideable via "Schermopties" in the top-right corner. Colors follow whichever
 admin color scheme the user has picked (Default/Light/Blue/Coffee/Ectoplasm/
-Midnight/Ocean/Sunrise) instead of a fixed color.
+Midnight/Ocean/Sunrise) instead of a fixed color. Lists longer than 5 items
+collapse behind a "Toon meer" link to keep blocks compact.
 
 ## Filters
 
