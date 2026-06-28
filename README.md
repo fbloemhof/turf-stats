@@ -87,6 +87,34 @@ you want to keep that history.
 | `turf_dedup_window` | 30 minutes | How long before a repeat view from the same visitor counts again |
 | `turf_retention_months` | 18 | How long raw event rows are kept before pruning (0 disables pruning) |
 | `turf_clicks_allowed_keys` | none (any key allowed) | Optional strict allow-list for `data-turf-click` keys |
+| `turf_visitor_country` | `''` | Supply a country code when Cloudflare's `CF-IPCountry` header isn't present |
+
+### Country detection without Cloudflare
+
+Country detection is free (no extra lookup) on sites behind Cloudflare. On
+sites that aren't, `turf_get_country()` returns `''` unless you hook
+`turf_visitor_country` with your own **local** lookup. Turf deliberately
+doesn't call a live geolocation API itself - that would mean sending visitor
+IPs to a third party, which defeats the point of a no-external-calls
+analytics plugin. Bring your own local database instead, for example with
+[MaxMind's GeoLite2 PHP API](https://github.com/maxmind/GeoIP2-php) (free
+account required, update the database periodically) or a CSV-based dataset
+like [DB-IP's country-lite](https://db-ip.com/db/lite.php) (CC BY 4.0, no
+account needed):
+
+```php
+add_filter( 'turf_visitor_country', function ( $country, $ip ) {
+	if ( '' !== $country ) {
+		return $country; // Cloudflare already supplied one.
+	}
+
+	// Your own local lookup against a database you maintain, e.g.:
+	// $reader = new \GeoIp2\Database\Reader( '/path/to/GeoLite2-Country.mmdb' );
+	// return $reader->country( $ip )->country->isoCode;
+
+	return $country;
+}, 10, 2 );
+```
 
 ## Requirements
 

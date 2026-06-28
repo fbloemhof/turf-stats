@@ -313,6 +313,10 @@ function turf_get_breakdown( $column, $days, $exclude_empty = false ) {
 }
 
 function turf_breakdown_label( $column, $raw ) {
+	if ( 'country' === $column && '' === $raw ) {
+		return __( 'Onbekend (geen Cloudflare-landdetectie of eigen GeoIP-koppeling)', 'turf-stats' );
+	}
+
 	if ( '' === $raw ) {
 		return __( 'Onbekend (van vóór deze functie)', 'turf-stats' );
 	}

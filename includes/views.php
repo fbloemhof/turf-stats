@@ -236,24 +236,40 @@ function turf_parse_language() {
 }
 
 /**
- * Visitor's country, from Cloudflare's CF-IPCountry header - added
- * automatically to every request that passes through Cloudflare (this site
- * runs behind it), so no GeoIP database/lookup/external API of our own is
- * needed. Empty outside Cloudflare (e.g. local dev) or for unknown/Tor
- * traffic, which Cloudflare marks as "XX"/"T1".
+ * Visitor's country. Free on sites behind Cloudflare - its CF-IPCountry
+ * header is added automatically to every request, so no GeoIP database/
+ * lookup/external API of our own is needed there. Empty everywhere else
+ * (e.g. local dev, or any site not behind Cloudflare) unless something hooks
+ * the turf_visitor_country filter to supply one - deliberately NOT a live
+ * geolocation API call here, since that would mean sending visitor IPs to a
+ * third party, exactly what this plugin exists to avoid. If you want country
+ * data without Cloudflare, hook this filter with your own *local* lookup
+ * (e.g. a MaxMind GeoLite2 or DB-IP country-lite database you maintain
+ * yourself) - see the README for an example.
  */
 function turf_get_country() {
-	if ( empty( $_SERVER['HTTP_CF_IPCOUNTRY'] ) ) {
-		return '';
+	$country = '';
+
+	if ( ! empty( $_SERVER['HTTP_CF_IPCOUNTRY'] ) ) {
+		$candidate = strtoupper( sanitize_text_field( wp_unslash( $_SERVER['HTTP_CF_IPCOUNTRY'] ) ) );
+
+		if ( preg_match( '/^[A-Z]{2}$/', $candidate ) && ! in_array( $candidate, array( 'XX', 'T1' ), true ) ) {
+			$country = $candidate;
+		}
 	}
 
-	$country = strtoupper( sanitize_text_field( wp_unslash( $_SERVER['HTTP_CF_IPCOUNTRY'] ) ) );
+	/**
+	 * Filters the visitor's country when there's no (usable) Cloudflare
+	 * header. Runs even when $country is already set, so a filter could in
+	 * theory override Cloudflare too, but the common case is "fill it in
+	 * when it's still empty".
+	 *
+	 * @param string $country Two-letter country code, or '' if unknown.
+	 * @param string $ip      The visitor IP turf_get_visitor_ip() resolved.
+	 */
+	$country = (string) apply_filters( 'turf_visitor_country', $country, turf_get_visitor_ip() );
 
-	if ( ! preg_match( '/^[A-Z]{2}$/', $country ) || in_array( $country, array( 'XX', 'T1' ), true ) ) {
-		return '';
-	}
-
-	return $country;
+	return preg_match( '/^[A-Z]{2}$/', $country ) ? $country : '';
 }
 
 /**
