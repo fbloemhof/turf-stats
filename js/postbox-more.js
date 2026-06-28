@@ -53,7 +53,9 @@
 				setup( barRows, barRows[ barRows.length - 1 ] );
 			}
 
-			inside.querySelectorAll( ':scope > table > tbody' ).forEach( function ( tbody ) {
+			// Excludes .bk-stats-heatmap - its rows are a fixed 7-day grid,
+			// not a ranked list, so there is nothing meaningful to collapse.
+			inside.querySelectorAll( ':scope > table:not(.bk-stats-heatmap) > tbody' ).forEach( function ( tbody ) {
 				var rows = Array.prototype.slice.call( tbody.children );
 				if ( rows.length ) {
 					setup( rows, tbody.closest( 'table' ) );

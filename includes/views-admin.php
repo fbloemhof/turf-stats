@@ -763,7 +763,14 @@ function turf_admin_inline_style() {
 		.bk-stats-more-link { display: block; margin: 2px 0 4px; background: none; border: none; padding: 0; color: var(--wp-admin-theme-color, #2271b1); cursor: pointer; font-size: 12px; text-decoration: underline; }
 		.bk-stats-more-link:hover { text-decoration: none; }
 		.turf-postbox-columns { display: flex; gap: 20px; align-items: flex-start; }
-		.turf-postbox-columns > .postbox-container { flex: 1 1 0; min-width: 0; }
+		#poststuff .turf-postbox-columns > .postbox-container {
+			float: none !important;
+			width: auto !important;
+			margin: 0 !important;
+			position: static !important;
+			flex: 1 1 0;
+			min-width: 0;
+		}
 
 		@media (max-width: 900px) {
 			.turf-postbox-columns { flex-direction: column; }
