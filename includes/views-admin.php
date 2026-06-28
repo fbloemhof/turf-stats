@@ -215,27 +215,32 @@ function turf_render_stat_box( $label, $value, $change ) {
  */
 function turf_render_overview( $days ) {
 	if ( 0 === $days ) {
-		$totals = turf_get_alltime_site_totals();
+		$totals   = turf_get_alltime_site_totals();
+		$comments = turf_get_comment_totals( 0 );
 		?>
 		<div class="bk-stats-overview">
 			<div class="bk-stats-overview__totals">
 				<?php turf_render_stat_box( __( 'Weergaven', 'turf-stats' ), $totals['views'], false ); ?>
 				<?php turf_render_stat_box( __( 'Bezoekers', 'turf-stats' ), $totals['visitors'], false ); ?>
+				<?php turf_render_stat_box( __( 'Reacties', 'turf-stats' ), $comments, false ); ?>
 			</div>
 		</div>
 		<?php
 		return;
 	}
 
-	$daily    = turf_get_daily_site_totals( $days );
-	$current  = turf_get_range_site_totals( $days, 0 );
-	$previous = turf_get_range_site_totals( $days, $days );
-	$max      = max( 1, max( array_column( $daily, 'views' ) ) );
+	$daily             = turf_get_daily_site_totals( $days );
+	$current           = turf_get_range_site_totals( $days, 0 );
+	$previous          = turf_get_range_site_totals( $days, $days );
+	$current_comments  = turf_get_comment_totals( $days, 0 );
+	$previous_comments = turf_get_comment_totals( $days, $days );
+	$max               = max( 1, max( array_column( $daily, 'views' ) ) );
 	?>
 	<div class="bk-stats-overview">
 		<div class="bk-stats-overview__totals">
 			<?php turf_render_stat_box( __( 'Weergaven', 'turf-stats' ), $current['views'], turf_pct_change( $current['views'], $previous['views'] ) ); ?>
 			<?php turf_render_stat_box( __( 'Bezoekers', 'turf-stats' ), $current['visitors'], turf_pct_change( $current['visitors'], $previous['visitors'] ) ); ?>
+			<?php turf_render_stat_box( __( 'Reacties', 'turf-stats' ), $current_comments, turf_pct_change( $current_comments, $previous_comments ) ); ?>
 		</div>
 
 		<div class="bk-stats-overview__legend">
@@ -646,6 +651,15 @@ function turf_admin_inline_style() {
 			.bk-stats-bar-row__track { flex-basis: 100%; order: 2; }
 			.bk-stats-bar-row__value { width: 100%; order: 3; text-align: left; margin-top: 2px; }
 		}
+		.bk-stats-online-now { display: inline-flex; align-items: center; gap: 8px; background: #fff; border: 1px solid #c3c4c7; border-radius: 20px; padding: 6px 14px; margin-bottom: 16px; font-size: 13px; }
+		.bk-stats-online-now__dot { width: 8px; height: 8px; border-radius: 50%; background: #2e7d4f; box-shadow: 0 0 0 0 rgba(46,125,79,0.6); animation: bk-stats-pulse 2s infinite; }
+		.bk-stats-online-now__value { font-weight: 600; font-size: 16px; }
+		.bk-stats-online-now__label { color: #646970; }
+		@keyframes bk-stats-pulse {
+			0% { box-shadow: 0 0 0 0 rgba(46,125,79,0.5); }
+			70% { box-shadow: 0 0 0 6px rgba(46,125,79,0); }
+			100% { box-shadow: 0 0 0 0 rgba(46,125,79,0); }
+		}
 	</style>
 	<?php
 }
@@ -671,6 +685,8 @@ function turf_render_admin_page() {
 	?>
 	<div class="wrap">
 		<h1><?php esc_html_e( 'Statistieken', 'turf-stats' ); ?></h1>
+
+		<?php turf_render_online_now(); ?>
 
 		<ul class="subsubsub">
 			<?php foreach ( array( '7' => '7 dagen', '30' => '30 dagen', '90' => '90 dagen', 'all' => 'Alles' ) as $key => $label ) : ?>
@@ -720,6 +736,8 @@ function turf_render_admin_page() {
 			<h2 style="margin-top:30px;"><?php echo esc_html( turf_get_post_type_label( $post_type ) ); ?></h2>
 			<?php turf_render_admin_table( $post_type, $days ); ?>
 		<?php endforeach; ?>
+
+		<?php turf_render_top_commented_posts( $days ); ?>
 
 		<h1 style="margin-top:40px;"><?php esc_html_e( 'Archiefpagina\'s', 'turf-stats' ); ?></h1>
 		<p class="description">

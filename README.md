@@ -28,6 +28,10 @@ tracked and stored on your own database.
   and block-editor "edit" context requests don't.
 - **Generic click tracking** for any UI element, via a `data-turf-click="<key>"`
   attribute — no extra JS or AJAX wiring needed per element.
+- **Comment counts per period** and a "most discussed" table — reads
+  directly from WordPress' own comments, no extra tracking needed.
+- **Online now** — a live, auto-refreshing count of visitors active in the
+  last 5 minutes (filterable), shown at the top of the Statistieken page.
 - **No cookies.** Deduplication uses a one-way hash of IP + user-agent, never
   the raw IP. The real visitor IP is read from Cloudflare's
   `CF-Connecting-IP` header when present, falling back to `REMOTE_ADDR`.
@@ -92,6 +96,7 @@ you want to keep that history.
 | `turf_dedup_window` | 30 minutes | How long before a repeat view from the same visitor counts again |
 | `turf_retention_months` | 18 | How long raw event rows are kept before pruning (0 disables pruning) |
 | `turf_clicks_allowed_keys` | none (any key allowed) | Optional strict allow-list for `data-turf-click` keys |
+| `turf_online_now_window` | 5 minutes | How recent a view has to be to count towards "online now" |
 | `turf_visitor_country` | `''` | Supply a country code when Cloudflare's `CF-IPCountry` header isn't present |
 
 ### Country detection without Cloudflare
