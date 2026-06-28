@@ -828,6 +828,18 @@ function turf_admin_inline_style() {
 		@media (max-width: 600px) {
 			.bk-stats-overview__totals { flex-wrap: wrap; }
 			.bk-stats-box { flex: 1 1 auto; }
+			.bk-stats-bar-row__track { width: 50px; }
+			.bk-stats-bar-row__value { width: 110px; font-size: 11px; }
+		}
+		/* WP core adds .ui-sortable-handle to the draggable box header and
+		   sets touch-action:none on it unconditionally (wp-admin/css/
+		   common.css) - that disables native touch scrolling the instant a
+		   finger lands on a box title, with no actual touch-drag to show
+		   for it (jQuery UI Sortable here only handles mouse events). Lets
+		   vertical scrolling through the handle again; doesn't affect
+		   mouse-based dragging at all. */
+		.postbox .postbox-header, .postbox .hndle, .postbox .handle-actions {
+			touch-action: pan-y !important;
 		}
 		.bk-stats-online-now__dot {
 			display: inline-block; flex-shrink: 0; width: 7px; height: 7px; border-radius: 50%;
