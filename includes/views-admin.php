@@ -220,10 +220,10 @@ function turf_render_overview( $days ) {
 		?>
 		<div class="bk-stats-overview">
 			<div class="bk-stats-overview__totals">
+				<?php turf_render_online_now(); ?>
 				<?php turf_render_stat_box( __( 'Weergaven', 'turf-stats' ), $totals['views'], false ); ?>
 				<?php turf_render_stat_box( __( 'Bezoekers', 'turf-stats' ), $totals['visitors'], false ); ?>
 				<?php turf_render_stat_box( __( 'Reacties', 'turf-stats' ), $comments, false ); ?>
-				<?php turf_render_online_now(); ?>
 			</div>
 		</div>
 		<?php
@@ -239,10 +239,10 @@ function turf_render_overview( $days ) {
 	?>
 	<div class="bk-stats-overview">
 		<div class="bk-stats-overview__totals">
+			<?php turf_render_online_now(); ?>
 			<?php turf_render_stat_box( __( 'Weergaven', 'turf-stats' ), $current['views'], turf_pct_change( $current['views'], $previous['views'] ) ); ?>
 			<?php turf_render_stat_box( __( 'Bezoekers', 'turf-stats' ), $current['visitors'], turf_pct_change( $current['visitors'], $previous['visitors'] ) ); ?>
 			<?php turf_render_stat_box( __( 'Reacties', 'turf-stats' ), $current_comments, turf_pct_change( $current_comments, $previous_comments ) ); ?>
-			<?php turf_render_online_now(); ?>
 		</div>
 
 		<div class="bk-stats-overview__legend">
