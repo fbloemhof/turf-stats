@@ -1,0 +1,106 @@
+# Turf
+
+Self-hosted, cookieless page-view and click analytics for WordPress. No
+Google Analytics, no Jetpack, no external network calls — everything is
+tracked and stored on your own database.
+
+## Features
+
+- **Page views** for every public post type and taxonomy archive, detected
+  automatically (no config needed when you add a new CPT or taxonomy later).
+- **Visitors** (unique, deduped per rolling window) alongside raw views.
+- **Device, browser, OS** — parsed from the user-agent already present on
+  every request.
+- **Language** — from the `Accept-Language` header.
+- **Country** — from Cloudflare's `CF-IPCountry` header if the site runs
+  behind Cloudflare (no GeoIP database, no extra lookups). Empty otherwise.
+- **Referrer / traffic source** — direct, internal, search engine, social, or
+  other, plus a "top referring sites" list.
+- **UTM campaign parameters** (`utm_source`, `utm_medium`, `utm_campaign`).
+- **New vs. returning visitors.**
+- **Scroll depth and reading time** per page, sent once when a visitor
+  leaves (via `navigator.sendBeacon`).
+- **404 tracking** — which missing URLs visitors actually hit.
+- **Generic click tracking** for any UI element, via a `data-turf-click="<key>"`
+  attribute — no extra JS or AJAX wiring needed per element.
+- **No cookies.** Deduplication uses a one-way hash of IP + user-agent, never
+  the raw IP. The real visitor IP is read from Cloudflare's
+  `CF-Connecting-IP` header when present, falling back to `REMOTE_ADDR`.
+- **Data retention**: raw event rows are pruned automatically after 18 months
+  (filterable, see below) — aggregate totals are unaffected and kept forever.
+- **WP-CLI import** for one-time backfilling of historical view counts from
+  Jetpack Stats and/or the old "Entry Views" plugin, so switching to Turf
+  doesn't lose history.
+
+## Installation
+
+1. Copy this folder into `wp-content/plugins/turf` (or `turf-stats`) and
+   activate it like any other plugin.
+2. That's it — views start counting immediately for every public post type
+   and taxonomy.
+
+### Optional: a visible "X views" counter
+
+Add a placeholder to any template where you want a visible counter:
+
+```php
+<span id="post-views"></span>
+```
+
+Turf's JS fills it in once it knows the count. If you don't add this
+element, the page is still tracked — it just won't show a number anywhere.
+
+### Optional: click tracking on specific elements
+
+Add the attribute to anything you want to measure:
+
+```php
+<a href="..." data-turf-click="homepage-cta-button">...</a>
+```
+
+### Optional: importing historical view counts
+
+```
+wp turf-stats import-legacy-views --source=jetpack
+wp turf-stats import-legacy-views --source=entry-views
+wp turf-stats import-legacy-views --source=all [--force] [--dry-run]
+```
+
+`--source=jetpack` needs Jetpack's Stats module to still be active (it calls
+Jetpack's own `stats_get_csv()`), so run it before disconnecting Jetpack if
+you want to keep that history.
+
+## Admin pages
+
+- **Statistieken** — overview chart, device/browser/OS/language/country
+  breakdowns, referrers, UTM campaigns, new vs. returning, and per-post-type
+  and per-taxonomy tables (with average reading time/scroll depth).
+- **Klikken** — top `data-turf-click` keys.
+- **404's** — top requested-but-missing paths.
+
+## Filters
+
+| Filter | Default | Purpose |
+|---|---|---|
+| `turf_trackable_post_types` | all public post types except `attachment` | Which post types get tracked |
+| `turf_trackable_taxonomies` | all public taxonomies except `post_format` | Which taxonomy archives get tracked |
+| `turf_dedup_window` | 30 minutes | How long before a repeat view from the same visitor counts again |
+| `turf_retention_months` | 18 | How long raw event rows are kept before pruning (0 disables pruning) |
+| `turf_clicks_allowed_keys` | none (any key allowed) | Optional strict allow-list for `data-turf-click` keys |
+
+## Requirements
+
+WordPress 6.0+, PHP 7.4+. No other plugins required.
+
+## GDPR
+
+Turf is designed to fit a "legitimate interest" basis (no consent banner
+needed) for first-party, aggregate analytics: no cookies, no cross-site
+tracking, no raw IP storage, automatic data retention limits. That's not
+legal advice — check with whoever maintains your privacy policy, especially
+before enabling country detection or any other feature that touches
+visitor-identifiable data.
+
+## License
+
+GPL-2.0-or-later. See [LICENSE](LICENSE).
