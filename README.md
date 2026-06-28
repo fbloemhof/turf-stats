@@ -21,6 +21,11 @@ tracked and stored on your own database.
 - **Scroll depth and reading time** per page, sent once when a visitor
   leaves (via `navigator.sendBeacon`).
 - **404 tracking** — which missing URLs visitors actually hit.
+- **REST API views** — counts views that come through `/wp-json/wp/v2/...`
+  instead of a normal page load (e.g. a companion mobile app), shown as its
+  own "App / REST API" bucket in the Herkomst breakdown. Only single-item
+  `GET` requests count (e.g. `/wp/v2/posts/123`) - list/collection requests
+  and block-editor "edit" context requests don't.
 - **Generic click tracking** for any UI element, via a `data-turf-click="<key>"`
   attribute — no extra JS or AJAX wiring needed per element.
 - **No cookies.** Deduplication uses a one-way hash of IP + user-agent, never

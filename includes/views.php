@@ -20,6 +20,13 @@ define( 'TURF_META_KEY', '_turf_views' );
 define( 'TURF_DB_VERSION', '1.4' );
 
 /**
+ * Sentinel referrer_host value for views recorded via the REST API (e.g. a
+ * companion app) rather than a normal page load - see includes/rest.php.
+ * Not a real hostname, so it can't collide with an actual referrer.
+ */
+define( 'TURF_REST_SOURCE_MARKER', 'rest-api' );
+
+/**
  * Every public post type gets tracked automatically - so a new CPT shows up
  * here (and in the admin report) the moment it's registered, no theme/plugin
  * code change needed. 'attachment' is the one structural exception: media
@@ -285,6 +292,10 @@ function turf_sanitize_utm( $value ) {
 function turf_classify_referrer( $host ) {
 	if ( '' === $host ) {
 		return 'direct';
+	}
+
+	if ( TURF_REST_SOURCE_MARKER === $host ) {
+		return 'app';
 	}
 
 	$site_host = wp_parse_url( home_url(), PHP_URL_HOST );

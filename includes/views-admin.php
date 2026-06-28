@@ -401,8 +401,11 @@ function turf_referrer_case_sql( $column = 'v.referrer_host' ) {
 	$search_sql = $build_likes( array( 'google.', 'bing.', 'duckduckgo.', 'yahoo.', 'ecosia.', 'startpage.' ) );
 	$social_sql = $build_likes( array( 'facebook.', 'instagram.', 'x.com', 'twitter.', 'linkedin.', 'pinterest.', 't.co', 'whatsapp.' ) );
 
+	$rest_marker = esc_sql( TURF_REST_SOURCE_MARKER );
+
 	return "CASE
 		WHEN $column = '' THEN 'direct'
+		WHEN $column = '$rest_marker' THEN 'app'
 		WHEN $column = '$site_host' THEN 'intern'
 		WHEN $search_sql THEN 'zoekmachine'
 		WHEN $social_sql THEN 'social'
@@ -438,6 +441,7 @@ function turf_get_referrer_breakdown( $days ) {
 function turf_referrer_bucket_label( $bucket ) {
 	$labels = array(
 		'direct'      => __( 'Direct', 'turf-stats' ),
+		'app'         => __( 'App / REST API', 'turf-stats' ),
 		'intern'      => __( 'Intern (eigen site)', 'turf-stats' ),
 		'zoekmachine' => __( 'Zoekmachines', 'turf-stats' ),
 		'social'      => __( 'Social media', 'turf-stats' ),
@@ -467,6 +471,7 @@ function turf_get_top_referrer_hosts( $days, $limit = 10 ) {
 	}
 
 	$params[] = $site_host;
+	$params[] = TURF_REST_SOURCE_MARKER;
 	$params[] = $limit;
 
 	return $wpdb->get_results( $wpdb->prepare(
@@ -474,7 +479,7 @@ function turf_get_top_referrer_hosts( $days, $limit = 10 ) {
 		FROM $table v
 		$join
 		WHERE $where $where_date
-		AND v.referrer_host != '' AND v.referrer_host != %s
+		AND v.referrer_host != '' AND v.referrer_host != %s AND v.referrer_host != %s
 		GROUP BY v.referrer_host
 		ORDER BY views DESC
 		LIMIT %d",
