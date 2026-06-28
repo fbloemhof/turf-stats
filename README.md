@@ -23,12 +23,19 @@ tracked and stored on your own database.
 - **404 tracking** — which missing URLs visitors actually hit.
 - **REST API views** — counts views that come through `/wp-json/wp/v2/...`
   instead of a normal page load (e.g. a companion mobile app), shown as its
-  own "App / REST API" bucket in the Herkomst breakdown. Only single-item
-  `GET` requests count (e.g. `/wp/v2/posts/123`) - list/collection requests
-  and block-editor "edit" context requests don't. To find out exactly what a
-  specific app's requests look like (so you can recognize it by name later),
-  set `define( 'TURF_DEBUG_REST', true );` in `wp-config.php` for a while and
-  watch your PHP error log - remove it again once you've got what you need.
+  own "App / REST API (overig)" bucket in the Herkomst breakdown. Only
+  single-item `GET` requests count (e.g. `/wp/v2/posts/123`) -
+  list/collection requests and block-editor "edit" context requests don't.
+- **Dorpsapp recognized by name** — the "Dorpsapp"/"Doarpsapp" village-app
+  product (used by several Dutch local sites) doesn't use `/wp/v2/...` at
+  all - its connector plugin registers its own `doarpsapp/v1` REST
+  namespace. Turf recognizes that namespace's single-item endpoints
+  specifically and shows them as their own "Dorpsapp" bucket, rather than
+  lumping them into the generic REST bucket above.
+- To find out exactly what a specific app's requests look like (so you can
+  recognize it by name too), set `define( 'TURF_DEBUG_REST', true );` in
+  `wp-config.php` for a while and watch your PHP error log - remove it again
+  once you've got what you need.
 - **Generic click tracking** for any UI element, via a `data-turf-click="<key>"`
   attribute — no extra JS or AJAX wiring needed per element.
 - **Comment counts per period** and a "most discussed" table — reads
@@ -100,6 +107,7 @@ you want to keep that history.
 | `turf_retention_months` | 18 | How long raw event rows are kept before pruning (0 disables pruning) |
 | `turf_clicks_allowed_keys` | none (any key allowed) | Optional strict allow-list for `data-turf-click` keys |
 | `turf_online_now_window` | 5 minutes | How recent a view has to be to count towards "online now" |
+| `turf_dorpsapp_route_patterns` | `doarpsapp/v1/{posts,events,info}/...` | Route patterns recognized as Dorpsapp single-item requests |
 | `turf_visitor_country` | `''` | Supply a country code when Cloudflare's `CF-IPCountry` header isn't present |
 
 ### Country detection without Cloudflare

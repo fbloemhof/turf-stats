@@ -27,6 +27,16 @@ define( 'TURF_DB_VERSION', '1.4' );
 define( 'TURF_REST_SOURCE_MARKER', 'rest-api' );
 
 /**
+ * Sentinel referrer_host value specifically for the "Dorpsapp"/"Doarpsapp"
+ * village-app integration (a custom doarpsapp/v1 REST namespace registered
+ * by a site-specific connector plugin - common on Dutch village/community
+ * sites). Distinct from the generic REST marker above, since this one is
+ * positively identified rather than "some unknown API consumer". See
+ * includes/rest.php.
+ */
+define( 'TURF_DORPSAPP_SOURCE_MARKER', 'dorpsapp' );
+
+/**
  * Every public post type gets tracked automatically - so a new CPT shows up
  * here (and in the admin report) the moment it's registered, no theme/plugin
  * code change needed. 'attachment' is the one structural exception: media
@@ -292,6 +302,10 @@ function turf_sanitize_utm( $value ) {
 function turf_classify_referrer( $host ) {
 	if ( '' === $host ) {
 		return 'direct';
+	}
+
+	if ( TURF_DORPSAPP_SOURCE_MARKER === $host ) {
+		return 'dorpsapp';
 	}
 
 	if ( TURF_REST_SOURCE_MARKER === $host ) {

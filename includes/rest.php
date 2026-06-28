@@ -21,6 +21,18 @@
  * rest_prepare_* hit gets logged with its route, method, and user-agent.
  * Remove the define again once you've got what you need; this is meant to
  * be temporary, not left running.
+ *
+ * "Dorpsapp" (a village/community app product used by several Dutch local
+ * sites) is recognized specifically: it doesn't use the standard /wp/v2/...
+ * controllers at all, but a site-specific connector plugin's own
+ * doarpsapp/v1 REST namespace (e.g. /wp-json/doarpsapp/v1/posts/123), so it
+ * never fires rest_prepare_{type}. Hooked separately below via
+ * rest_post_dispatch (fires for every REST response, any namespace),
+ * reading the post ID straight out of the connector's own response payload
+ * - every doarpsapp/v1 single-item endpoint includes an "id" field for
+ * exactly this reason. Tagged with its own TURF_DORPSAPP_SOURCE_MARKER
+ * instead of the generic one, so it shows up as "Dorpsapp" rather than
+ * lumped into "App / REST API (overig)".
  */
 
 function turf_register_rest_tracking() {
@@ -41,6 +53,7 @@ function turf_register_rest_tracking() {
 	}
 }
 add_action( 'rest_api_init', 'turf_register_rest_tracking', 20 );
+add_filter( 'rest_post_dispatch', 'turf_track_dorpsapp_view', 10, 3 );
 
 function turf_track_rest_post_view( $response, $post, $request ) {
 	$is_view = turf_is_rest_single_item_request( $request, $post->ID );
@@ -59,6 +72,58 @@ function turf_track_rest_term_view( $response, $term, $request ) {
 
 	if ( $is_view ) {
 		turf_track_view( $term->term_id, 'term', array( 'referrer_host' => TURF_REST_SOURCE_MARKER ) );
+	}
+
+	return $response;
+}
+
+/**
+ * The route prefixes Dorpsapp's connector plugin (e.g. dorpsplein-bakkeveen)
+ * registers single-item endpoints under. Filterable in case a different
+ * version of the connector plugin uses different route names.
+ */
+function turf_dorpsapp_route_patterns() {
+	return apply_filters( 'turf_dorpsapp_route_patterns', array(
+		'#^/doarpsapp/v1/posts/\d+$#',
+		'#^/doarpsapp/v1/events/\d+$#',
+		'#^/doarpsapp/v1/info/[a-zA-Z0-9_-]+$#',
+	) );
+}
+
+function turf_track_dorpsapp_view( $response, $server, $request ) {
+	if ( ! ( $request instanceof WP_REST_Request ) || 'GET' !== $request->get_method() ) {
+		return $response;
+	}
+
+	if ( current_user_can( 'edit_posts' ) ) {
+		return $response;
+	}
+
+	$route   = $request->get_route();
+	$matches = false;
+
+	foreach ( turf_dorpsapp_route_patterns() as $pattern ) {
+		if ( preg_match( $pattern, $route ) ) {
+			$matches = true;
+			break;
+		}
+	}
+
+	if ( ! $matches ) {
+		return $response;
+	}
+
+	$post_id = 0;
+
+	if ( $response instanceof WP_REST_Response ) {
+		$data    = $response->get_data();
+		$post_id = isset( $data['id'] ) ? absint( $data['id'] ) : 0;
+	}
+
+	turf_maybe_log_rest_debug( $request, (bool) $post_id, "dorpsapp {$route}" );
+
+	if ( $post_id ) {
+		turf_track_view( $post_id, 'post', array( 'referrer_host' => TURF_DORPSAPP_SOURCE_MARKER ) );
 	}
 
 	return $response;
