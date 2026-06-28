@@ -5,7 +5,7 @@
 		return;
 	}
 
-	var el = document.querySelector( '#turf-online-now .bk-stats-online-now__value' );
+	var el = document.getElementById( 'turf-online-now-value' );
 
 	if ( ! el ) {
 		return;

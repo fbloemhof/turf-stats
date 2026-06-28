@@ -29,12 +29,21 @@ function turf_get_online_now_count() {
 	) );
 }
 
+/**
+ * Same .bk-stats-box markup as the regular totals (Weergaven/Bezoekers/...),
+ * so it sits in that row as a matching square box instead of a separately
+ * styled badge. The pulsing dot next to the label is the only visual
+ * difference, signalling "this one updates live" - id="turf-online-now-value"
+ * is what js/online-now.js polls and rewrites.
+ */
 function turf_render_online_now() {
 	?>
-	<div class="bk-stats-online-now" id="turf-online-now">
-		<span class="bk-stats-online-now__dot"></span>
-		<span class="bk-stats-online-now__value"><?php echo esc_html( number_format_i18n( turf_get_online_now_count() ) ); ?></span>
-		<span class="bk-stats-online-now__label"><?php esc_html_e( 'nu online', 'turf-stats' ); ?></span>
+	<div class="bk-stats-box">
+		<span class="bk-stats-box__label">
+			<span class="bk-stats-online-now__dot"></span>
+			<?php esc_html_e( 'Nu online', 'turf-stats' ); ?>
+		</span>
+		<span class="bk-stats-box__value" id="turf-online-now-value"><?php echo esc_html( number_format_i18n( turf_get_online_now_count() ) ); ?></span>
 	</div>
 	<?php
 }

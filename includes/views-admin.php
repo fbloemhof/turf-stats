@@ -223,6 +223,7 @@ function turf_render_overview( $days ) {
 				<?php turf_render_stat_box( __( 'Weergaven', 'turf-stats' ), $totals['views'], false ); ?>
 				<?php turf_render_stat_box( __( 'Bezoekers', 'turf-stats' ), $totals['visitors'], false ); ?>
 				<?php turf_render_stat_box( __( 'Reacties', 'turf-stats' ), $comments, false ); ?>
+				<?php turf_render_online_now(); ?>
 			</div>
 		</div>
 		<?php
@@ -241,6 +242,7 @@ function turf_render_overview( $days ) {
 			<?php turf_render_stat_box( __( 'Weergaven', 'turf-stats' ), $current['views'], turf_pct_change( $current['views'], $previous['views'] ) ); ?>
 			<?php turf_render_stat_box( __( 'Bezoekers', 'turf-stats' ), $current['visitors'], turf_pct_change( $current['visitors'], $previous['visitors'] ) ); ?>
 			<?php turf_render_stat_box( __( 'Reacties', 'turf-stats' ), $current_comments, turf_pct_change( $current_comments, $previous_comments ) ); ?>
+			<?php turf_render_online_now(); ?>
 		</div>
 
 		<div class="bk-stats-overview__legend">
@@ -655,12 +657,7 @@ function turf_admin_inline_style() {
 			.bk-stats-bar-row__track { flex-basis: 100%; order: 2; }
 			.bk-stats-bar-row__value { width: 100%; order: 3; text-align: left; margin-top: 2px; }
 		}
-		.bk-stats-header-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 6px; }
-		.bk-stats-header-row h1 { margin: 0; }
-		.bk-stats-online-now { display: inline-flex; align-items: center; gap: 7px; background: #fff; border: 1px solid #c3c4c7; border-radius: 20px; padding: 4px 12px; font-size: 13px; line-height: 1.4; }
-		.bk-stats-online-now__dot { flex-shrink: 0; width: 8px; height: 8px; border-radius: 50%; background: #2e7d4f; box-shadow: 0 0 0 0 rgba(46,125,79,0.6); animation: bk-stats-pulse 2s infinite; }
-		.bk-stats-online-now__value { font-weight: 600; }
-		.bk-stats-online-now__label { color: #646970; }
+		.bk-stats-online-now__dot { display: inline-block; flex-shrink: 0; width: 7px; height: 7px; border-radius: 50%; background: #2e7d4f; margin-right: 5px; box-shadow: 0 0 0 0 rgba(46,125,79,0.6); animation: bk-stats-pulse 2s infinite; }
 		@keyframes bk-stats-pulse {
 			0% { box-shadow: 0 0 0 0 rgba(46,125,79,0.5); }
 			70% { box-shadow: 0 0 0 6px rgba(46,125,79,0); }
@@ -690,10 +687,7 @@ function turf_render_admin_page() {
 	turf_admin_inline_style();
 	?>
 	<div class="wrap">
-		<div class="bk-stats-header-row">
-			<h1><?php esc_html_e( 'Statistieken', 'turf-stats' ); ?></h1>
-			<?php turf_render_online_now(); ?>
-		</div>
+		<h1><?php esc_html_e( 'Statistieken', 'turf-stats' ); ?></h1>
 
 		<ul class="subsubsub">
 			<?php foreach ( array( '7' => '7 dagen', '30' => '30 dagen', '90' => '90 dagen', 'all' => 'Alles' ) as $key => $label ) : ?>
