@@ -42,6 +42,21 @@ tracked and stored on your own database.
   directly from WordPress' own comments, no extra tracking needed.
 - **Online now** — a live, auto-refreshing count of visitors active in the
   last 5 minutes (filterable), shown at the top of the Statistieken page.
+- **Search terms** — what visitors search for on the site (WP's own front-end
+  search) and how many results each query found, including a dedicated view
+  of zero-result searches - a direct signal for missing content or a
+  redirect worth adding.
+- **Visitor routes** — consecutive pageviews by the same visitor within a
+  30-minute window are chained into sessions, surfaced as the most common
+  "from this page, visitors went to this page next" transitions.
+- **Bounce-rate proxy** — the share of sessions that had exactly one
+  pageview and never clicked onward, derived from the same session
+  reconstruction (skipped for "Alles", where an unbounded history makes a
+  single rate not very meaningful).
+- **Peak-hours heatmap** — a 7×24 day/hour grid of when views actually
+  happen, in the site's own local time.
+- **Trending content** — what's rising fastest right now (last 24h vs. the
+  24h before that), independent of the page's period filter.
 - **Bots & LLM's** — a separate "Bots & LLM's" page tracking how often
   crawlers visit and what they look at: search engines (Googlebot, Bingbot,
   ...), AI/LLM crawlers (GPTBot, ClaudeBot, Google-Extended, PerplexityBot,
@@ -127,6 +142,8 @@ Midnight/Ocean/Sunrise) instead of a fixed color.
 | `turf_dorpsapp_route_patterns` | `doarpsapp/v1/{posts,events,info}/...` | Route patterns recognized as Dorpsapp single-item requests |
 | `turf_bot_signatures` | see `includes/bots.php` | Known bot/LLM user-agent signatures, grouped by category |
 | `turf_visitor_country` | `''` | Supply a country code when Cloudflare's `CF-IPCountry` header isn't present |
+| `turf_session_gap_seconds` | 30 minutes | How long a gap between two pageviews from the same visitor still counts as the same session |
+| `turf_session_row_limit` | 20000 | Max rows pulled into PHP for session reconstruction (bounce rate, visitor routes) |
 
 ### Country detection without Cloudflare
 

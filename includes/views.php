@@ -154,6 +154,15 @@ function turf_get_visitor_ip() {
 }
 
 /**
+ * One-way visitor identifier for dedup/uniques - never the raw IP, never a
+ * cookie. Shared by every feature that needs to recognize "the same visitor
+ * again" (views, sessions, search).
+ */
+function turf_visitor_hash( $user_agent ) {
+	return md5( turf_get_visitor_ip() . '|' . $user_agent );
+}
+
+/**
  * Simple bot/crawler heuristic - good enough to keep the numbers meaningful
  * without pulling in a full UA-parsing library.
  */
@@ -420,7 +429,7 @@ function turf_track_view( $object_id, $object_type = 'post', $extra = array() ) 
 	global $wpdb;
 	$table        = turf_table();
 	$column       = 'term' === $object_type ? 'term_id' : 'post_id';
-	$visitor_hash = md5( turf_get_visitor_ip() . '|' . $user_agent );
+	$visitor_hash = turf_visitor_hash( $user_agent );
 	$window_start = gmdate( 'Y-m-d H:i:s', time() - turf_dedup_window() );
 
 	$recent = $wpdb->get_var( $wpdb->prepare(
@@ -518,7 +527,7 @@ function turf_track_engagement( $event_id, $scroll_depth, $duration_seconds ) {
 	global $wpdb;
 
 	$user_agent   = isset( $_SERVER['HTTP_USER_AGENT'] ) ? sanitize_text_field( wp_unslash( $_SERVER['HTTP_USER_AGENT'] ) ) : '';
-	$visitor_hash = md5( turf_get_visitor_ip() . '|' . $user_agent );
+	$visitor_hash = turf_visitor_hash( $user_agent );
 
 	$wpdb->update(
 		turf_table(),

@@ -77,6 +77,26 @@ function turf_views_register_metaboxes() {
 		turf_render_breakdown( 'utm_medium', $days, true );
 	}, $hook, 'normal' );
 
+	add_meta_box( 'turf_search_terms', __( 'Zoekwoorden', 'turf-stats' ), function () use ( $days ) {
+		turf_search_render_top_terms( $days );
+	}, $hook, 'normal' );
+
+	add_meta_box( 'turf_search_zero_results', __( 'Zoekopdrachten zonder resultaat', 'turf-stats' ), function () use ( $days ) {
+		turf_search_render_zero_results( $days );
+	}, $hook, 'normal' );
+
+	add_meta_box( 'turf_session_routes', __( 'Bezoekersroutes', 'turf-stats' ), function () use ( $days ) {
+		turf_render_session_routes( $days );
+	}, $hook, 'normal' );
+
+	add_meta_box( 'turf_peak_hours', __( 'Piekuren', 'turf-stats' ), function () use ( $days ) {
+		turf_render_peak_hours( $days );
+	}, $hook, 'normal' );
+
+	add_meta_box( 'turf_trending', __( 'Trending', 'turf-stats' ), function () {
+		turf_render_trending();
+	}, $hook, 'normal' );
+
 	$post_types = turf_trackable_post_types();
 	usort( $post_types, function ( $a, $b ) {
 		return strnatcasecmp( turf_get_post_type_label( $a ), turf_get_post_type_label( $b ) );
@@ -286,11 +306,11 @@ function turf_render_change_badge( $change ) {
 	);
 }
 
-function turf_render_stat_box( $label, $value, $change ) {
+function turf_render_stat_box( $label, $value, $change, $suffix = '' ) {
 	?>
 	<div class="bk-stats-box">
 		<span class="bk-stats-box__label"><?php echo esc_html( $label ); ?></span>
-		<span class="bk-stats-box__value"><?php echo esc_html( number_format_i18n( $value ) ); ?></span>
+		<span class="bk-stats-box__value"><?php echo esc_html( number_format_i18n( $value ) . $suffix ); ?></span>
 		<?php if ( false !== $change ) : ?>
 			<?php turf_render_change_badge( $change ); ?>
 		<?php endif; ?>
@@ -334,6 +354,12 @@ function turf_render_overview( $days ) {
 			<?php turf_render_stat_box( __( 'Weergaven', 'turf-stats' ), $current['views'], turf_pct_change( $current['views'], $previous['views'] ) ); ?>
 			<?php turf_render_stat_box( __( 'Bezoekers', 'turf-stats' ), $current['visitors'], turf_pct_change( $current['visitors'], $previous['visitors'] ) ); ?>
 			<?php turf_render_stat_box( __( 'Reacties', 'turf-stats' ), $current_comments, turf_pct_change( $current_comments, $previous_comments ) ); ?>
+			<?php
+			$bounce_rate = turf_get_bounce_rate( $days );
+			if ( null !== $bounce_rate ) :
+				turf_render_stat_box( __( 'Bouncepercentage', 'turf-stats' ), $bounce_rate, false, '%' );
+			endif;
+			?>
 		</div>
 
 		<div class="bk-stats-overview__legend">
@@ -763,6 +789,9 @@ function turf_admin_inline_style() {
 			70% { box-shadow: 0 0 0 6px color-mix(in srgb, currentColor 0%, transparent); }
 			100% { box-shadow: 0 0 0 0 color-mix(in srgb, currentColor 0%, transparent); }
 		}
+		.bk-stats-heatmap { border-collapse: collapse; width: 100%; }
+		.bk-stats-heatmap th { font-size: 10px; color: #646970; font-weight: 400; text-align: center; padding: 2px; }
+		.bk-stats-heatmap td { height: 18px; border: 1px solid #fff; }
 	</style>
 	<?php
 }
