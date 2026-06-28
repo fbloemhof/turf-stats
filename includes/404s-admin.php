@@ -4,7 +4,7 @@
  */
 
 function turf_404s_admin_menu() {
-	add_submenu_page(
+	$hook = add_submenu_page(
 		'turf-stats',
 		__( "404's", 'turf-stats' ),
 		__( "404's", 'turf-stats' ),
@@ -12,8 +12,21 @@ function turf_404s_admin_menu() {
 		'turf-404s',
 		'turf_404s_render_admin_page'
 	);
+
+	add_action( "load-$hook", 'turf_404s_register_metaboxes' );
 }
 add_action( 'admin_menu', 'turf_404s_admin_menu' );
+
+function turf_404s_register_metaboxes() {
+	$hook = get_current_screen()->id;
+	turf_register_postbox_hook( $hook );
+
+	$days = turf_get_requested_days();
+
+	add_meta_box( 'turf_404s_top', __( "Meest geraakte URL's", 'turf-stats' ), function () use ( $days ) {
+		turf_404s_render_top_paths( $days );
+	}, $hook, 'normal' );
+}
 
 function turf_404s_count_paths( $days ) {
 	global $wpdb;
@@ -53,18 +66,46 @@ function turf_404s_get_top_paths( $days, $page = 1 ) {
 	) );
 }
 
-function turf_404s_render_admin_page() {
-	$period   = isset( $_GET['period'] ) ? sanitize_key( $_GET['period'] ) : '7';
-	$days_map = array( '7' => 7, '30' => 30, '90' => 90, 'all' => 0 );
-	$days     = isset( $days_map[ $period ] ) ? $days_map[ $period ] : 7;
-	$base_url = admin_url( 'admin.php?page=turf-404s' );
-
+function turf_404s_render_top_paths( $days ) {
 	$param          = 'pg';
 	$requested_page = isset( $_GET[ $param ] ) ? max( 1, absint( $_GET[ $param ] ) ) : 1;
 	$total          = turf_404s_count_paths( $days );
 	$total_pages    = max( 1, (int) ceil( $total / TURF_PER_PAGE ) );
 	$page           = min( $requested_page, $total_pages );
 	$rows           = $total ? turf_404s_get_top_paths( $days, $page ) : array();
+
+	if ( ! $rows ) {
+		echo '<p>' . esc_html__( 'Geen 404\'s geregistreerd voor deze periode.', 'turf-stats' ) . '</p>';
+		return;
+	}
+	?>
+	<table class="wp-list-table widefat fixed striped">
+		<thead>
+			<tr>
+				<th><?php esc_html_e( 'Pad', 'turf-stats' ); ?></th>
+				<th><?php esc_html_e( 'Keer geraakt', 'turf-stats' ); ?></th>
+				<th><?php esc_html_e( 'Laatst', 'turf-stats' ); ?></th>
+			</tr>
+		</thead>
+		<tbody>
+			<?php foreach ( $rows as $row ) : ?>
+				<tr>
+					<td><code><?php echo esc_html( $row->path ); ?></code></td>
+					<td><?php echo (int) $row->hits; ?></td>
+					<td><?php echo esc_html( get_date_from_gmt( $row->last_hit, 'd-m-Y H:i' ) ); ?></td>
+				</tr>
+			<?php endforeach; ?>
+		</tbody>
+	</table>
+	<?php if ( $total_pages > 1 ) : ?>
+		<div class="tablenav"><div class="tablenav-pages">
+			<?php turf_render_pagination( $param, $page, $total_pages ); ?>
+		</div></div>
+	<?php endif; ?>
+	<?php
+}
+
+function turf_404s_render_admin_page() {
 	?>
 	<div class="wrap">
 		<h1><?php esc_html_e( "404's", 'turf-stats' ); ?></h1>
@@ -72,44 +113,9 @@ function turf_404s_render_admin_page() {
 			<?php esc_html_e( 'Welke niet-bestaande URL\'s bezoekers raken - handig om kapotte links te vinden en te fixen.', 'turf-stats' ); ?>
 		</p>
 
-		<ul class="subsubsub">
-			<?php foreach ( array( '7' => '7 dagen', '30' => '30 dagen', '90' => '90 dagen', 'all' => 'Alles' ) as $key => $label ) : ?>
-				<li>
-					<a href="<?php echo esc_url( add_query_arg( 'period', $key, $base_url ) ); ?>" <?php echo $period === (string) $key ? 'class="current"' : ''; ?>>
-						<?php echo esc_html( $label ); ?>
-					</a> |
-				</li>
-			<?php endforeach; ?>
-		</ul>
-		<br class="clear" />
+		<?php turf_render_period_tabs( admin_url( 'admin.php?page=turf-404s' ) ); ?>
 
-		<?php if ( ! $rows ) : ?>
-			<p><?php esc_html_e( 'Geen 404\'s geregistreerd voor deze periode.', 'turf-stats' ); ?></p>
-		<?php else : ?>
-			<table class="wp-list-table widefat fixed striped">
-				<thead>
-					<tr>
-						<th><?php esc_html_e( 'Pad', 'turf-stats' ); ?></th>
-						<th><?php esc_html_e( 'Keer geraakt', 'turf-stats' ); ?></th>
-						<th><?php esc_html_e( 'Laatst', 'turf-stats' ); ?></th>
-					</tr>
-				</thead>
-				<tbody>
-					<?php foreach ( $rows as $row ) : ?>
-						<tr>
-							<td><code><?php echo esc_html( $row->path ); ?></code></td>
-							<td><?php echo (int) $row->hits; ?></td>
-							<td><?php echo esc_html( get_date_from_gmt( $row->last_hit, 'd-m-Y H:i' ) ); ?></td>
-						</tr>
-					<?php endforeach; ?>
-				</tbody>
-			</table>
-			<?php if ( $total_pages > 1 ) : ?>
-				<div class="tablenav"><div class="tablenav-pages">
-					<?php turf_render_pagination( $param, $page, $total_pages ); ?>
-				</div></div>
-			<?php endif; ?>
-		<?php endif; ?>
+		<?php turf_render_postboxes( get_current_screen()->id ); ?>
 	</div>
 	<?php
 }

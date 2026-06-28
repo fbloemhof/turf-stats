@@ -13,7 +13,7 @@
 define( 'TURF_PER_PAGE', 10 );
 
 function turf_admin_menu() {
-	add_menu_page(
+	$hook = add_menu_page(
 		__( 'Statistieken', 'turf-stats' ),
 		__( 'Statistieken', 'turf-stats' ),
 		'manage_options',
@@ -22,8 +22,99 @@ function turf_admin_menu() {
 		'dashicons-chart-bar',
 		26
 	);
+
+	add_action( "load-$hook", 'turf_views_register_metaboxes' );
 }
 add_action( 'admin_menu', 'turf_admin_menu' );
+
+function turf_views_register_metaboxes() {
+	$hook = get_current_screen()->id;
+	turf_register_postbox_hook( $hook );
+
+	$days = turf_get_requested_days();
+
+	add_meta_box( 'turf_overview', __( 'Overzicht', 'turf-stats' ), function () use ( $days ) {
+		turf_render_overview( $days );
+	}, $hook, 'normal' );
+
+	add_meta_box( 'turf_device', __( 'Apparaat', 'turf-stats' ), function () use ( $days ) {
+		turf_render_breakdown( 'device_type', $days );
+	}, $hook, 'normal' );
+
+	add_meta_box( 'turf_browser', __( 'Browser', 'turf-stats' ), function () use ( $days ) {
+		turf_render_breakdown( 'browser', $days );
+	}, $hook, 'normal' );
+
+	add_meta_box( 'turf_os', __( 'Besturingssysteem', 'turf-stats' ), function () use ( $days ) {
+		turf_render_breakdown( 'os', $days );
+	}, $hook, 'normal' );
+
+	add_meta_box( 'turf_language', __( 'Taal', 'turf-stats' ), function () use ( $days ) {
+		turf_render_breakdown( 'language', $days );
+	}, $hook, 'normal' );
+
+	add_meta_box( 'turf_country', __( 'Land van herkomst', 'turf-stats' ), function () use ( $days ) {
+		turf_render_breakdown( 'country', $days );
+	}, $hook, 'normal' );
+
+	add_meta_box( 'turf_new_returning', __( 'Nieuw vs. terugkerend', 'turf-stats' ), function () use ( $days ) {
+		turf_render_new_vs_returning( $days );
+	}, $hook, 'normal' );
+
+	add_meta_box( 'turf_referrer', __( 'Herkomst', 'turf-stats' ), function () use ( $days ) {
+		turf_render_referrer_breakdown( $days );
+	}, $hook, 'normal' );
+
+	add_meta_box( 'turf_top_referrers', __( 'Top verwijzende sites', 'turf-stats' ), function () use ( $days ) {
+		turf_render_top_referrer_hosts( $days );
+	}, $hook, 'normal' );
+
+	add_meta_box( 'turf_utm_source', __( 'Campagnebron (UTM)', 'turf-stats' ), function () use ( $days ) {
+		turf_render_breakdown( 'utm_source', $days, true );
+	}, $hook, 'normal' );
+
+	add_meta_box( 'turf_utm_medium', __( 'Campagnemedium (UTM)', 'turf-stats' ), function () use ( $days ) {
+		turf_render_breakdown( 'utm_medium', $days, true );
+	}, $hook, 'normal' );
+
+	$post_types = turf_trackable_post_types();
+	usort( $post_types, function ( $a, $b ) {
+		return strnatcasecmp( turf_get_post_type_label( $a ), turf_get_post_type_label( $b ) );
+	} );
+
+	foreach ( $post_types as $post_type ) {
+		add_meta_box(
+			'turf_posts_' . $post_type,
+			turf_get_post_type_label( $post_type ),
+			function () use ( $post_type, $days ) {
+				turf_render_admin_table( $post_type, $days );
+			},
+			$hook,
+			'normal'
+		);
+	}
+
+	add_meta_box( 'turf_comments', __( 'Meest besproken', 'turf-stats' ), function () use ( $days ) {
+		turf_render_top_commented_posts( $days );
+	}, $hook, 'normal' );
+
+	$taxonomies = turf_trackable_taxonomies();
+	usort( $taxonomies, function ( $a, $b ) {
+		return strnatcasecmp( turf_get_taxonomy_label( $a ), turf_get_taxonomy_label( $b ) );
+	} );
+
+	foreach ( $taxonomies as $taxonomy ) {
+		add_meta_box(
+			'turf_terms_' . $taxonomy,
+			turf_get_taxonomy_label( $taxonomy ),
+			function () use ( $taxonomy, $days ) {
+				turf_render_admin_terms_table( $taxonomy, $days );
+			},
+			$hook,
+			'normal'
+		);
+	}
+}
 
 /**
  * Builds a `post_type IN (%s, %s, ...)` placeholder string plus the matching
@@ -501,55 +592,53 @@ function turf_get_top_referrer_hosts( $days, $limit = 10 ) {
 /**
  * Shared renderer for any "rows with views+visitors, stacked bar per row"
  * breakdown block (device, browser, referrer bucket, top referrer hosts).
+ * The block's heading comes from the metabox title it's rendered inside of -
+ * this only outputs the bar rows themselves.
  *
- * @param string   $title          Block heading.
  * @param object[] $rows           Each with ->label, ->views, ->visitors.
  * @param callable $label_callback Maps a raw $row->label to a display label.
  */
-function turf_render_breakdown_rows( $title, $rows, $label_callback ) {
+function turf_render_breakdown_rows( $rows, $label_callback ) {
 	$views_list  = array_map( 'intval', wp_list_pluck( $rows, 'views' ) );
 	$total_views = array_sum( $views_list );
 	$max_views   = $views_list ? max( 1, max( $views_list ) ) : 1;
 	?>
-	<div class="bk-stats-breakdown">
-		<h3><?php echo esc_html( $title ); ?></h3>
-		<?php if ( ! $rows ) : ?>
-			<p><?php esc_html_e( 'Nog geen data voor deze periode.', 'turf-stats' ); ?></p>
-		<?php else : ?>
-			<?php foreach ( $rows as $row ) : ?>
-				<?php
-				$views        = (int) $row->views;
-				$visitors     = (int) $row->visitors;
-				$views_pct    = (int) round( ( $views / $max_views ) * 100 );
-				$visitors_pct = (int) round( ( $visitors / $max_views ) * 100 );
-				$share        = $total_views ? (int) round( ( $views / $total_views ) * 100 ) : 0;
-				?>
-				<div class="bk-stats-bar-row">
-					<span class="bk-stats-bar-row__label"><?php echo esc_html( call_user_func( $label_callback, $row->label ) ); ?></span>
-					<span class="bk-stats-bar-row__track">
-						<span class="bk-stats-bar-row__fill bk-stats-bar-row__fill--views" style="width:<?php echo $views_pct; ?>%"></span>
-						<span class="bk-stats-bar-row__fill bk-stats-bar-row__fill--visitors" style="width:<?php echo $visitors_pct; ?>%"></span>
-					</span>
-					<span class="bk-stats-bar-row__value">
-						<?php echo esc_html( sprintf(
-							/* translators: 1: number of views, 2: percentage share of total views, 3: number of unique visitors */
-							__( '%1$s weergaven (%2$d%%) · %3$s bezoekers', 'turf-stats' ),
-							number_format_i18n( $views ),
-							$share,
-							number_format_i18n( $visitors )
-						) ); ?>
-					</span>
-				</div>
-			<?php endforeach; ?>
-		<?php endif; ?>
-	</div>
+	<?php if ( ! $rows ) : ?>
+		<p><?php esc_html_e( 'Nog geen data voor deze periode.', 'turf-stats' ); ?></p>
+	<?php else : ?>
+		<?php foreach ( $rows as $row ) : ?>
+			<?php
+			$views        = (int) $row->views;
+			$visitors     = (int) $row->visitors;
+			$views_pct    = (int) round( ( $views / $max_views ) * 100 );
+			$visitors_pct = (int) round( ( $visitors / $max_views ) * 100 );
+			$share        = $total_views ? (int) round( ( $views / $total_views ) * 100 ) : 0;
+			?>
+			<div class="bk-stats-bar-row">
+				<span class="bk-stats-bar-row__label"><?php echo esc_html( call_user_func( $label_callback, $row->label ) ); ?></span>
+				<span class="bk-stats-bar-row__track">
+					<span class="bk-stats-bar-row__fill bk-stats-bar-row__fill--views" style="width:<?php echo $views_pct; ?>%"></span>
+					<span class="bk-stats-bar-row__fill bk-stats-bar-row__fill--visitors" style="width:<?php echo $visitors_pct; ?>%"></span>
+				</span>
+				<span class="bk-stats-bar-row__value">
+					<?php echo esc_html( sprintf(
+						/* translators: 1: number of views, 2: percentage share of total views, 3: number of unique visitors */
+						__( '%1$s weergaven (%2$d%%) · %3$s bezoekers', 'turf-stats' ),
+						number_format_i18n( $views ),
+						$share,
+						number_format_i18n( $visitors )
+					) ); ?>
+				</span>
+			</div>
+		<?php endforeach; ?>
+	<?php endif; ?>
 	<?php
 }
 
-function turf_render_breakdown( $title, $column, $days, $exclude_empty = false ) {
+function turf_render_breakdown( $column, $days, $exclude_empty = false ) {
 	$rows = turf_get_breakdown( $column, $days, $exclude_empty );
 
-	turf_render_breakdown_rows( $title, $rows, function ( $raw ) use ( $column ) {
+	turf_render_breakdown_rows( $rows, function ( $raw ) use ( $column ) {
 		return turf_breakdown_label( $column, $raw );
 	} );
 }
@@ -557,13 +646,13 @@ function turf_render_breakdown( $title, $column, $days, $exclude_empty = false )
 function turf_render_referrer_breakdown( $days ) {
 	$rows = turf_get_referrer_breakdown( $days );
 
-	turf_render_breakdown_rows( __( 'Herkomst', 'turf-stats' ), $rows, 'turf_referrer_bucket_label' );
+	turf_render_breakdown_rows( $rows, 'turf_referrer_bucket_label' );
 }
 
 function turf_render_top_referrer_hosts( $days ) {
 	$rows = turf_get_top_referrer_hosts( $days );
 
-	turf_render_breakdown_rows( __( 'Top verwijzende sites', 'turf-stats' ), $rows, function ( $raw ) {
+	turf_render_breakdown_rows( $rows, function ( $raw ) {
 		return $raw;
 	} );
 }
@@ -610,43 +699,48 @@ function turf_get_new_vs_returning( $days ) {
 function turf_render_new_vs_returning( $days ) {
 	$rows = turf_get_new_vs_returning( $days );
 
-	turf_render_breakdown_rows( __( 'Nieuw vs. terugkerend', 'turf-stats' ), $rows, function ( $raw ) {
+	turf_render_breakdown_rows( $rows, function ( $raw ) {
 		return 'nieuw' === $raw ? __( 'Nieuwe bezoekers', 'turf-stats' ) : __( 'Terugkerende bezoekers', 'turf-stats' );
 	} );
 }
 
+/**
+ * All accent colors below use the WP admin's own --wp-admin-theme-color
+ * custom property (set by core per active color scheme - Default/Light/
+ * Blue/Coffee/Ectoplasm/Midnight/Ocean/Sunrise) instead of a fixed hex
+ * value, so Turf's charts/bars match whatever scheme the user picked
+ * rather than always being green. The box chrome itself (border, header,
+ * collapse arrow) needs no custom CSS at all - that's core's own .postbox
+ * styling, already scheme-aware.
+ */
 function turf_admin_inline_style() {
 	?>
 	<style>
-		.bk-stats-overview { margin: 20px 0 30px; }
-		.bk-stats-overview__totals { display: flex; gap: 16px; margin-bottom: 16px; }
-		.bk-stats-box { background: #fff; border: 1px solid #c3c4c7; border-radius: 4px; padding: 12px 16px; min-width: 140px; }
+		.bk-stats-overview__totals { display: flex; gap: 24px; margin-bottom: 16px; flex-wrap: wrap; }
+		.bk-stats-box { min-width: 120px; }
 		.bk-stats-box__label { display: block; color: #646970; font-size: 13px; }
 		.bk-stats-box__value { display: block; font-size: 24px; font-weight: 600; margin: 4px 0; }
 		.bk-stats-box__change { font-size: 12px; font-weight: 600; }
-		.bk-stats-box__change--up { color: #2e7d4f; }
+		.bk-stats-box__change--up { color: var(--wp-admin-theme-color, #2271b1); }
 		.bk-stats-box__change--down { color: #d63638; }
 		.bk-stats-box__change--new { color: #646970; }
 		.bk-stats-overview__legend { display: flex; gap: 16px; margin-bottom: 8px; font-size: 12px; color: #646970; }
 		.bk-stats-legend::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: middle; }
-		.bk-stats-legend--views::before { background: #a8d5b5; }
-		.bk-stats-legend--visitors::before { background: #2e7d4f; }
+		.bk-stats-legend--views::before { background: color-mix(in srgb, var(--wp-admin-theme-color, #2271b1) 35%, #fff); }
+		.bk-stats-legend--visitors::before { background: var(--wp-admin-theme-color, #2271b1); }
 		.bk-stats-chart { display: flex; align-items: flex-end; gap: 8px; height: 200px; padding: 10px 0; border-bottom: 1px solid #dcdcde; }
 		.bk-stats-chart__col { flex: 1; display: flex; flex-direction: column; align-items: center; height: 100%; }
 		.bk-stats-chart__bars { position: relative; width: 100%; max-width: 36px; height: 160px; }
 		.bk-stats-chart__bar { position: absolute; bottom: 0; left: 0; width: 100%; border-radius: 2px 2px 0 0; }
-		.bk-stats-chart__bar--views { background: #a8d5b5; }
-		.bk-stats-chart__bar--visitors { background: #2e7d4f; }
+		.bk-stats-chart__bar--views { background: color-mix(in srgb, var(--wp-admin-theme-color, #2271b1) 35%, #fff); }
+		.bk-stats-chart__bar--visitors { background: var(--wp-admin-theme-color, #2271b1); }
 		.bk-stats-chart__label { margin-top: 6px; font-size: 11px; color: #646970; }
-		.bk-stats-breakdowns { display: flex; gap: 24px; margin-bottom: 24px; flex-wrap: wrap; }
-		.bk-stats-breakdown { background: #fff; border: 1px solid #c3c4c7; border-radius: 4px; padding: 16px; flex: 1; min-width: 260px; }
-		.bk-stats-breakdown h3 { margin-top: 0; }
 		.bk-stats-bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; font-size: 13px; }
 		.bk-stats-bar-row__label { width: 110px; flex-shrink: 0; }
 		.bk-stats-bar-row__track { position: relative; flex: 1; background: #f0f0f1; border-radius: 3px; height: 10px; overflow: hidden; }
 		.bk-stats-bar-row__fill { position: absolute; top: 0; left: 0; height: 100%; border-radius: 3px; }
-		.bk-stats-bar-row__fill--views { background: #a8d5b5; }
-		.bk-stats-bar-row__fill--visitors { background: #2e7d4f; }
+		.bk-stats-bar-row__fill--views { background: color-mix(in srgb, var(--wp-admin-theme-color, #2271b1) 35%, #fff); }
+		.bk-stats-bar-row__fill--visitors { background: var(--wp-admin-theme-color, #2271b1); }
 		.bk-stats-bar-row__value { width: 210px; flex-shrink: 0; text-align: right; color: #646970; }
 
 		@media (max-width: 600px) {
@@ -657,98 +751,42 @@ function turf_admin_inline_style() {
 			.bk-stats-bar-row__track { flex-basis: 100%; order: 2; }
 			.bk-stats-bar-row__value { width: 100%; order: 3; text-align: left; margin-top: 2px; }
 		}
-		.bk-stats-online-now__dot { display: inline-block; flex-shrink: 0; width: 7px; height: 7px; border-radius: 50%; background: #2e7d4f; margin-right: 5px; box-shadow: 0 0 0 0 rgba(46,125,79,0.6); animation: bk-stats-pulse 2s infinite; }
+		.bk-stats-online-now__dot {
+			display: inline-block; flex-shrink: 0; width: 7px; height: 7px; border-radius: 50%;
+			background: var(--wp-admin-theme-color, #2271b1);
+			color: var(--wp-admin-theme-color, #2271b1);
+			margin-right: 5px;
+			animation: bk-stats-pulse 2s infinite;
+		}
 		@keyframes bk-stats-pulse {
-			0% { box-shadow: 0 0 0 0 rgba(46,125,79,0.5); }
-			70% { box-shadow: 0 0 0 6px rgba(46,125,79,0); }
-			100% { box-shadow: 0 0 0 0 rgba(46,125,79,0); }
+			0% { box-shadow: 0 0 0 0 color-mix(in srgb, currentColor 50%, transparent); }
+			70% { box-shadow: 0 0 0 6px color-mix(in srgb, currentColor 0%, transparent); }
+			100% { box-shadow: 0 0 0 0 color-mix(in srgb, currentColor 0%, transparent); }
 		}
 	</style>
 	<?php
 }
 
 function turf_render_admin_page() {
-	$period = isset( $_GET['period'] ) ? sanitize_key( $_GET['period'] ) : '7';
-	$days   = array( '7' => 7, '30' => 30, '90' => 90, 'all' => 0 );
-	$days   = isset( $days[ $period ] ) ? $days[ $period ] : 7;
-
-	$base_url = admin_url( 'admin.php?page=turf-stats' );
-
-	$post_types = turf_trackable_post_types();
-	usort( $post_types, function ( $a, $b ) {
-		return strnatcasecmp( turf_get_post_type_label( $a ), turf_get_post_type_label( $b ) );
-	} );
-
-	$taxonomies = turf_trackable_taxonomies();
-	usort( $taxonomies, function ( $a, $b ) {
-		return strnatcasecmp( turf_get_taxonomy_label( $a ), turf_get_taxonomy_label( $b ) );
-	} );
+	$days = turf_get_requested_days();
 
 	turf_admin_inline_style();
 	?>
 	<div class="wrap">
 		<h1><?php esc_html_e( 'Statistieken', 'turf-stats' ); ?></h1>
 
-		<ul class="subsubsub">
-			<?php foreach ( array( '7' => '7 dagen', '30' => '30 dagen', '90' => '90 dagen', 'all' => 'Alles' ) as $key => $label ) : ?>
-				<li>
-					<a href="<?php echo esc_url( add_query_arg( 'period', $key, $base_url ) ); ?>" <?php echo $period === (string) $key ? 'class="current"' : ''; ?>>
-						<?php echo esc_html( $label ); ?>
-					</a> |
-				</li>
-			<?php endforeach; ?>
-		</ul>
-		<br class="clear" />
+		<?php turf_render_period_tabs( admin_url( 'admin.php?page=turf-stats' ) ); ?>
 
-		<?php turf_render_overview( $days ); ?>
-
-		<div class="bk-stats-breakdowns">
-			<?php turf_render_breakdown( __( 'Apparaat', 'turf-stats' ), 'device_type', $days ); ?>
-			<?php turf_render_breakdown( __( 'Browser', 'turf-stats' ), 'browser', $days ); ?>
-		</div>
-
-		<div class="bk-stats-breakdowns">
-			<?php turf_render_breakdown( __( 'Besturingssysteem', 'turf-stats' ), 'os', $days ); ?>
-			<?php turf_render_breakdown( __( 'Taal', 'turf-stats' ), 'language', $days ); ?>
-		</div>
-
-		<div class="bk-stats-breakdowns">
-			<?php turf_render_breakdown( __( 'Land van herkomst', 'turf-stats' ), 'country', $days ); ?>
-			<?php turf_render_new_vs_returning( $days ); ?>
-		</div>
-
-		<div class="bk-stats-breakdowns">
-			<?php turf_render_referrer_breakdown( $days ); ?>
-			<?php turf_render_top_referrer_hosts( $days ); ?>
-		</div>
-
-		<div class="bk-stats-breakdowns">
-			<?php turf_render_breakdown( __( 'Campagnebron (UTM)', 'turf-stats' ), 'utm_source', $days, true ); ?>
-			<?php turf_render_breakdown( __( 'Campagnemedium (UTM)', 'turf-stats' ), 'utm_medium', $days, true ); ?>
-		</div>
-
+		<p class="description">
+			<?php esc_html_e( 'Elk blok hieronder is inklapbaar en kan verplaatst worden door het vast te pakken aan de titel. Onder "Schermopties" rechtsboven kun je blokken tijdelijk verbergen.', 'turf-stats' ); ?>
+		</p>
 		<?php if ( 0 !== $days ) : ?>
 			<p class="description">
 				<?php esc_html_e( 'Geïmporteerde historische views (van vóór deze plugin) hebben geen datum en geen bezoekers-/apparaat-/herkomstgegevens. Ze tellen alleen mee bij "Alles" en alleen bij "Weergaven".', 'turf-stats' ); ?>
 			</p>
 		<?php endif; ?>
 
-		<?php foreach ( $post_types as $post_type ) : ?>
-			<h2 style="margin-top:30px;"><?php echo esc_html( turf_get_post_type_label( $post_type ) ); ?></h2>
-			<?php turf_render_admin_table( $post_type, $days ); ?>
-		<?php endforeach; ?>
-
-		<?php turf_render_top_commented_posts( $days ); ?>
-
-		<h1 style="margin-top:40px;"><?php esc_html_e( 'Archiefpagina\'s', 'turf-stats' ); ?></h1>
-		<p class="description">
-			<?php esc_html_e( 'Weergaven van categorie-/taxonomie-archiefpagina\'s (bv. een "Vereniging" of "Locatie" overzicht), los van de losse berichten daarbinnen.', 'turf-stats' ); ?>
-		</p>
-
-		<?php foreach ( $taxonomies as $taxonomy ) : ?>
-			<h2 style="margin-top:30px;"><?php echo esc_html( turf_get_taxonomy_label( $taxonomy ) ); ?></h2>
-			<?php turf_render_admin_terms_table( $taxonomy, $days ); ?>
-		<?php endforeach; ?>
+		<?php turf_render_postboxes( get_current_screen()->id ); ?>
 	</div>
 	<?php
 }

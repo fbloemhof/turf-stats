@@ -105,6 +105,14 @@ you want to keep that history.
   and per-taxonomy tables (with average reading time/scroll depth).
 - **Klikken** — top `data-turf-click` keys.
 - **404's** — top requested-but-missing paths.
+- **Bots & LLM's** — see above.
+
+Every block on every Turf admin page is a real wp-admin postbox: collapsible
+(click the title), draggable/reorderable (drag the title, order is remembered
+per user - the same mechanism the Dashboard widgets use), and individually
+hideable via "Schermopties" in the top-right corner. Colors follow whichever
+admin color scheme the user has picked (Default/Light/Blue/Coffee/Ectoplasm/
+Midnight/Ocean/Sunrise) instead of a fixed color.
 
 ## Filters
 

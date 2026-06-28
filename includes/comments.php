@@ -95,8 +95,6 @@ function turf_render_top_commented_posts( $days ) {
 
 	$total = turf_count_commented_posts( $days );
 
-	echo '<h2 style="margin-top:40px;">' . esc_html__( 'Meest besproken', 'turf-stats' ) . '</h2>';
-
 	if ( ! $total ) {
 		echo '<p>' . esc_html__( 'Nog geen reacties voor deze periode.', 'turf-stats' ) . '</p>';
 		return;
