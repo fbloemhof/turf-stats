@@ -45,7 +45,7 @@ add_action( 'admin_enqueue_scripts', 'turf_postboxes_enqueue' );
  * Renders just one postbox-container + its boxes, with no outer wrapper -
  * the building block for everything below. A page with several sections
  * (e.g. Statistieken's overview / compact-breakdowns / tables) calls this
- * (or turf_render_postbox_columns()) more than once inside one shared
+ * (or turf_render_postbox_grid_column()) more than once inside one shared
  * #poststuff wrapper of its own; turf_render_postboxes() below covers the
  * common single-section case.
  */
@@ -58,21 +58,18 @@ function turf_render_postbox_column( $hook, $context ) {
 }
 
 /**
- * Renders several postbox-container columns side by side, one per given
- * context - each its own independent (but cross-connected, via WP core's
- * own postboxes.js) sortable area, so boxes can be dragged between columns.
- * Doesn't rely on WP core's own columns-N CSS (tuned for a wide-main +
- * narrow-sidebar layout, not equal columns) - .turf-postbox-columns below
- * is Turf's own, deliberately equal-width, layout.
- *
- * @param string[] $contexts Context strings used when registering the boxes for these columns via add_meta_box().
+ * Renders one postbox-container whose boxes (all registered under the same
+ * $context) lay out two-per-row in a CSS grid, in registration/drag order -
+ * box 1 + box 2 on row one, box 3 + box 4 on row two, and so on. This is a
+ * single sortable list (jQuery UI Sortable just reorders DOM children;
+ * the grid then re-flows automatically based on the new order), unlike an
+ * earlier attempt that used two separate side-by-side containers - that
+ * approach fought WP core's own postbox-container width rules and broke.
  */
-function turf_render_postbox_columns( $hook, array $contexts ) {
+function turf_render_postbox_grid_column( $hook, $context ) {
 	?>
-	<div class="turf-postbox-columns">
-		<?php foreach ( $contexts as $context ) : ?>
-			<?php turf_render_postbox_column( $hook, $context ); ?>
-		<?php endforeach; ?>
+	<div class="postbox-container turf-postbox-grid">
+		<?php do_meta_boxes( $hook, $context, null ); ?>
 	</div>
 	<?php
 }
