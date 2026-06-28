@@ -492,6 +492,53 @@ function turf_language_label( $code ) {
 }
 
 /**
+ * Android sends `Referer: android-app://<package-name>` for links opened
+ * from inside many apps - once parsed as a URL host (which is all Turf
+ * stores), that shows up as a raw reverse-DNS string like
+ * "com.google.android.googlequicksearchbox" in the referrer-hosts list.
+ * This is a static, baked-in lookup of well-known package names (same idea
+ * as turf_country_label()/turf_language_label() above) - not a live
+ * lookup, so it doesn't conflict with the no-external-calls design.
+ * Filterable for package names not in this (necessarily incomplete) list.
+ */
+function turf_referrer_app_labels() {
+	return apply_filters( 'turf_referrer_app_labels', array(
+		'com.google.android.googlequicksearchbox' => 'Google-app (Android)',
+		'com.google.android.gms'                  => 'Google Play Services (Android)',
+		'com.google.android.apps.magazines'       => 'Google Discover/News (Android)',
+		'com.google.android.youtube'              => 'YouTube (Android)',
+		'com.android.chrome'                      => 'Chrome (Android)',
+		'com.android.vending'                     => 'Google Play Store (Android)',
+		'com.sec.android.app.sbrowser'            => 'Samsung Internet (Android)',
+		'com.microsoft.emmx'                       => 'Edge (Android)',
+		'org.mozilla.firefox'                     => 'Firefox (Android)',
+		'com.opera.browser'                       => 'Opera (Android)',
+		'com.duckduckgo.mobile.android'           => 'DuckDuckGo (Android)',
+		'com.facebook.katana'                     => 'Facebook (Android)',
+		'com.facebook.lite'                       => 'Facebook Lite (Android)',
+		'com.facebook.orca'                       => 'Messenger (Android)',
+		'com.instagram.android'                   => 'Instagram (Android)',
+		'com.twitter.android'                     => 'X / Twitter (Android)',
+		'com.whatsapp'                             => 'WhatsApp (Android)',
+		'com.linkedin.android'                    => 'LinkedIn (Android)',
+		'com.pinterest'                            => 'Pinterest (Android)',
+		'com.snapchat.android'                    => 'Snapchat (Android)',
+		'com.apple.mobilesafari'                  => 'Safari (iOS)',
+		'com.apple.SafariViewService'             => 'Safari (iOS, in-app)',
+	) );
+}
+
+/**
+ * Returns a friendly label for a known Android/iOS app referrer host, or
+ * the raw host unchanged if it isn't recognized.
+ */
+function turf_referrer_host_label( $host ) {
+	$labels = turf_referrer_app_labels();
+
+	return $labels[ $host ] ?? $host;
+}
+
+/**
  * SQL CASE expression that buckets a referrer_host column into a traffic-
  * source label. Keep the substring lists in sync with the PHP equivalent,
  * turf_classify_referrer() - this exists separately so the
@@ -670,9 +717,7 @@ function turf_render_referrer_breakdown( $days ) {
 function turf_render_top_referrer_hosts( $days ) {
 	$rows = turf_get_top_referrer_hosts( $days );
 
-	turf_render_breakdown_rows( $rows, function ( $raw ) {
-		return $raw;
-	} );
+	turf_render_breakdown_rows( $rows, 'turf_referrer_host_label' );
 }
 
 /**
@@ -759,12 +804,13 @@ function turf_admin_inline_style() {
 		.bk-stats-bar-row__fill { position: absolute; top: 0; left: 0; height: 100%; border-radius: 3px; }
 		.bk-stats-bar-row__fill--views { background: color-mix(in srgb, var(--wp-admin-theme-color, #2271b1) 35%, #fff); }
 		.bk-stats-bar-row__fill--visitors { background: var(--wp-admin-theme-color, #2271b1); }
-		/* max-width is a backstop, not the normal case - the grid column
-		   itself is wide enough for the full "N weergaven (P%) · M
-		   bezoekers" text in normal use; this just guarantees an extreme
-		   edge-case number truncates gracefully (ellipsis) instead of ever
-		   blowing out the two-column grid again. */
-		.bk-stats-bar-row__value { flex-shrink: 0; max-width: 240px; overflow: hidden; text-align: right; color: #646970; white-space: nowrap; text-overflow: ellipsis; }
+		/* A *fixed* width, not shrink-to-content - rows with shorter text
+		   (e.g. "17 weergaven (5%) · 10 bezoekers" vs. "247 weergaven (80%)
+		   · 167 bezoekers") would otherwise each end at a different X
+		   position, making the bars/labels above them drift row to row
+		   instead of lining up. overflow+ellipsis is the backstop for an
+		   edge-case number wider than this. */
+		.bk-stats-bar-row__value { flex-shrink: 0; width: 220px; overflow: hidden; text-align: right; color: #646970; white-space: nowrap; text-overflow: ellipsis; }
 		.bk-stats-more-link { display: block; margin: 2px 0 4px; background: none; border: none; padding: 0; color: var(--wp-admin-theme-color, #2271b1); cursor: pointer; font-size: 12px; text-decoration: underline; }
 		.bk-stats-more-link:hover { text-decoration: none; }
 		.turf-postbox-grid .meta-box-sortables {

@@ -175,6 +175,7 @@ collapse behind a "Toon meer" link to keep blocks compact.
 | `turf_visitor_country` | `''` | Supply a country code when Cloudflare's `CF-IPCountry` header isn't present |
 | `turf_session_gap_seconds` | 30 minutes | How long a gap between two pageviews from the same visitor still counts as the same session |
 | `turf_session_row_limit` | 20000 | Max rows pulled into PHP for session reconstruction (bounce rate, visitor routes) |
+| `turf_referrer_app_labels` | see `includes/views-admin.php` | Known Android/iOS app package names ("Referer: android-app://...") mapped to a friendly label in the Top verwijzende sites list |
 | `turf_social_share_networks` | Facebook/X/WhatsApp/LinkedIn/email | Customize or add networks for `turf_social_share_links()` |
 
 ### Country detection without Cloudflare
