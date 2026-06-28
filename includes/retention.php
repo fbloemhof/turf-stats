@@ -43,6 +43,11 @@ function turf_prune_old_events() {
 		'DELETE FROM ' . turf_404s_table() . ' WHERE hit_at < %s',
 		$cutoff
 	) );
+
+	$wpdb->query( $wpdb->prepare(
+		'DELETE FROM ' . turf_bots_table() . ' WHERE visited_at < %s',
+		$cutoff
+	) );
 }
 add_action( 'turf_prune_old_events', 'turf_prune_old_events' );
 

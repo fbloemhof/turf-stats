@@ -42,6 +42,15 @@ tracked and stored on your own database.
   directly from WordPress' own comments, no extra tracking needed.
 - **Online now** — a live, auto-refreshing count of visitors active in the
   last 5 minutes (filterable), shown at the top of the Statistieken page.
+- **Bots & LLM's** — a separate "Bots & LLM's" page tracking how often
+  crawlers visit and what they look at: search engines (Googlebot, Bingbot,
+  ...), AI/LLM crawlers (GPTBot, ClaudeBot, Google-Extended, PerplexityBot,
+  CCBot, ...), social link-preview bots, and SEO tools. Tracked server-side
+  on every request (most bots, especially LLM crawlers, never run
+  JavaScript, so the regular AJAX-based tracking can't see them at all) and
+  kept completely separate from the human-visitor numbers, which already
+  deliberately exclude bots. The signature list is filterable
+  (`turf_bot_signatures`) since new crawlers show up regularly.
 - **No cookies.** Deduplication uses a one-way hash of IP + user-agent, never
   the raw IP. The real visitor IP is read from Cloudflare's
   `CF-Connecting-IP` header when present, falling back to `REMOTE_ADDR`.
@@ -108,6 +117,7 @@ you want to keep that history.
 | `turf_clicks_allowed_keys` | none (any key allowed) | Optional strict allow-list for `data-turf-click` keys |
 | `turf_online_now_window` | 5 minutes | How recent a view has to be to count towards "online now" |
 | `turf_dorpsapp_route_patterns` | `doarpsapp/v1/{posts,events,info}/...` | Route patterns recognized as Dorpsapp single-item requests |
+| `turf_bot_signatures` | see `includes/bots.php` | Known bot/LLM user-agent signatures, grouped by category |
 | `turf_visitor_country` | `''` | Supply a country code when Cloudflare's `CF-IPCountry` header isn't present |
 
 ### Country detection without Cloudflare
