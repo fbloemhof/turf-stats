@@ -46,6 +46,10 @@ function turf_views_register_metaboxes() {
 		turf_render_overview( $days );
 	}, $hook, 'turf_overview' );
 
+	add_meta_box( 'turf_content_activity', __( 'Content-activiteit', 'turf-stats' ), function () use ( $days ) {
+		turf_render_content_activity( $days );
+	}, $hook, 'turf_overview' );
+
 	$compact_boxes = array(
 		array( 'turf_device', __( 'Apparaat', 'turf-stats' ), function () use ( $days ) {
 			turf_render_breakdown( 'device_type', $days );
@@ -315,17 +319,106 @@ function turf_render_change_badge( $change ) {
 	);
 }
 
-function turf_render_stat_box( $label, $value, $change, $suffix = '' ) {
+/**
+ * Just the label/value/change markup, with no .bk-stats-box wrapper -
+ * shared between the normal page render (turf_render_stat_box() below
+ * wraps this) and the AJAX refresh handler (which re-renders only this
+ * inner markup into an existing, already-wrapped box - see
+ * turf_ajax_overview_stats()).
+ */
+function turf_render_stat_box_inner( $label, $value, $change, $suffix = '' ) {
 	?>
-	<div class="bk-stats-box">
-		<span class="bk-stats-box__label"><?php echo esc_html( $label ); ?></span>
-		<span class="bk-stats-box__value"><?php echo esc_html( number_format_i18n( $value ) . $suffix ); ?></span>
-		<?php if ( false !== $change ) : ?>
-			<?php turf_render_change_badge( $change ); ?>
-		<?php endif; ?>
+	<span class="bk-stats-box__label"><?php echo esc_html( $label ); ?></span>
+	<span class="bk-stats-box__value"><?php echo esc_html( number_format_i18n( $value ) . $suffix ); ?></span>
+	<?php if ( false !== $change ) : ?>
+		<?php turf_render_change_badge( $change ); ?>
+	<?php endif; ?>
+	<?php
+}
+
+/**
+ * @param string $key Optional - when set, the box gets id="turf-stat-$key"
+ *                     so the AJAX refresh script can find and update it.
+ */
+function turf_render_stat_box( $label, $value, $change, $suffix = '', $key = '' ) {
+	?>
+	<div class="bk-stats-box"<?php echo $key ? ' id="turf-stat-' . esc_attr( $key ) . '"' : ''; ?>>
+		<?php turf_render_stat_box_inner( $label, $value, $change, $suffix ); ?>
 	</div>
 	<?php
 }
+
+function turf_capture_stat_box_inner( $label, $value, $change, $suffix = '' ) {
+	ob_start();
+	turf_render_stat_box_inner( $label, $value, $change, $suffix );
+	return ob_get_clean();
+}
+
+/**
+ * Keeps Weergaven/Bezoekers/Reacties/Bouncepercentage live without a page
+ * reload - same idea as "Nu online" (includes/online-now.php), just for
+ * the rest of the overview row. The chart, peak-hours heatmap, and every
+ * breakdown/table below it are NOT live - re-rendering those via AJAX
+ * would mean re-doing far more work for far less benefit (they don't
+ * change meaningfully within a few seconds the way "right now" numbers do).
+ */
+function turf_overview_refresh_enqueue( $hook ) {
+	if ( 'toplevel_page_turf-stats' !== $hook ) {
+		return;
+	}
+
+	wp_enqueue_script(
+		'turf-overview-refresh',
+		TURF_URL . 'js/overview-refresh.js',
+		array(),
+		TURF_VERSION,
+		true
+	);
+
+	wp_localize_script( 'turf-overview-refresh', 'turfOverviewRefresh', array(
+		'ajaxUrl'  => admin_url( 'admin-ajax.php' ),
+		'nonce'    => wp_create_nonce( 'turf_overview_stats' ),
+		'interval' => 30000, // ms
+	) );
+}
+add_action( 'admin_enqueue_scripts', 'turf_overview_refresh_enqueue' );
+
+function turf_ajax_overview_stats() {
+	if ( ! current_user_can( 'manage_options' ) || ! wp_verify_nonce( sanitize_key( $_POST['nonce'] ?? '' ), 'turf_overview_stats' ) ) {
+		wp_send_json_error( 'forbidden', 403 );
+	}
+
+	$days  = isset( $_POST['days'] ) ? (int) $_POST['days'] : 7;
+	$boxes = array();
+
+	if ( 0 === $days ) {
+		$totals   = turf_get_alltime_site_totals();
+		$comments = turf_get_comment_totals( 0 );
+
+		$boxes['weergaven'] = turf_capture_stat_box_inner( __( 'Weergaven', 'turf-stats' ), $totals['views'], false );
+		$boxes['bezoekers'] = turf_capture_stat_box_inner( __( 'Bezoekers', 'turf-stats' ), $totals['visitors'], false );
+		$boxes['reacties']  = turf_capture_stat_box_inner( __( 'Reacties', 'turf-stats' ), $comments, false );
+	} else {
+		$offset            = turf_previous_period_offset( $days );
+		$current           = turf_get_range_site_totals( $days, 0 );
+		$previous          = turf_get_range_site_totals( $days, $offset );
+		$current_comments  = turf_get_comment_totals( $days, 0 );
+		$previous_comments = turf_get_comment_totals( $days, $offset );
+
+		$boxes['weergaven'] = turf_capture_stat_box_inner( __( 'Weergaven', 'turf-stats' ), $current['views'], turf_pct_change( $current['views'], $previous['views'] ) );
+		$boxes['bezoekers'] = turf_capture_stat_box_inner( __( 'Bezoekers', 'turf-stats' ), $current['visitors'], turf_pct_change( $current['visitors'], $previous['visitors'] ) );
+		$boxes['reacties']  = turf_capture_stat_box_inner( __( 'Reacties', 'turf-stats' ), $current_comments, turf_pct_change( $current_comments, $previous_comments ) );
+
+		$bounce_rate = turf_get_bounce_rate( $days );
+
+		if ( null !== $bounce_rate ) {
+			$boxes['bounce'] = turf_capture_stat_box_inner( __( 'Bouncepercentage', 'turf-stats' ), $bounce_rate, false, '%' );
+		}
+	}
+
+	wp_send_json_success( array( 'boxes' => $boxes ) );
+}
+add_action( 'wp_ajax_turf_overview_stats', 'turf_ajax_overview_stats' );
 
 /**
  * Site-wide "Afgelopen N dagen" overview: totals with %-change vs. the
@@ -339,11 +432,11 @@ function turf_render_overview( $days ) {
 		$comments = turf_get_comment_totals( 0 );
 		?>
 		<div class="bk-stats-overview">
-			<div class="bk-stats-overview__totals">
+			<div class="bk-stats-overview__totals" id="turf-overview-totals" data-days="<?php echo esc_attr( $days ); ?>">
 				<?php turf_render_online_now(); ?>
-				<?php turf_render_stat_box( __( 'Weergaven', 'turf-stats' ), $totals['views'], false ); ?>
-				<?php turf_render_stat_box( __( 'Bezoekers', 'turf-stats' ), $totals['visitors'], false ); ?>
-				<?php turf_render_stat_box( __( 'Reacties', 'turf-stats' ), $comments, false ); ?>
+				<?php turf_render_stat_box( __( 'Weergaven', 'turf-stats' ), $totals['views'], false, '', 'weergaven' ); ?>
+				<?php turf_render_stat_box( __( 'Bezoekers', 'turf-stats' ), $totals['visitors'], false, '', 'bezoekers' ); ?>
+				<?php turf_render_stat_box( __( 'Reacties', 'turf-stats' ), $comments, false, '', 'reacties' ); ?>
 			</div>
 		</div>
 		<?php
@@ -357,22 +450,18 @@ function turf_render_overview( $days ) {
 		$previous_comments = turf_get_comment_totals( $days, 1 );
 		?>
 		<div class="bk-stats-overview">
-			<div class="bk-stats-overview__totals">
+			<div class="bk-stats-overview__totals" id="turf-overview-totals" data-days="<?php echo esc_attr( $days ); ?>">
 				<?php turf_render_online_now(); ?>
-				<?php turf_render_stat_box( __( 'Weergaven', 'turf-stats' ), $current['views'], turf_pct_change( $current['views'], $previous['views'] ) ); ?>
-				<?php turf_render_stat_box( __( 'Bezoekers', 'turf-stats' ), $current['visitors'], turf_pct_change( $current['visitors'], $previous['visitors'] ) ); ?>
-				<?php turf_render_stat_box( __( 'Reacties', 'turf-stats' ), $current_comments, turf_pct_change( $current_comments, $previous_comments ) ); ?>
+				<?php turf_render_stat_box( __( 'Weergaven', 'turf-stats' ), $current['views'], turf_pct_change( $current['views'], $previous['views'] ), '', 'weergaven' ); ?>
+				<?php turf_render_stat_box( __( 'Bezoekers', 'turf-stats' ), $current['visitors'], turf_pct_change( $current['visitors'], $previous['visitors'] ), '', 'bezoekers' ); ?>
+				<?php turf_render_stat_box( __( 'Reacties', 'turf-stats' ), $current_comments, turf_pct_change( $current_comments, $previous_comments ), '', 'reacties' ); ?>
 				<?php
 				$bounce_rate = turf_get_bounce_rate( $days );
 				if ( null !== $bounce_rate ) :
-					turf_render_stat_box( __( 'Bouncepercentage', 'turf-stats' ), $bounce_rate, false, '%' );
+					turf_render_stat_box( __( 'Bouncepercentage', 'turf-stats' ), $bounce_rate, false, '%', 'bounce' );
 				endif;
-				turf_render_content_activity_boxes( $days );
 				?>
 			</div>
-			<p class="description">
-				<?php esc_html_e( 'Vandaag, sinds middernacht - vergeleken met heel gisteren. De grafiek hieronder toont de laatste 7 dagen voor context.', 'turf-stats' ); ?>
-			</p>
 			<?php turf_render_daily_chart( turf_get_daily_site_totals( 7 ) ); ?>
 		</div>
 		<?php
@@ -386,17 +475,16 @@ function turf_render_overview( $days ) {
 	$previous_comments = turf_get_comment_totals( $days, turf_previous_period_offset( $days ) );
 	?>
 	<div class="bk-stats-overview">
-		<div class="bk-stats-overview__totals">
+		<div class="bk-stats-overview__totals" id="turf-overview-totals" data-days="<?php echo esc_attr( $days ); ?>">
 			<?php turf_render_online_now(); ?>
-			<?php turf_render_stat_box( __( 'Weergaven', 'turf-stats' ), $current['views'], turf_pct_change( $current['views'], $previous['views'] ) ); ?>
-			<?php turf_render_stat_box( __( 'Bezoekers', 'turf-stats' ), $current['visitors'], turf_pct_change( $current['visitors'], $previous['visitors'] ) ); ?>
-			<?php turf_render_stat_box( __( 'Reacties', 'turf-stats' ), $current_comments, turf_pct_change( $current_comments, $previous_comments ) ); ?>
+			<?php turf_render_stat_box( __( 'Weergaven', 'turf-stats' ), $current['views'], turf_pct_change( $current['views'], $previous['views'] ), '', 'weergaven' ); ?>
+			<?php turf_render_stat_box( __( 'Bezoekers', 'turf-stats' ), $current['visitors'], turf_pct_change( $current['visitors'], $previous['visitors'] ), '', 'bezoekers' ); ?>
+			<?php turf_render_stat_box( __( 'Reacties', 'turf-stats' ), $current_comments, turf_pct_change( $current_comments, $previous_comments ), '', 'reacties' ); ?>
 			<?php
 			$bounce_rate = turf_get_bounce_rate( $days );
 			if ( null !== $bounce_rate ) :
-				turf_render_stat_box( __( 'Bouncepercentage', 'turf-stats' ), $bounce_rate, false, '%' );
+				turf_render_stat_box( __( 'Bouncepercentage', 'turf-stats' ), $bounce_rate, false, '%', 'bounce' );
 			endif;
-			turf_render_content_activity_boxes( $days );
 			?>
 		</div>
 
@@ -451,11 +539,20 @@ function turf_render_daily_chart( $daily ) {
  * type that actually had activity - skipped entirely on a quiet
  * day/period, so it doesn't clutter the overview otherwise.
  */
-function turf_render_content_activity_boxes( $days ) {
+/**
+ * Compact table, not stat-box tiles - over a longer period (30/90 days),
+ * most trackable post types end up with at least some activity, which
+ * made the original stat-box version visually overwhelming. A table row
+ * per active type stays readable regardless of how many there are (and
+ * collapses behind the usual "Toon meer" past 5, like every other list).
+ */
+function turf_render_content_activity( $days ) {
 	$post_types = turf_trackable_post_types();
 	usort( $post_types, function ( $a, $b ) {
 		return strnatcasecmp( turf_get_post_type_label( $a ), turf_get_post_type_label( $b ) );
 	} );
+
+	$rows = array();
 
 	foreach ( $post_types as $post_type ) {
 		$activity = turf_get_content_activity( $post_type, $days );
@@ -464,14 +561,37 @@ function turf_render_content_activity_boxes( $days ) {
 			continue;
 		}
 
-		$label = sprintf(
-			/* translators: %s: post type label, e.g. "Berichten" */
-			__( '%s toegevoegd/gewijzigd', 'turf-stats' ),
-			turf_get_post_type_label( $post_type )
+		$rows[] = array(
+			'label'    => turf_get_post_type_label( $post_type ),
+			'added'    => $activity['added'],
+			'modified' => $activity['modified'],
 		);
-
-		turf_render_stat_box( $label, $activity['added'], false, ' / ' . number_format_i18n( $activity['modified'] ) );
 	}
+
+	if ( ! $rows ) {
+		echo '<p>' . esc_html__( 'Geen content-activiteit voor deze periode.', 'turf-stats' ) . '</p>';
+		return;
+	}
+	?>
+	<table class="wp-list-table widefat fixed striped">
+		<thead>
+			<tr>
+				<th><?php esc_html_e( 'Type', 'turf-stats' ); ?></th>
+				<th><?php esc_html_e( 'Toegevoegd', 'turf-stats' ); ?></th>
+				<th><?php esc_html_e( 'Gewijzigd', 'turf-stats' ); ?></th>
+			</tr>
+		</thead>
+		<tbody>
+			<?php foreach ( $rows as $row ) : ?>
+				<tr>
+					<td><?php echo esc_html( $row['label'] ); ?></td>
+					<td><?php echo (int) $row['added']; ?></td>
+					<td><?php echo (int) $row['modified']; ?></td>
+				</tr>
+			<?php endforeach; ?>
+		</tbody>
+	</table>
+	<?php
 }
 
 /**
@@ -1024,23 +1144,12 @@ function turf_admin_inline_style() {
 }
 
 function turf_render_admin_page() {
-	$days = turf_get_requested_days( 'today' );
-
 	turf_admin_inline_style();
 	?>
 	<div class="wrap">
 		<h1><?php esc_html_e( 'Statistieken', 'turf-stats' ); ?></h1>
 
 		<?php turf_render_period_tabs( admin_url( 'admin.php?page=turf-stats' ), 'today' ); ?>
-
-		<p class="description">
-			<?php esc_html_e( 'Elk blok hieronder is inklapbaar en kan verplaatst worden door het vast te pakken aan de titel. Onder "Schermopties" rechtsboven kun je blokken tijdelijk verbergen.', 'turf-stats' ); ?>
-		</p>
-		<?php if ( 0 !== $days ) : ?>
-			<p class="description">
-				<?php esc_html_e( 'Geïmporteerde historische views (van vóór deze plugin) hebben geen datum en geen bezoekers-/apparaat-/herkomstgegevens. Ze tellen alleen mee bij "Alles" en alleen bij "Weergaven".', 'turf-stats' ); ?>
-			</p>
-		<?php endif; ?>
 
 		<?php
 		$hook = get_current_screen()->id;

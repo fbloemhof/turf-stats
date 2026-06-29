@@ -153,19 +153,24 @@ you want to keep that history.
   other page's own period tabs. The chart and peak-hours heatmap show the
   last 7 days for context even on "Vandaag" (a single day is too sparse
   for either to be meaningful) - only the headline stat boxes are
-  strictly "today".
-- **Editorial activity** — how many posts of each trackable type were
-  published or edited during the period ("Berichten toegevoegd/gewijzigd",
-  etc.), shown in the overview only for types that actually had activity.
-  Not a visitor metric - just a quick "was anything published today"
-  check alongside the audience numbers.
+  strictly "today". Those headline numbers (Weergaven/Bezoekers/Reacties/
+  Bouncepercentage) refresh live every 30 seconds via AJAX, same idea as
+  "Nu online" - the chart, heatmap, and every breakdown/table below stay
+  as rendered on page load.
+- **Content-activiteit** — its own box right under Overzicht: how many
+  posts of each trackable type were published or edited during the
+  period, one row per type that actually had activity (skipped entirely
+  on a quiet period). Not a visitor metric - editorial activity alongside
+  the audience numbers.
 - **Analyse** — the deeper, more diagnostic stats: search terms (+
   zero-result searches), visitor routes, trending content, per-author
   stats, form submissions, and the WooCommerce funnel (when applicable).
   Kept on its own page so Statistieken doesn't turn into an overwhelming
   wall of boxes.
 - **Klikken** — top `data-turf-click` keys.
-- **404's** — top requested-but-missing paths.
+- **404's** — top requested-but-missing paths, 20 per page (every other
+  table on every other page shows 5, with a "Toon meer"/pagination
+  pattern - 404 hunting tends to need a longer list at a glance).
 - **Bots & LLM's** — see above.
 
 Every block on every Turf admin page is a real wp-admin postbox: collapsible
