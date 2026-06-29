@@ -91,21 +91,61 @@ function turf_render_postboxes( $hook, $context = 'normal' ) {
 /**
  * Shared "7 / 30 / 90 dagen / Alles" period resolution, used by every Turf
  * admin page and by the metabox content callbacks registered for it.
+ *
+ * TURF_PERIOD_TODAY is a dedicated sentinel for "Vandaag" - deliberately
+ * not 0, which already means "Alles" (no date filter at all) throughout
+ * the codebase's many `0 === $days` / `$days > 0` checks. Kept distinct so
+ * those existing checks don't need to change: 0 still means "no filter",
+ * any other value (positive N, or this sentinel) still means "yes, filter".
  */
+define( 'TURF_PERIOD_TODAY', -1 );
+
 function turf_period_days_map() {
-	return array( '7' => 7, '30' => 30, '90' => 90, 'all' => 0 );
+	return array( 'today' => TURF_PERIOD_TODAY, '7' => 7, '30' => 30, '90' => 90, 'all' => 0 );
 }
 
-function turf_get_requested_days() {
-	$period = isset( $_GET['period'] ) ? sanitize_key( $_GET['period'] ) : '7';
+/**
+ * @param string $default_period Which tab to use when no ?period= is in the
+ *                                URL yet - most pages keep the historical
+ *                                '7' default; Statistieken opts into 'today'.
+ */
+function turf_get_requested_days( $default_period = '7' ) {
+	$period = isset( $_GET['period'] ) ? sanitize_key( $_GET['period'] ) : $default_period;
 	$map    = turf_period_days_map();
 
 	return isset( $map[ $period ] ) ? $map[ $period ] : 7;
 }
 
-function turf_render_period_tabs( $base_url ) {
-	$period = isset( $_GET['period'] ) ? sanitize_key( $_GET['period'] ) : '7';
+/**
+ * SQL-ready (UTC, 'Y-m-d 00:00:00') start-of-period boundary - the
+ * midnight-aligned "since the start of this period" pattern used by every
+ * breakdown/listing query throughout the admin pages. Today's midnight for
+ * TURF_PERIOD_TODAY, otherwise midnight $days days ago.
+ */
+function turf_period_start_sql_date( $days ) {
+	if ( TURF_PERIOD_TODAY === $days ) {
+		return gmdate( 'Y-m-d 00:00:00' );
+	}
+
+	return gmdate( 'Y-m-d 00:00:00', strtotime( "-{$days} days" ) );
+}
+
+/**
+ * The $offset_days to pass for the "previous period" half of a %-change
+ * comparison (paired with turf_get_range_site_totals()-style functions
+ * called as `($days, 0)` for current and `($days, <this>)` for previous).
+ * For an N-day window, shifting the whole window back by N days is
+ * correct; TURF_PERIOD_TODAY isn't a fixed-length window, so its "previous
+ * period" is always exactly 1 day back (yesterday).
+ */
+function turf_previous_period_offset( $days ) {
+	return TURF_PERIOD_TODAY === $days ? 1 : $days;
+}
+
+function turf_render_period_tabs( $base_url, $default_period = '7' ) {
+	$period = isset( $_GET['period'] ) ? sanitize_key( $_GET['period'] ) : $default_period;
 	$labels = array(
+		'today' => __( 'Vandaag', 'turf-stats' ),
 		'7'   => __( '7 dagen', 'turf-stats' ),
 		'30'  => __( '30 dagen', 'turf-stats' ),
 		'90'  => __( '90 dagen', 'turf-stats' ),

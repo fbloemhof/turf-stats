@@ -13,9 +13,9 @@ function turf_forms_get_top_forms( $days, $limit = 10 ) {
 	$where_date = '';
 	$params     = array();
 
-	if ( $days > 0 ) {
+	if ( 0 !== $days ) {
 		$where_date = 'WHERE submitted_at >= %s';
-		$params[]   = gmdate( 'Y-m-d 00:00:00', strtotime( "-{$days} days" ) );
+		$params[]   = turf_period_start_sql_date( $days );
 	}
 
 	$params[] = $limit;
@@ -66,11 +66,11 @@ function turf_forms_render_top_forms( $days ) {
 				if ( $post_id ) {
 					global $wpdb;
 
-					if ( $days > 0 ) {
+					if ( 0 !== $days ) {
 						$page_views = (int) $wpdb->get_var( $wpdb->prepare(
 							"SELECT COUNT(*) FROM " . turf_table() . " WHERE post_id = %d AND viewed_at >= %s",
 							$post_id,
-							gmdate( 'Y-m-d 00:00:00', strtotime( "-{$days} days" ) )
+							turf_period_start_sql_date( $days )
 						) );
 					} else {
 						$page_views = turf_get_views( $post_id );

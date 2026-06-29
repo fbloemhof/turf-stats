@@ -39,7 +39,7 @@ function turf_clicks_count_keys( $days ) {
 
 	return (int) $wpdb->get_var( $wpdb->prepare(
 		"SELECT COUNT(DISTINCT click_key) FROM $table WHERE clicked_at >= %s",
-		gmdate( 'Y-m-d 00:00:00', strtotime( "-{$days} days" ) )
+		turf_period_start_sql_date( $days )
 	) );
 }
 
@@ -61,7 +61,7 @@ function turf_clicks_get_top_keys( $days, $page = 1 ) {
 		"SELECT click_key, COUNT(*) AS clicks FROM $table
 		WHERE clicked_at >= %s
 		GROUP BY click_key ORDER BY clicks DESC LIMIT %d OFFSET %d",
-		gmdate( 'Y-m-d 00:00:00', strtotime( "-{$days} days" ) ),
+		turf_period_start_sql_date( $days ),
 		TURF_PER_PAGE,
 		$offset
 	) );

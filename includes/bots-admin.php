@@ -69,8 +69,13 @@ function turf_bots_get_range_totals( $days, $offset_days = 0 ) {
 		return array( 'hits' => $hits, 'pages' => $pages );
 	}
 
-	$end   = gmdate( 'Y-m-d H:i:s', strtotime( "-{$offset_days} days" ) );
-	$start = gmdate( 'Y-m-d H:i:s', strtotime( '-' . ( $offset_days + $days ) . ' days' ) );
+	if ( TURF_PERIOD_TODAY === $days ) {
+		$end   = ( 0 === $offset_days ) ? current_time( 'mysql', true ) : gmdate( 'Y-m-d 00:00:00' );
+		$start = gmdate( 'Y-m-d 00:00:00', strtotime( "-{$offset_days} days" ) );
+	} else {
+		$end   = gmdate( 'Y-m-d H:i:s', strtotime( "-{$offset_days} days" ) );
+		$start = gmdate( 'Y-m-d H:i:s', strtotime( '-' . ( $offset_days + $days ) . ' days' ) );
+	}
 
 	$hits = (int) $wpdb->get_var( $wpdb->prepare(
 		"SELECT COUNT(*) FROM $table WHERE visited_at >= %s AND visited_at < %s",
@@ -104,7 +109,7 @@ function turf_bots_render_overview( $days ) {
 	}
 
 	$current  = turf_bots_get_range_totals( $days, 0 );
-	$previous = turf_bots_get_range_totals( $days, $days );
+	$previous = turf_bots_get_range_totals( $days, turf_previous_period_offset( $days ) );
 	?>
 	<div class="bk-stats-overview__totals">
 		<?php turf_render_stat_box( __( 'Bot-bezoeken', 'turf-stats' ), $current['hits'], turf_pct_change( $current['hits'], $previous['hits'] ) ); ?>
@@ -123,7 +128,7 @@ function turf_bots_get_category_breakdown( $days ) {
 
 	return $wpdb->get_results( $wpdb->prepare(
 		"SELECT bot_category AS label, COUNT(*) AS total FROM $table WHERE visited_at >= %s GROUP BY bot_category ORDER BY total DESC",
-		gmdate( 'Y-m-d 00:00:00', strtotime( "-{$days} days" ) )
+		turf_period_start_sql_date( $days )
 	) );
 }
 
@@ -140,7 +145,7 @@ function turf_bots_get_top_bots( $days, $limit = 10 ) {
 
 	return $wpdb->get_results( $wpdb->prepare(
 		"SELECT bot_name AS label, COUNT(*) AS total FROM $table WHERE visited_at >= %s GROUP BY bot_name ORDER BY total DESC LIMIT %d",
-		gmdate( 'Y-m-d 00:00:00', strtotime( "-{$days} days" ) ),
+		turf_period_start_sql_date( $days ),
 		$limit
 	) );
 }
@@ -188,7 +193,7 @@ function turf_bots_count_crawled_pages( $days ) {
 	global $wpdb;
 	$table = turf_bots_table();
 
-	$where_date = $days > 0 ? $wpdb->prepare( 'AND visited_at >= %s', gmdate( 'Y-m-d 00:00:00', strtotime( "-{$days} days" ) ) ) : '';
+	$where_date = 0 !== $days ? $wpdb->prepare( 'AND visited_at >= %s', turf_period_start_sql_date( $days ) ) : '';
 
 	$posts = (int) $wpdb->get_var( "SELECT COUNT(DISTINCT post_id) FROM $table WHERE post_id IS NOT NULL $where_date" );
 	$terms = (int) $wpdb->get_var( "SELECT COUNT(DISTINCT term_id) FROM $table WHERE term_id IS NOT NULL $where_date" );
@@ -201,7 +206,7 @@ function turf_bots_get_top_crawled_pages( $days, $page = 1 ) {
 	$table  = turf_bots_table();
 	$offset = ( max( 1, $page ) - 1 ) * TURF_PER_PAGE;
 
-	$where_date = $days > 0 ? $wpdb->prepare( 'AND visited_at >= %s', gmdate( 'Y-m-d 00:00:00', strtotime( "-{$days} days" ) ) ) : '';
+	$where_date = 0 !== $days ? $wpdb->prepare( 'AND visited_at >= %s', turf_period_start_sql_date( $days ) ) : '';
 
 	return $wpdb->get_results( $wpdb->prepare(
 		"(SELECT 'post' AS kind, post_id AS object_id, COUNT(*) AS hits FROM $table WHERE post_id IS NOT NULL $where_date GROUP BY post_id)

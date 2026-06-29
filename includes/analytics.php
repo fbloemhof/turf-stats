@@ -23,9 +23,9 @@ function turf_get_peak_hours( $days ) {
 
 	$where_date = '';
 
-	if ( $days > 0 ) {
+	if ( 0 !== $days ) {
 		$where_date = 'AND v.viewed_at >= %s';
-		$params[]   = gmdate( 'Y-m-d 00:00:00', strtotime( "-{$days} days" ) );
+		$params[]   = turf_period_start_sql_date( $days );
 	}
 
 	$rows = $wpdb->get_results( $wpdb->prepare(

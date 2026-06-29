@@ -142,7 +142,10 @@ you want to keep that history.
 - **Statistieken** — the core audience picture: overview chart, the compact
   device/browser/OS/language/country/referrer/UTM breakdowns (in two
   columns), a peak-hours heatmap, and per-post-type/per-taxonomy tables
-  (with average reading time/scroll depth).
+  (with average reading time/scroll depth). Defaults to "Vandaag" (today,
+  since midnight, vs. yesterday for the %-change) - every other admin page
+  keeps defaulting to "7 dagen". "Vandaag" is also selectable on every
+  other page's own period tabs.
 - **Analyse** — the deeper, more diagnostic stats: search terms (+
   zero-result searches), visitor routes, trending content, per-author
   stats, form submissions, and the WooCommerce funnel (when applicable).

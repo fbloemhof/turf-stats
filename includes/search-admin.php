@@ -12,9 +12,9 @@ function turf_search_get_top_terms( $days, $limit = 15 ) {
 	$where_date = '';
 	$params     = array();
 
-	if ( $days > 0 ) {
+	if ( 0 !== $days ) {
 		$where_date = 'WHERE searched_at >= %s';
-		$params[]   = gmdate( 'Y-m-d 00:00:00', strtotime( "-{$days} days" ) );
+		$params[]   = turf_period_start_sql_date( $days );
 	}
 
 	$params[] = $limit;
@@ -36,9 +36,9 @@ function turf_search_get_zero_result_terms( $days, $limit = 15 ) {
 	$where_date = '';
 	$params     = array();
 
-	if ( $days > 0 ) {
+	if ( 0 !== $days ) {
 		$where_date = 'AND searched_at >= %s';
-		$params[]   = gmdate( 'Y-m-d 00:00:00', strtotime( "-{$days} days" ) );
+		$params[]   = turf_period_start_sql_date( $days );
 	}
 
 	$params[] = $limit;

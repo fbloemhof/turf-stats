@@ -38,7 +38,7 @@ function turf_404s_count_paths( $days ) {
 
 	return (int) $wpdb->get_var( $wpdb->prepare(
 		"SELECT COUNT(DISTINCT path) FROM $table WHERE hit_at >= %s",
-		gmdate( 'Y-m-d 00:00:00', strtotime( "-{$days} days" ) )
+		turf_period_start_sql_date( $days )
 	) );
 }
 
@@ -60,7 +60,7 @@ function turf_404s_get_top_paths( $days, $page = 1 ) {
 		"SELECT path, COUNT(*) AS hits, MAX(hit_at) AS last_hit FROM $table
 		WHERE hit_at >= %s
 		GROUP BY path ORDER BY hits DESC LIMIT %d OFFSET %d",
-		gmdate( 'Y-m-d 00:00:00', strtotime( "-{$days} days" ) ),
+		turf_period_start_sql_date( $days ),
 		TURF_PER_PAGE,
 		$offset
 	) );

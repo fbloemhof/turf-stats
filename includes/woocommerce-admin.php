@@ -18,7 +18,7 @@ function turf_woo_get_funnel( $days ) {
 		$add_to_cart = (int) $wpdb->get_var( "SELECT COUNT(*) FROM $woo_table WHERE event_type = 'add_to_cart'" );
 		$checkout    = (int) $wpdb->get_var( "SELECT COUNT(*) FROM $woo_table WHERE event_type = 'checkout'" );
 	} else {
-		$since = gmdate( 'Y-m-d 00:00:00', strtotime( "-{$days} days" ) );
+		$since = turf_period_start_sql_date( $days );
 
 		$views = (int) $wpdb->get_var( $wpdb->prepare(
 			"SELECT COUNT(*) FROM " . turf_table() . " v

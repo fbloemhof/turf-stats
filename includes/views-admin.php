@@ -40,7 +40,7 @@ function turf_views_register_metaboxes() {
 	$hook = get_current_screen()->id;
 	turf_register_postbox_hook( $hook );
 
-	$days = turf_get_requested_days();
+	$days = turf_get_requested_days( 'today' );
 
 	add_meta_box( 'turf_overview', __( 'Overzicht', 'turf-stats' ), function () use ( $days ) {
 		turf_render_overview( $days );
@@ -170,8 +170,13 @@ function turf_site_join_and_where() {
 /**
  * Site-wide views + unique visitors for a single date range (UTC).
  *
- * @param int $days        Length of the range in days.
+ * @param int $days        Length of the range in days, or TURF_PERIOD_TODAY.
  * @param int $offset_days How many days ago the range ends (0 = ending now).
+ *                          For TURF_PERIOD_TODAY specifically, 0 means
+ *                          "today" (midnight to now) and 1 means "yesterday"
+ *                          (midnight to midnight) - the generic "shift the
+ *                          whole window back by $days" offset math below
+ *                          doesn't apply to a single calendar day.
  */
 function turf_get_range_site_totals( $days, $offset_days = 0 ) {
 	global $wpdb;
@@ -179,8 +184,13 @@ function turf_get_range_site_totals( $days, $offset_days = 0 ) {
 	$table = turf_table();
 	list( $join, $where, $params ) = turf_site_join_and_where();
 
-	$end   = gmdate( 'Y-m-d H:i:s', strtotime( "-{$offset_days} days" ) );
-	$start = gmdate( 'Y-m-d H:i:s', strtotime( '-' . ( $offset_days + $days ) . ' days' ) );
+	if ( TURF_PERIOD_TODAY === $days ) {
+		$end   = ( 0 === $offset_days ) ? current_time( 'mysql', true ) : gmdate( 'Y-m-d 00:00:00' );
+		$start = gmdate( 'Y-m-d 00:00:00', strtotime( "-{$offset_days} days" ) );
+	} else {
+		$end   = gmdate( 'Y-m-d H:i:s', strtotime( "-{$offset_days} days" ) );
+		$start = gmdate( 'Y-m-d H:i:s', strtotime( '-' . ( $offset_days + $days ) . ' days' ) );
+	}
 
 	$row = $wpdb->get_row( $wpdb->prepare(
 		"SELECT COUNT(*) AS views, COUNT(DISTINCT v.visitor_hash) AS visitors
@@ -203,7 +213,7 @@ function turf_get_daily_site_totals( $days ) {
 	$table = turf_table();
 	list( $join, $where, $params ) = turf_site_join_and_where();
 
-	$start = gmdate( 'Y-m-d 00:00:00', strtotime( "-{$days} days" ) );
+	$start = turf_period_start_sql_date( $days );
 
 	$results = $wpdb->get_results( $wpdb->prepare(
 		"SELECT DATE(v.viewed_at) AS day, COUNT(*) AS views, COUNT(DISTINCT v.visitor_hash) AS visitors
@@ -332,11 +342,38 @@ function turf_render_overview( $days ) {
 		return;
 	}
 
+	if ( TURF_PERIOD_TODAY === $days ) {
+		$current           = turf_get_range_site_totals( $days, 0 );
+		$previous          = turf_get_range_site_totals( $days, 1 );
+		$current_comments  = turf_get_comment_totals( $days, 0 );
+		$previous_comments = turf_get_comment_totals( $days, 1 );
+		?>
+		<div class="bk-stats-overview">
+			<div class="bk-stats-overview__totals">
+				<?php turf_render_online_now(); ?>
+				<?php turf_render_stat_box( __( 'Weergaven', 'turf-stats' ), $current['views'], turf_pct_change( $current['views'], $previous['views'] ) ); ?>
+				<?php turf_render_stat_box( __( 'Bezoekers', 'turf-stats' ), $current['visitors'], turf_pct_change( $current['visitors'], $previous['visitors'] ) ); ?>
+				<?php turf_render_stat_box( __( 'Reacties', 'turf-stats' ), $current_comments, turf_pct_change( $current_comments, $previous_comments ) ); ?>
+				<?php
+				$bounce_rate = turf_get_bounce_rate( $days );
+				if ( null !== $bounce_rate ) :
+					turf_render_stat_box( __( 'Bouncepercentage', 'turf-stats' ), $bounce_rate, false, '%' );
+				endif;
+				?>
+			</div>
+			<p class="description">
+				<?php esc_html_e( 'Vandaag, sinds middernacht - vergeleken met heel gisteren.', 'turf-stats' ); ?>
+			</p>
+		</div>
+		<?php
+		return;
+	}
+
 	$daily             = turf_get_daily_site_totals( $days );
 	$current           = turf_get_range_site_totals( $days, 0 );
-	$previous          = turf_get_range_site_totals( $days, $days );
+	$previous          = turf_get_range_site_totals( $days, turf_previous_period_offset( $days ) );
 	$current_comments  = turf_get_comment_totals( $days, 0 );
-	$previous_comments = turf_get_comment_totals( $days, $days );
+	$previous_comments = turf_get_comment_totals( $days, turf_previous_period_offset( $days ) );
 	$max               = max( 1, max( array_column( $daily, 'views' ) ) );
 	?>
 	<div class="bk-stats-overview">
@@ -409,9 +446,9 @@ function turf_get_breakdown( $column, $days, $exclude_empty = false ) {
 
 	$where_date = '';
 
-	if ( $days > 0 ) {
+	if ( 0 !== $days ) {
 		$where_date = 'AND v.viewed_at >= %s';
-		$params[]   = gmdate( 'Y-m-d 00:00:00', strtotime( "-{$days} days" ) );
+		$params[]   = turf_period_start_sql_date( $days );
 	}
 
 	$where_empty = $exclude_empty ? "AND v.$column != ''" : '';
@@ -586,9 +623,9 @@ function turf_get_referrer_breakdown( $days ) {
 
 	$where_date = '';
 
-	if ( $days > 0 ) {
+	if ( 0 !== $days ) {
 		$where_date = 'AND v.viewed_at >= %s';
-		$params[]   = gmdate( 'Y-m-d 00:00:00', strtotime( "-{$days} days" ) );
+		$params[]   = turf_period_start_sql_date( $days );
 	}
 
 	return $wpdb->get_results( $wpdb->prepare(
@@ -630,9 +667,9 @@ function turf_get_top_referrer_hosts( $days, $limit = 10 ) {
 
 	$where_date = '';
 
-	if ( $days > 0 ) {
+	if ( 0 !== $days ) {
 		$where_date = 'AND v.viewed_at >= %s';
-		$params[]   = gmdate( 'Y-m-d 00:00:00', strtotime( "-{$days} days" ) );
+		$params[]   = turf_period_start_sql_date( $days );
 	}
 
 	$params[] = $site_host;
@@ -731,8 +768,8 @@ function turf_get_new_vs_returning( $days ) {
 	$table = turf_table();
 	list( $join, $where, $params ) = turf_site_join_and_where();
 
-	if ( $days > 0 ) {
-		$start = gmdate( 'Y-m-d 00:00:00', strtotime( "-{$days} days" ) );
+	if ( 0 !== $days ) {
+		$start = turf_period_start_sql_date( $days );
 		$end   = current_time( 'mysql', true );
 	} else {
 		$start = '1970-01-01 00:00:00';
@@ -861,14 +898,14 @@ function turf_admin_inline_style() {
 }
 
 function turf_render_admin_page() {
-	$days = turf_get_requested_days();
+	$days = turf_get_requested_days( 'today' );
 
 	turf_admin_inline_style();
 	?>
 	<div class="wrap">
 		<h1><?php esc_html_e( 'Statistieken', 'turf-stats' ); ?></h1>
 
-		<?php turf_render_period_tabs( admin_url( 'admin.php?page=turf-stats' ) ); ?>
+		<?php turf_render_period_tabs( admin_url( 'admin.php?page=turf-stats' ), 'today' ); ?>
 
 		<p class="description">
 			<?php esc_html_e( 'Elk blok hieronder is inklapbaar en kan verplaatst worden door het vast te pakken aan de titel. Onder "Schermopties" rechtsboven kun je blokken tijdelijk verbergen.', 'turf-stats' ); ?>
@@ -910,9 +947,9 @@ function turf_count_posts_for_period( $post_type, $days ) {
 		"SELECT COUNT(DISTINCT v.post_id) FROM $table v
 		INNER JOIN $wpdb->posts p ON p.ID = v.post_id
 		WHERE p.post_type = %s AND p.post_status = 'publish'
-		AND v.viewed_at >= DATE_SUB(NOW(), INTERVAL %d DAY)",
+		AND v.viewed_at >= %s",
 		$post_type,
-		$days
+		turf_period_start_sql_date( $days )
 	) );
 }
 
@@ -1001,12 +1038,12 @@ function turf_get_top_posts_for_period( $post_type, $days, $page = 1 ) {
 		FROM $table v
 		INNER JOIN $wpdb->posts p ON p.ID = v.post_id
 		WHERE p.post_type = %s AND p.post_status = 'publish'
-		AND v.viewed_at >= DATE_SUB(NOW(), INTERVAL %d DAY)
+		AND v.viewed_at >= %s
 		GROUP BY v.post_id
 		ORDER BY views DESC
 		LIMIT %d OFFSET %d",
 		$post_type,
-		$days,
+		turf_period_start_sql_date( $days ),
 		TURF_PER_PAGE,
 		$offset
 	) );
@@ -1099,9 +1136,9 @@ function turf_count_terms_for_period( $taxonomy, $days ) {
 		"SELECT COUNT(DISTINCT v.term_id) FROM $table v
 		INNER JOIN $wpdb->term_taxonomy tt ON tt.term_id = v.term_id
 		WHERE tt.taxonomy = %s
-		AND v.viewed_at >= DATE_SUB(NOW(), INTERVAL %d DAY)",
+		AND v.viewed_at >= %s",
 		$taxonomy,
-		$days
+		turf_period_start_sql_date( $days )
 	) );
 }
 
@@ -1153,12 +1190,12 @@ function turf_get_top_terms_for_period( $taxonomy, $days, $page = 1 ) {
 		FROM $table v
 		INNER JOIN $wpdb->term_taxonomy tt ON tt.term_id = v.term_id
 		WHERE tt.taxonomy = %s
-		AND v.viewed_at >= DATE_SUB(NOW(), INTERVAL %d DAY)
+		AND v.viewed_at >= %s
 		GROUP BY v.term_id
 		ORDER BY views DESC
 		LIMIT %d OFFSET %d",
 		$taxonomy,
-		$days,
+		turf_period_start_sql_date( $days ),
 		TURF_PER_PAGE,
 		$offset
 	) );

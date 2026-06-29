@@ -26,11 +26,11 @@ function turf_get_author_breakdown( $days, $limit = 15 ) {
 			FROM " . turf_table() . " v
 			INNER JOIN $wpdb->posts p ON p.ID = v.post_id
 			WHERE p.post_type IN ($placeholders) AND p.post_status = 'publish'
-			AND v.viewed_at >= DATE_SUB(NOW(), INTERVAL %d DAY)
+			AND v.viewed_at >= %s
 			GROUP BY p.post_author
 			ORDER BY views DESC
 			LIMIT %d",
-			array_merge( $post_types, array( $days, $limit ) )
+			array_merge( $post_types, array( turf_period_start_sql_date( $days ), $limit ) )
 		) );
 	}
 

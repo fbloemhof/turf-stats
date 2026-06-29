@@ -27,8 +27,13 @@ function turf_get_comment_totals( $days, $offset_days = 0 ) {
 		) );
 	}
 
-	$end   = gmdate( 'Y-m-d H:i:s', strtotime( "-{$offset_days} days" ) );
-	$start = gmdate( 'Y-m-d H:i:s', strtotime( '-' . ( $offset_days + $days ) . ' days' ) );
+	if ( TURF_PERIOD_TODAY === $days ) {
+		$end   = ( 0 === $offset_days ) ? current_time( 'mysql', true ) : gmdate( 'Y-m-d 00:00:00' );
+		$start = gmdate( 'Y-m-d 00:00:00', strtotime( "-{$offset_days} days" ) );
+	} else {
+		$end   = gmdate( 'Y-m-d H:i:s', strtotime( "-{$offset_days} days" ) );
+		$start = gmdate( 'Y-m-d H:i:s', strtotime( '-' . ( $offset_days + $days ) . ' days' ) );
+	}
 
 	return (int) $wpdb->get_var( $wpdb->prepare(
 		"SELECT COUNT(*) FROM $wpdb->comments c
@@ -47,9 +52,9 @@ function turf_count_commented_posts( $days ) {
 	$where_date = '';
 	$params     = $post_types;
 
-	if ( $days > 0 ) {
+	if ( 0 !== $days ) {
 		$where_date = 'AND c.comment_date_gmt >= %s';
-		$params[]   = gmdate( 'Y-m-d 00:00:00', strtotime( "-{$days} days" ) );
+		$params[]   = turf_period_start_sql_date( $days );
 	}
 
 	return (int) $wpdb->get_var( $wpdb->prepare(
@@ -69,9 +74,9 @@ function turf_get_top_commented_posts( $days, $page = 1 ) {
 	$where_date = '';
 	$params     = $post_types;
 
-	if ( $days > 0 ) {
+	if ( 0 !== $days ) {
 		$where_date = 'AND c.comment_date_gmt >= %s';
-		$params[]   = gmdate( 'Y-m-d 00:00:00', strtotime( "-{$days} days" ) );
+		$params[]   = turf_period_start_sql_date( $days );
 	}
 
 	$params[] = TURF_PER_PAGE;
