@@ -17,7 +17,7 @@
  */
 
 define( 'TURF_META_KEY', '_turf_views' );
-define( 'TURF_DB_VERSION', '1.4' );
+define( 'TURF_DB_VERSION', '1.5' );
 
 /**
  * Sentinel referrer_host value for views recorded via the REST API (e.g. a
@@ -85,6 +85,7 @@ function turf_install() {
 		id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
 		post_id BIGINT UNSIGNED NULL DEFAULT NULL,
 		term_id BIGINT UNSIGNED NULL DEFAULT NULL,
+		page_type VARCHAR(20) NULL DEFAULT NULL,
 		viewed_at DATETIME NOT NULL,
 		visitor_hash CHAR(32) NOT NULL,
 		device_type VARCHAR(10) NOT NULL DEFAULT '',
@@ -101,7 +102,8 @@ function turf_install() {
 		PRIMARY KEY  (id),
 		KEY post_lookup (post_id, viewed_at),
 		KEY term_lookup (term_id, viewed_at),
-		KEY dedup_lookup (post_id, visitor_hash, viewed_at)
+		KEY dedup_lookup (post_id, visitor_hash, viewed_at),
+		KEY page_type_lookup (page_type, visitor_hash, viewed_at)
 	) $charset_collate;" );
 
 	// dbDelta doesn't reliably relax an existing NOT NULL column - do that explicitly
@@ -356,9 +358,25 @@ function turf_sanitize_referrer_host( $host ) {
 	return strtolower( $host );
 }
 
+/**
+ * Decides what (if anything) to track for the current front-end request.
+ * Posts and trackable-taxonomy archives get full per-object attribution
+ * (post_id/term_id, the running postmeta/termmeta total, per-post-type and
+ * per-taxonomy tables). Everything else that's still a real, public,
+ * non-404 page (author/date archives, search results, the blog index, or
+ * any other archive/singular view not covered above - e.g. a post type
+ * excluded via turf_trackable_post_types) still counts as a view via
+ * turf_track_other_view(), just without that per-object detail - see the
+ * "Overige pagina's" breakdown on the Statistieken page.
+ */
 function turf_enqueue() {
+	if ( is_404() ) {
+		return; // Has its own dedicated tracker, includes/404s.php.
+	}
+
 	$object_id   = 0;
 	$object_type = 'post';
+	$page_type   = '';
 
 	if ( is_singular( turf_trackable_post_types() ) ) {
 		$object_id   = get_queried_object_id();
@@ -369,6 +387,21 @@ function turf_enqueue() {
 		if ( $queried instanceof WP_Term && in_array( $queried->taxonomy, turf_trackable_taxonomies(), true ) ) {
 			$object_id   = $queried->term_id;
 			$object_type = 'term';
+		} elseif ( is_author() ) {
+			$object_type = 'other';
+			$page_type   = 'author';
+		} elseif ( is_date() ) {
+			$object_type = 'other';
+			$page_type   = 'date';
+		} elseif ( is_search() ) {
+			$object_type = 'other';
+			$page_type   = 'search';
+		} elseif ( is_home() ) {
+			$object_type = 'other';
+			$page_type   = 'home';
+		} elseif ( is_singular() || is_archive() ) {
+			$object_type = 'other';
+			$page_type   = 'other';
 		} else {
 			return;
 		}
@@ -386,6 +419,7 @@ function turf_enqueue() {
 		'ajaxUrl'    => admin_url( 'admin-ajax.php' ),
 		'postId'     => $object_id,
 		'objectType' => $object_type,
+		'pageType'   => $page_type,
 		'nonce'      => wp_create_nonce( 'turf_track_view' ),
 	) );
 }
@@ -489,6 +523,61 @@ function turf_track_view( $object_id, $object_type = 'post', $extra = array() ) 
 	return array( 'views' => turf_get_views( $object_id, $object_type ), 'event_id' => $event_id );
 }
 
+/**
+ * Records a view of a public page that isn't a trackable post or taxonomy
+ * archive (author/date archives, search results, the blog index, or
+ * anything else turf_enqueue() still recognizes as a real page) - no
+ * per-object running total to update (there's no single post/term to
+ * attach one to), just a raw event row, still counted towards the
+ * site-wide Weergaven/Bezoekers totals and breakdowns (see
+ * turf_site_join_and_where()) and broken out by type in the "Overige
+ * pagina's" box.
+ */
+function turf_track_other_view( $page_type, $extra = array() ) {
+	$user_agent = isset( $_SERVER['HTTP_USER_AGENT'] ) ? sanitize_text_field( wp_unslash( $_SERVER['HTTP_USER_AGENT'] ) ) : '';
+
+	if ( turf_is_bot( $user_agent ) || current_user_can( 'edit_posts' ) ) {
+		return array( 'event_id' => null );
+	}
+
+	global $wpdb;
+	$table        = turf_table();
+	$visitor_hash = turf_visitor_hash( $user_agent );
+	$window_start = gmdate( 'Y-m-d H:i:s', time() - turf_dedup_window() );
+
+	$recent = $wpdb->get_var( $wpdb->prepare(
+		"SELECT 1 FROM $table WHERE page_type = %s AND visitor_hash = %s AND viewed_at >= %s LIMIT 1",
+		$page_type,
+		$visitor_hash,
+		$window_start
+	) );
+
+	if ( $recent ) {
+		return array( 'event_id' => null );
+	}
+
+	$wpdb->insert(
+		$table,
+		array(
+			'page_type'     => $page_type,
+			'viewed_at'     => current_time( 'mysql', true ),
+			'visitor_hash'  => $visitor_hash,
+			'device_type'   => turf_parse_device_type( $user_agent ),
+			'browser'       => turf_parse_browser( $user_agent ),
+			'os'            => turf_parse_os( $user_agent ),
+			'referrer_host' => $extra['referrer_host'] ?? '',
+			'language'      => turf_parse_language(),
+			'country'       => turf_get_country(),
+			'utm_source'    => $extra['utm_source'] ?? '',
+			'utm_medium'    => $extra['utm_medium'] ?? '',
+			'utm_campaign'  => $extra['utm_campaign'] ?? '',
+		),
+		array( '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s' )
+	);
+
+	return array( 'event_id' => $wpdb->insert_id );
+}
+
 function turf_ajax_track_view() {
 	if ( ! isset( $_POST['post_id'], $_POST['nonce'] ) ) {
 		wp_send_json_error( 'invalid request', 400 );
@@ -498,8 +587,7 @@ function turf_ajax_track_view() {
 		wp_send_json_error( 'bad nonce', 403 );
 	}
 
-	$object_id   = absint( $_POST['post_id'] );
-	$object_type = ( isset( $_POST['object_type'] ) && 'term' === $_POST['object_type'] ) ? 'term' : 'post';
+	$object_type = isset( $_POST['object_type'] ) ? sanitize_key( $_POST['object_type'] ) : 'post';
 
 	$extra = array(
 		'referrer_host' => isset( $_POST['referrer'] ) ? turf_sanitize_referrer_host( wp_unslash( $_POST['referrer'] ) ) : '',
@@ -507,6 +595,16 @@ function turf_ajax_track_view() {
 		'utm_medium'    => isset( $_POST['utm_medium'] ) ? turf_sanitize_utm( wp_unslash( $_POST['utm_medium'] ) ) : '',
 		'utm_campaign'  => isset( $_POST['utm_campaign'] ) ? turf_sanitize_utm( wp_unslash( $_POST['utm_campaign'] ) ) : '',
 	);
+
+	if ( 'other' === $object_type ) {
+		$page_type = isset( $_POST['page_type'] ) ? sanitize_key( $_POST['page_type'] ) : 'other';
+		$result    = turf_track_other_view( $page_type, $extra );
+
+		wp_send_json_success( array( 'views' => 0, 'event_id' => $result['event_id'] ) );
+	}
+
+	$object_id   = absint( $_POST['post_id'] );
+	$object_type = ( 'term' === $object_type ) ? 'term' : 'post';
 
 	$result = turf_track_view( $object_id, $object_type, $extra );
 

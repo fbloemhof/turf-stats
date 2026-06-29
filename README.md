@@ -8,6 +8,11 @@ tracked and stored on your own database.
 
 - **Page views** for every public post type and taxonomy archive, detected
   automatically (no config needed when you add a new CPT or taxonomy later).
+  Every *other* real, public, non-404 page (author/date archives, search
+  results, the blog index, or anything else not covered by the above)
+  still counts towards the site-wide totals and breakdowns too, broken out
+  by type in its own "Overige pagina's" box - just without the per-object
+  detail a specific post/term gets.
 - **Visitors** (unique, deduped per rolling window) alongside raw views.
 - **Device, browser, OS** — parsed from the user-agent already present on
   every request.

@@ -22,6 +22,7 @@
 		body.set( 'action', 'turf_track_view' );
 		body.set( 'post_id', turfViews.postId );
 		body.set( 'object_type', turfViews.objectType );
+		body.set( 'page_type', turfViews.pageType || '' );
 		body.set( 'referrer', referrerHost );
 		body.set( 'utm_source', urlParams.get( 'utm_source' ) || '' );
 		body.set( 'utm_medium', urlParams.get( 'utm_medium' ) || '' );

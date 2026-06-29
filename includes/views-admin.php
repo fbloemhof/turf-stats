@@ -77,6 +77,9 @@ function turf_views_register_metaboxes() {
 		array( 'turf_utm_medium', __( 'Campagnemedium (UTM)', 'turf-stats' ), function () use ( $days ) {
 			turf_render_breakdown( 'utm_medium', $days, true );
 		} ),
+		array( 'turf_other_pages', __( 'Overige pagina\'s', 'turf-stats' ), function () use ( $days ) {
+			turf_render_other_pages_breakdown( $days );
+		} ),
 	);
 
 	foreach ( $compact_boxes as $box ) {
@@ -139,12 +142,14 @@ function turf_post_type_in_clause() {
 }
 
 /**
- * Site-wide queries need to count both post views and taxonomy-archive
- * views (post_id and term_id are mutually exclusive per row - see
- * includes/views.php). This builds the shared JOIN + WHERE that
- * restricts to currently-live, trackable content on both sides, so deleted
+ * Site-wide queries need to count post views, taxonomy-archive views, and
+ * "other" page views (author/date archives, search, etc. - post_id,
+ * term_id and page_type are mutually exclusive per row, see
+ * includes/views.php) together. This builds the shared JOIN + WHERE that
+ * restricts the first two to currently-live, trackable content, so deleted
  * posts/terms or types that were later excluded via the filters don't linger
- * in the totals.
+ * in the totals; "other" rows have no such per-object check (there's no
+ * single post/term to validate against), they're just always included.
  *
  * @return array{0: string, 1: string, 2: array} [$join_sql, $where_sql, $params]
  */
@@ -162,6 +167,7 @@ function turf_site_join_and_where() {
 	$where = "(
 		(v.post_id IS NOT NULL AND p.post_type IN ($post_placeholders) AND p.post_status = 'publish')
 		OR (v.term_id IS NOT NULL AND tt.taxonomy IN ($tax_placeholders))
+		OR (v.page_type IS NOT NULL)
 	)";
 
 	return array( $join, $where, array_merge( $post_types, $taxonomies ) );
@@ -755,6 +761,54 @@ function turf_render_top_referrer_hosts( $days ) {
 	$rows = turf_get_top_referrer_hosts( $days );
 
 	turf_render_breakdown_rows( $rows, 'turf_referrer_host_label' );
+}
+
+/**
+ * Breakdown of "other" page views (author/date archives, search results,
+ * the blog index, anything else turf_track_other_view() recorded) by
+ * page_type - the only place this dimension shows up, since these rows
+ * have no post_id/term_id to list in a per-post-type/taxonomy table.
+ */
+function turf_get_other_pages_breakdown( $days ) {
+	global $wpdb;
+	$table = turf_table();
+
+	if ( 0 === $days ) {
+		return $wpdb->get_results(
+			"SELECT page_type AS label, COUNT(*) AS views, COUNT(DISTINCT visitor_hash) AS visitors
+			FROM $table
+			WHERE page_type IS NOT NULL
+			GROUP BY page_type
+			ORDER BY views DESC"
+		);
+	}
+
+	return $wpdb->get_results( $wpdb->prepare(
+		"SELECT page_type AS label, COUNT(*) AS views, COUNT(DISTINCT visitor_hash) AS visitors
+		FROM $table
+		WHERE page_type IS NOT NULL AND viewed_at >= %s
+		GROUP BY page_type
+		ORDER BY views DESC",
+		turf_period_start_sql_date( $days )
+	) );
+}
+
+function turf_other_page_type_label( $type ) {
+	$labels = array(
+		'author' => __( 'Auteur-archief', 'turf-stats' ),
+		'date'   => __( 'Datum-archief', 'turf-stats' ),
+		'search' => __( 'Zoekresultaten', 'turf-stats' ),
+		'home'   => __( 'Blogoverzicht', 'turf-stats' ),
+		'other'  => __( 'Overig', 'turf-stats' ),
+	);
+
+	return $labels[ $type ] ?? $type;
+}
+
+function turf_render_other_pages_breakdown( $days ) {
+	$rows = turf_get_other_pages_breakdown( $days );
+
+	turf_render_breakdown_rows( $rows, 'turf_other_page_type_label' );
 }
 
 /**
