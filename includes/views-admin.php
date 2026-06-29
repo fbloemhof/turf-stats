@@ -185,8 +185,8 @@ function turf_get_range_site_totals( $days, $offset_days = 0 ) {
 	list( $join, $where, $params ) = turf_site_join_and_where();
 
 	if ( TURF_PERIOD_TODAY === $days ) {
-		$end   = ( 0 === $offset_days ) ? current_time( 'mysql', true ) : gmdate( 'Y-m-d 00:00:00' );
-		$start = gmdate( 'Y-m-d 00:00:00', strtotime( "-{$offset_days} days" ) );
+		$end   = ( 0 === $offset_days ) ? current_time( 'mysql', true ) : turf_local_midnight_utc( 0 );
+		$start = turf_local_midnight_utc( $offset_days );
 	} else {
 		$end   = gmdate( 'Y-m-d H:i:s', strtotime( "-{$offset_days} days" ) );
 		$start = gmdate( 'Y-m-d H:i:s', strtotime( '-' . ( $offset_days + $days ) . ' days' ) );

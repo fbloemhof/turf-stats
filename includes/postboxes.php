@@ -124,10 +124,31 @@ function turf_get_requested_days( $default_period = '7' ) {
  */
 function turf_period_start_sql_date( $days ) {
 	if ( TURF_PERIOD_TODAY === $days ) {
-		return gmdate( 'Y-m-d 00:00:00' );
+		return turf_local_midnight_utc( 0 );
 	}
 
 	return gmdate( 'Y-m-d 00:00:00', strtotime( "-{$days} days" ) );
+}
+
+/**
+ * Midnight $days_back days ago, in the site's own configured timezone (not
+ * UTC), converted to a UTC 'Y-m-d H:i:s' string ready to compare against
+ * viewed_at (always stored in UTC). "Vandaag" must match the calendar day
+ * the site owner actually experiences locally - a site on Europe/Amsterdam
+ * (UTC+1/+2) sees its day start 1-2 hours before UTC midnight, which a
+ * plain gmdate('Y-m-d 00:00:00') boundary would miss entirely.
+ */
+function turf_local_midnight_utc( $days_back = 0 ) {
+	$date = new DateTime( 'now', wp_timezone() );
+	$date->setTime( 0, 0, 0 );
+
+	if ( $days_back > 0 ) {
+		$date->modify( "-{$days_back} days" );
+	}
+
+	$date->setTimezone( new DateTimeZone( 'UTC' ) );
+
+	return $date->format( 'Y-m-d H:i:s' );
 }
 
 /**
