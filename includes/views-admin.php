@@ -88,7 +88,9 @@ function turf_views_register_metaboxes() {
 	}
 
 	add_meta_box( 'turf_peak_hours', __( 'Piekuren', 'turf-stats' ), function () use ( $days ) {
-		turf_render_peak_hours( $days );
+		// A single day is too sparse for a meaningful 7x24 heatmap - shows
+		// the last 7 days for context instead, same as the Vandaag chart.
+		turf_render_peak_hours( TURF_PERIOD_TODAY === $days ? 7 : $days );
 	}, $hook, 'turf_wide' );
 
 	$post_types = turf_trackable_post_types();
@@ -365,11 +367,13 @@ function turf_render_overview( $days ) {
 				if ( null !== $bounce_rate ) :
 					turf_render_stat_box( __( 'Bouncepercentage', 'turf-stats' ), $bounce_rate, false, '%' );
 				endif;
+				turf_render_content_activity_boxes( $days );
 				?>
 			</div>
 			<p class="description">
-				<?php esc_html_e( 'Vandaag, sinds middernacht - vergeleken met heel gisteren.', 'turf-stats' ); ?>
+				<?php esc_html_e( 'Vandaag, sinds middernacht - vergeleken met heel gisteren. De grafiek hieronder toont de laatste 7 dagen voor context.', 'turf-stats' ); ?>
 			</p>
+			<?php turf_render_daily_chart( turf_get_daily_site_totals( 7 ) ); ?>
 		</div>
 		<?php
 		return;
@@ -380,7 +384,6 @@ function turf_render_overview( $days ) {
 	$previous          = turf_get_range_site_totals( $days, turf_previous_period_offset( $days ) );
 	$current_comments  = turf_get_comment_totals( $days, 0 );
 	$previous_comments = turf_get_comment_totals( $days, turf_previous_period_offset( $days ) );
-	$max               = max( 1, max( array_column( $daily, 'views' ) ) );
 	?>
 	<div class="bk-stats-overview">
 		<div class="bk-stats-overview__totals">
@@ -393,38 +396,107 @@ function turf_render_overview( $days ) {
 			if ( null !== $bounce_rate ) :
 				turf_render_stat_box( __( 'Bouncepercentage', 'turf-stats' ), $bounce_rate, false, '%' );
 			endif;
+			turf_render_content_activity_boxes( $days );
 			?>
 		</div>
 
-		<div class="bk-stats-overview__legend">
-			<span class="bk-stats-legend bk-stats-legend--views"><?php esc_html_e( 'Weergaven', 'turf-stats' ); ?></span>
-			<span class="bk-stats-legend bk-stats-legend--visitors"><?php esc_html_e( 'Bezoekers', 'turf-stats' ); ?></span>
-		</div>
-
-		<div class="bk-stats-chart">
-			<?php foreach ( $daily as $day ) : ?>
-				<?php
-				$views_pct    = round( ( $day['views'] / $max ) * 100 );
-				$visitors_pct = round( ( $day['visitors'] / $max ) * 100 );
-				$title        = sprintf(
-					/* translators: 1: date, 2: number of views, 3: number of visitors */
-					__( '%1$s — %2$s weergaven, %3$s bezoekers', 'turf-stats' ),
-					date_i18n( 'd M', strtotime( $day['date'] ) ),
-					number_format_i18n( $day['views'] ),
-					number_format_i18n( $day['visitors'] )
-				);
-				?>
-				<div class="bk-stats-chart__col" title="<?php echo esc_attr( $title ); ?>">
-					<div class="bk-stats-chart__bars">
-						<div class="bk-stats-chart__bar bk-stats-chart__bar--views" style="height:<?php echo (int) $views_pct; ?>%"></div>
-						<div class="bk-stats-chart__bar bk-stats-chart__bar--visitors" style="height:<?php echo (int) $visitors_pct; ?>%"></div>
-					</div>
-					<span class="bk-stats-chart__label"><?php echo esc_html( date_i18n( 'd M', strtotime( $day['date'] ) ) ); ?></span>
-				</div>
-			<?php endforeach; ?>
-		</div>
+		<?php turf_render_daily_chart( $daily ); ?>
 	</div>
 	<?php
+}
+
+/**
+ * The daily views/visitors bar chart (à la Jetpack), shared between the
+ * "Vandaag" overview (which always shows the last 7 days here for context,
+ * regardless of the single-day headline totals above it) and the regular
+ * N-day overview (which shows exactly the selected period).
+ */
+function turf_render_daily_chart( $daily ) {
+	$max = max( 1, max( array_column( $daily, 'views' ) ) );
+	?>
+	<div class="bk-stats-overview__legend">
+		<span class="bk-stats-legend bk-stats-legend--views"><?php esc_html_e( 'Weergaven', 'turf-stats' ); ?></span>
+		<span class="bk-stats-legend bk-stats-legend--visitors"><?php esc_html_e( 'Bezoekers', 'turf-stats' ); ?></span>
+	</div>
+
+	<div class="bk-stats-chart">
+		<?php foreach ( $daily as $day ) : ?>
+			<?php
+			$views_pct    = round( ( $day['views'] / $max ) * 100 );
+			$visitors_pct = round( ( $day['visitors'] / $max ) * 100 );
+			$title        = sprintf(
+				/* translators: 1: date, 2: number of views, 3: number of visitors */
+				__( '%1$s — %2$s weergaven, %3$s bezoekers', 'turf-stats' ),
+				date_i18n( 'd M', strtotime( $day['date'] ) ),
+				number_format_i18n( $day['views'] ),
+				number_format_i18n( $day['visitors'] )
+			);
+			?>
+			<div class="bk-stats-chart__col" title="<?php echo esc_attr( $title ); ?>">
+				<div class="bk-stats-chart__bars">
+					<div class="bk-stats-chart__bar bk-stats-chart__bar--views" style="height:<?php echo (int) $views_pct; ?>%"></div>
+					<div class="bk-stats-chart__bar bk-stats-chart__bar--visitors" style="height:<?php echo (int) $visitors_pct; ?>%"></div>
+				</div>
+				<span class="bk-stats-chart__label"><?php echo esc_html( date_i18n( 'd M', strtotime( $day['date'] ) ) ); ?></span>
+			</div>
+		<?php endforeach; ?>
+	</div>
+	<?php
+}
+
+/**
+ * Editorial activity (not visitor activity) for the period: how many
+ * trackable posts of each type were newly published ("toegevoegd") or
+ * edited after their initial publication ("gewijzigd"). One box per post
+ * type that actually had activity - skipped entirely on a quiet
+ * day/period, so it doesn't clutter the overview otherwise.
+ */
+function turf_render_content_activity_boxes( $days ) {
+	$post_types = turf_trackable_post_types();
+	usort( $post_types, function ( $a, $b ) {
+		return strnatcasecmp( turf_get_post_type_label( $a ), turf_get_post_type_label( $b ) );
+	} );
+
+	foreach ( $post_types as $post_type ) {
+		$activity = turf_get_content_activity( $post_type, $days );
+
+		if ( $activity['added'] <= 0 && $activity['modified'] <= 0 ) {
+			continue;
+		}
+
+		$label = sprintf(
+			/* translators: %s: post type label, e.g. "Berichten" */
+			__( '%s toegevoegd/gewijzigd', 'turf-stats' ),
+			turf_get_post_type_label( $post_type )
+		);
+
+		turf_render_stat_box( $label, $activity['added'], false, ' / ' . number_format_i18n( $activity['modified'] ) );
+	}
+}
+
+/**
+ * @return array{added: int, modified: int}
+ */
+function turf_get_content_activity( $post_type, $days ) {
+	global $wpdb;
+
+	$start = turf_period_start_sql_date( $days );
+
+	$added = (int) $wpdb->get_var( $wpdb->prepare(
+		"SELECT COUNT(*) FROM $wpdb->posts WHERE post_type = %s AND post_status = 'publish' AND post_date_gmt >= %s",
+		$post_type,
+		$start
+	) );
+
+	$modified = (int) $wpdb->get_var( $wpdb->prepare(
+		"SELECT COUNT(*) FROM $wpdb->posts
+		WHERE post_type = %s AND post_status = 'publish'
+		AND post_modified_gmt >= %s AND post_modified_gmt != post_date_gmt",
+		$post_type,
+		$start
+	) );
+
+	return array( 'added' => $added, 'modified' => $modified );
 }
 
 /**

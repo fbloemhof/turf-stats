@@ -150,7 +150,15 @@ you want to keep that history.
   (with average reading time/scroll depth). Defaults to "Vandaag" (today,
   since midnight, vs. yesterday for the %-change) - every other admin page
   keeps defaulting to "7 dagen". "Vandaag" is also selectable on every
-  other page's own period tabs.
+  other page's own period tabs. The chart and peak-hours heatmap show the
+  last 7 days for context even on "Vandaag" (a single day is too sparse
+  for either to be meaningful) - only the headline stat boxes are
+  strictly "today".
+- **Editorial activity** — how many posts of each trackable type were
+  published or edited during the period ("Berichten toegevoegd/gewijzigd",
+  etc.), shown in the overview only for types that actually had activity.
+  Not a visitor metric - just a quick "was anything published today"
+  check alongside the audience numbers.
 - **Analyse** — the deeper, more diagnostic stats: search terms (+
   zero-result searches), visitor routes, trending content, per-author
   stats, form submissions, and the WooCommerce funnel (when applicable).
