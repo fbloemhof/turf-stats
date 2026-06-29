@@ -943,10 +943,28 @@ function turf_render_breakdown( $column, $days, $exclude_empty = false ) {
 	} );
 }
 
+/**
+ * "Bezoekers" is structurally unreliable for the dorpsapp/app buckets: those
+ * requests come from the connector's own backend server (one fixed IP, one
+ * fixed user-agent, e.g. literally "DorpsApp-Backend/1.0"), not from
+ * individual end-user devices - there's nothing in the request that could
+ * distinguish one app user from another, so they all hash to the same (or
+ * very few) visitor_hash values regardless of how many real people are
+ * using the app. "Weergaven" still reflects real fetch activity; "Bezoekers"
+ * for these two buckets specifically doesn't mean what it means everywhere
+ * else on this page. Shown only when relevant, not as a permanent notice.
+ */
 function turf_render_referrer_breakdown( $days ) {
 	$rows = turf_get_referrer_breakdown( $days );
 
 	turf_render_breakdown_rows( $rows, 'turf_referrer_bucket_label' );
+
+	foreach ( $rows as $row ) {
+		if ( in_array( $row->label, array( 'dorpsapp', 'app' ), true ) ) {
+			echo '<p class="description">' . esc_html__( '"Dorpsapp" en "App / REST API" lopen via één centrale backend-server, niet via de apparaten van losse bezoekers - "Bezoekers" is daardoor niet betrouwbaar voor die bronnen. "Weergaven" wel.', 'turf-stats' ) . '</p>';
+			break;
+		}
+	}
 }
 
 function turf_render_top_referrer_hosts( $days ) {

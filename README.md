@@ -36,7 +36,14 @@ tracked and stored on your own database.
   all - its connector plugin registers its own `doarpsapp/v1` REST
   namespace. Turf recognizes that namespace's single-item endpoints
   specifically and shows them as their own "Dorpsapp" bucket, rather than
-  lumping them into the generic REST bucket above.
+  lumping them into the generic REST bucket above. "Weergaven" for this
+  bucket (and the generic REST one) reflects real fetch activity, but
+  "Bezoekers" doesn't - these requests come from the connector's own
+  backend server (one fixed IP/user-agent, e.g. literally
+  "DorpsApp-Backend/1.0"), not from individual app users' own devices, so
+  they can't be told apart the way a normal page load's visitor can. Turf
+  shows a note about this on the Herkomst breakdown whenever either bucket
+  has data.
 - To find out exactly what a specific app's requests look like (so you can
   recognize it by name too), set `define( 'TURF_DEBUG_REST', true );` in
   `wp-config.php` for a while and watch your PHP error log - remove it again
