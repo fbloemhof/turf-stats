@@ -43,6 +43,11 @@ tracked and stored on your own database.
   once you've got what you need.
 - **Generic click tracking** for any UI element, via a `data-turf-click="<key>"`
   attribute — no extra JS or AJAX wiring needed per element.
+- **Outbound link tracking** — automatic, no markup needed anywhere in the
+  theme or post content: any `<a href="...">` pointing at a different
+  hostname gets tracked under its destination host. An explicit
+  `data-turf-click` on a link still takes priority over this, for sites
+  that want to label specific outbound links their own way.
 - **Comment counts per period** and a "most discussed" table — reads
   directly from WordPress' own comments, no extra tracking needed.
 - **Online now** — a live, auto-refreshing count of visitors active in the

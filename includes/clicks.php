@@ -8,9 +8,24 @@
  * js/clicks.js picks up every click on such an element via one delegated
  * listener and beacons it to the AJAX action below - no further markup or
  * JS changes needed beyond the attribute itself.
+ *
+ * Outbound links are the one exception: js/clicks.js also auto-detects any
+ * click on an <a href="..."> pointing at a different hostname - no
+ * data-turf-click attribute needed anywhere in theme/content for that to
+ * work - and tracks it under the fixed TURF_OUTBOUND_CLICK_KEY key, with the
+ * destination hostname in its own target_url column (an explicit
+ * data-turf-click on a link still wins over the automatic detection, so a
+ * site can deliberately label specific outbound links its own way instead).
  */
 
-define( 'TURF_CLICKS_DB_VERSION', '1.0' );
+define( 'TURF_CLICKS_DB_VERSION', '1.1' );
+
+/**
+ * Sentinel click_key for automatically-detected outbound link clicks -
+ * sanitize_key()-safe (lowercase + dashes only), so it can't collide with a
+ * real data-turf-click key a site happens to choose.
+ */
+define( 'TURF_OUTBOUND_CLICK_KEY', 'outbound-link' );
 
 function turf_clicks_table() {
 	global $wpdb;
@@ -32,6 +47,7 @@ function turf_clicks_install() {
 		id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
 		click_key VARCHAR(100) NOT NULL,
 		context VARCHAR(191) NOT NULL DEFAULT '',
+		target_url VARCHAR(255) NULL DEFAULT NULL,
 		clicked_at DATETIME NOT NULL,
 		PRIMARY KEY  (id),
 		KEY key_lookup (click_key, clicked_at)
@@ -66,10 +82,12 @@ function turf_clicks_ajax_track() {
 	}
 
 	// Optional stricter allow-list (off by default) for sites/integrations
-	// that want to reject any key they didn't explicitly register.
+	// that want to reject any key they didn't explicitly register - doesn't
+	// apply to the built-in outbound-link key, since that's not something a
+	// site registers itself.
 	$allowed = apply_filters( 'turf_clicks_allowed_keys', array() );
 
-	if ( ! empty( $allowed ) && ! in_array( $key, $allowed, true ) ) {
+	if ( TURF_OUTBOUND_CLICK_KEY !== $key && ! empty( $allowed ) && ! in_array( $key, $allowed, true ) ) {
 		wp_send_json_error( 'key not allowed', 400 );
 	}
 
@@ -84,15 +102,27 @@ function turf_clicks_ajax_track() {
 
 	$context = isset( $_POST['context'] ) ? substr( sanitize_text_field( wp_unslash( $_POST['context'] ) ), 0, 191 ) : '';
 
+	$target_url = null;
+
+	if ( TURF_OUTBOUND_CLICK_KEY === $key && isset( $_POST['target'] ) ) {
+		$target_url = turf_sanitize_referrer_host( wp_unslash( $_POST['target'] ) );
+		$target_url = $target_url ? substr( $target_url, 0, 255 ) : null;
+	}
+
+	if ( TURF_OUTBOUND_CLICK_KEY === $key && ! $target_url ) {
+		wp_send_json_success(); // No usable destination host - nothing worth recording.
+	}
+
 	global $wpdb;
 	$wpdb->insert(
 		turf_clicks_table(),
 		array(
-			'click_key'  => $key,
-			'context'    => $context,
-			'clicked_at' => current_time( 'mysql', true ),
+			'click_key'   => $key,
+			'context'     => $context,
+			'target_url'  => $target_url,
+			'clicked_at'  => current_time( 'mysql', true ),
 		),
-		array( '%s', '%s', '%s' )
+		array( '%s', '%s', '%s', '%s' )
 	);
 
 	wp_send_json_success();

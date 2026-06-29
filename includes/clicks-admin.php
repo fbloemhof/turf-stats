@@ -27,18 +27,33 @@ function turf_clicks_register_metaboxes() {
 	add_meta_box( 'turf_clicks_top', __( 'Top kliks', 'turf-stats' ), function () use ( $days ) {
 		turf_clicks_render_top_keys( $days );
 	}, $hook, 'normal' );
+
+	add_meta_box( 'turf_clicks_outbound', __( 'Uitgaande links', 'turf-stats' ), function () use ( $days ) {
+		turf_clicks_render_top_outbound_links( $days );
+	}, $hook, 'normal' );
 }
 
+/**
+ * Excludes TURF_OUTBOUND_CLICK_KEY - outbound link clicks all share that one
+ * key (the destination is in target_url instead), so lumping it in here
+ * would just show one big, undifferentiated "outbound-link" row. They get
+ * their own breakdown by destination host instead - see
+ * turf_clicks_get_top_outbound_links() below.
+ */
 function turf_clicks_count_keys( $days ) {
 	global $wpdb;
 	$table = turf_clicks_table();
 
 	if ( 0 === $days ) {
-		return (int) $wpdb->get_var( "SELECT COUNT(DISTINCT click_key) FROM $table" );
+		return (int) $wpdb->get_var( $wpdb->prepare(
+			"SELECT COUNT(DISTINCT click_key) FROM $table WHERE click_key != %s",
+			TURF_OUTBOUND_CLICK_KEY
+		) );
 	}
 
 	return (int) $wpdb->get_var( $wpdb->prepare(
-		"SELECT COUNT(DISTINCT click_key) FROM $table WHERE clicked_at >= %s",
+		"SELECT COUNT(DISTINCT click_key) FROM $table WHERE click_key != %s AND clicked_at >= %s",
+		TURF_OUTBOUND_CLICK_KEY,
 		turf_period_start_sql_date( $days )
 	) );
 }
@@ -51,7 +66,9 @@ function turf_clicks_get_top_keys( $days, $page = 1 ) {
 	if ( 0 === $days ) {
 		return $wpdb->get_results( $wpdb->prepare(
 			"SELECT click_key, COUNT(*) AS clicks FROM $table
+			WHERE click_key != %s
 			GROUP BY click_key ORDER BY clicks DESC LIMIT %d OFFSET %d",
+			TURF_OUTBOUND_CLICK_KEY,
 			TURF_PER_PAGE,
 			$offset
 		) );
@@ -59,8 +76,54 @@ function turf_clicks_get_top_keys( $days, $page = 1 ) {
 
 	return $wpdb->get_results( $wpdb->prepare(
 		"SELECT click_key, COUNT(*) AS clicks FROM $table
-		WHERE clicked_at >= %s
+		WHERE click_key != %s AND clicked_at >= %s
 		GROUP BY click_key ORDER BY clicks DESC LIMIT %d OFFSET %d",
+		TURF_OUTBOUND_CLICK_KEY,
+		turf_period_start_sql_date( $days ),
+		TURF_PER_PAGE,
+		$offset
+	) );
+}
+
+function turf_clicks_count_outbound_hosts( $days ) {
+	global $wpdb;
+	$table = turf_clicks_table();
+
+	if ( 0 === $days ) {
+		return (int) $wpdb->get_var( $wpdb->prepare(
+			"SELECT COUNT(DISTINCT target_url) FROM $table WHERE click_key = %s",
+			TURF_OUTBOUND_CLICK_KEY
+		) );
+	}
+
+	return (int) $wpdb->get_var( $wpdb->prepare(
+		"SELECT COUNT(DISTINCT target_url) FROM $table WHERE click_key = %s AND clicked_at >= %s",
+		TURF_OUTBOUND_CLICK_KEY,
+		turf_period_start_sql_date( $days )
+	) );
+}
+
+function turf_clicks_get_top_outbound_links( $days, $page = 1 ) {
+	global $wpdb;
+	$table  = turf_clicks_table();
+	$offset = ( max( 1, $page ) - 1 ) * TURF_PER_PAGE;
+
+	if ( 0 === $days ) {
+		return $wpdb->get_results( $wpdb->prepare(
+			"SELECT target_url, COUNT(*) AS clicks FROM $table
+			WHERE click_key = %s
+			GROUP BY target_url ORDER BY clicks DESC LIMIT %d OFFSET %d",
+			TURF_OUTBOUND_CLICK_KEY,
+			TURF_PER_PAGE,
+			$offset
+		) );
+	}
+
+	return $wpdb->get_results( $wpdb->prepare(
+		"SELECT target_url, COUNT(*) AS clicks FROM $table
+		WHERE click_key = %s AND clicked_at >= %s
+		GROUP BY target_url ORDER BY clicks DESC LIMIT %d OFFSET %d",
+		TURF_OUTBOUND_CLICK_KEY,
 		turf_period_start_sql_date( $days ),
 		TURF_PER_PAGE,
 		$offset
@@ -91,6 +154,51 @@ function turf_clicks_render_top_keys( $days ) {
 			<?php foreach ( $rows as $row ) : ?>
 				<tr>
 					<td><code><?php echo esc_html( $row->click_key ); ?></code></td>
+					<td><?php echo (int) $row->clicks; ?></td>
+				</tr>
+			<?php endforeach; ?>
+		</tbody>
+	</table>
+	<?php if ( $total_pages > 1 ) : ?>
+		<div class="tablenav"><div class="tablenav-pages">
+			<?php turf_render_pagination( $param, $page, $total_pages ); ?>
+		</div></div>
+	<?php endif; ?>
+	<?php
+}
+
+/**
+ * Own pagination param ('pg_outbound', not 'pg') so paging through this
+ * box doesn't also move the separate "Top kliks" box to the same page
+ * number.
+ */
+function turf_clicks_render_top_outbound_links( $days ) {
+	$param          = 'pg_outbound';
+	$requested_page = isset( $_GET[ $param ] ) ? max( 1, absint( $_GET[ $param ] ) ) : 1;
+	$total          = turf_clicks_count_outbound_hosts( $days );
+	$total_pages    = max( 1, (int) ceil( $total / TURF_PER_PAGE ) );
+	$page           = min( $requested_page, $total_pages );
+	$rows           = $total ? turf_clicks_get_top_outbound_links( $days, $page ) : array();
+
+	if ( ! $rows ) {
+		echo '<p>' . esc_html__( 'Nog geen klikken op uitgaande links geregistreerd voor deze periode.', 'turf-stats' ) . '</p>';
+		return;
+	}
+	?>
+	<p class="description">
+		<?php esc_html_e( 'Klikken op links naar andere websites - automatisch herkend, geen data-turf-click nodig.', 'turf-stats' ); ?>
+	</p>
+	<table class="wp-list-table widefat fixed striped">
+		<thead>
+			<tr>
+				<th><?php esc_html_e( 'Doel', 'turf-stats' ); ?></th>
+				<th><?php esc_html_e( 'Kliks', 'turf-stats' ); ?></th>
+			</tr>
+		</thead>
+		<tbody>
+			<?php foreach ( $rows as $row ) : ?>
+				<tr>
+					<td><code><?php echo esc_html( $row->target_url ); ?></code></td>
 					<td><?php echo (int) $row->clicks; ?></td>
 				</tr>
 			<?php endforeach; ?>
