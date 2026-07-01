@@ -56,7 +56,10 @@
 			var url = new URL( href, window.location.href );
 
 			if ( url.hostname && url.hostname !== window.location.hostname ) {
-				send( 'outbound-link', { target: url.hostname } );
+				// Full destination URL (not just the hostname) so the report can
+				// show exactly which external page was clicked; the source page
+				// the visitor was on is already sent as `context` above.
+				send( 'outbound-link', { target: url.href } );
 			}
 		} catch ( err ) {
 			// Malformed URL - nothing to track.

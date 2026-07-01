@@ -18,7 +18,7 @@
  * site can deliberately label specific outbound links its own way instead).
  */
 
-define( 'TURF_CLICKS_DB_VERSION', '1.1' );
+define( 'TURF_CLICKS_DB_VERSION', '1.2' );
 
 /**
  * Sentinel click_key for automatically-detected outbound link clicks -
@@ -43,11 +43,14 @@ function turf_clicks_install() {
 	$table           = turf_clicks_table();
 	$charset_collate = $wpdb->get_charset_collate();
 
+	// target_url holds a full outbound URL (not just a hostname) since 1.2, so
+	// it needs to be long enough for real query-string-laden links - hence 512
+	// rather than the original 255. dbDelta widens the existing column in place.
 	dbDelta( "CREATE TABLE $table (
 		id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
 		click_key VARCHAR(100) NOT NULL,
 		context VARCHAR(191) NOT NULL DEFAULT '',
-		target_url VARCHAR(255) NULL DEFAULT NULL,
+		target_url VARCHAR(512) NULL DEFAULT NULL,
 		clicked_at DATETIME NOT NULL,
 		PRIMARY KEY  (id),
 		KEY key_lookup (click_key, clicked_at)
@@ -105,12 +108,14 @@ function turf_clicks_ajax_track() {
 	$target_url = null;
 
 	if ( TURF_OUTBOUND_CLICK_KEY === $key && isset( $_POST['target'] ) ) {
-		$target_url = turf_sanitize_referrer_host( wp_unslash( $_POST['target'] ) );
-		$target_url = $target_url ? substr( $target_url, 0, 255 ) : null;
+		// Full external URL, validated with esc_url_raw() (only http/https
+		// schemes survive), truncated to the column width.
+		$raw        = esc_url_raw( wp_unslash( $_POST['target'] ) );
+		$target_url = $raw ? substr( $raw, 0, 512 ) : null;
 	}
 
 	if ( TURF_OUTBOUND_CLICK_KEY === $key && ! $target_url ) {
-		wp_send_json_success(); // No usable destination host - nothing worth recording.
+		wp_send_json_success(); // No usable destination URL - nothing worth recording.
 	}
 
 	global $wpdb;

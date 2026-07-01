@@ -115,6 +115,68 @@ function turf_install() {
 add_action( 'init', 'turf_install' );
 
 /**
+ * Raw hit counter - the deliberate counterpart to the deduplicated
+ * "Weergaven" number. turf_track_view() drops a repeat view from the same
+ * visitor within the dedup window *before* it ever writes a row, so the event
+ * table can never reconstruct a raw pageview count. This tiny aggregate
+ * (one row per UTC hour, incremented on every real browser pageview,
+ * bots/editors excluded) does, so "Rauwe weergaven" can be compared
+ * apples-to-apples against tools that count every hit (Clicky, Jetpack).
+ * Only browser pageviews are counted here - REST/app fetches and redirect-time
+ * server-side tracking are excluded, since Clicky/Jetpack's own JS can't see
+ * those either, so including them would break the comparison.
+ */
+define( 'TURF_RAW_HITS_DB_VERSION', '1.0' );
+
+function turf_raw_hits_table() {
+	global $wpdb;
+	return $wpdb->prefix . 'turf_raw_hits';
+}
+
+function turf_raw_hits_install() {
+	if ( get_option( 'turf_raw_hits_db_version' ) === TURF_RAW_HITS_DB_VERSION ) {
+		return;
+	}
+
+	global $wpdb;
+	require_once ABSPATH . 'wp-admin/includes/upgrade.php';
+
+	$table           = turf_raw_hits_table();
+	$charset_collate = $wpdb->get_charset_collate();
+
+	// hit_hour is the top of the UTC hour (e.g. 2026-07-01 14:00:00), so the
+	// same turf_period_start_sql_date() boundary every other query uses works
+	// here unchanged, and a per-hour breakdown stays possible later.
+	dbDelta( "CREATE TABLE $table (
+		hit_hour DATETIME NOT NULL,
+		hits INT UNSIGNED NOT NULL DEFAULT 0,
+		PRIMARY KEY  (hit_hour)
+	) $charset_collate;" );
+
+	update_option( 'turf_raw_hits_db_version', TURF_RAW_HITS_DB_VERSION );
+}
+add_action( 'init', 'turf_raw_hits_install' );
+
+/**
+ * Increments the raw hit counter for the current UTC hour. Called only from
+ * the browser pageview path (see turf_track_view()/turf_track_other_view(),
+ * guarded by $extra['is_pageview']), after bot/editor filtering but before the
+ * dedup check - so every genuine pageview counts, deduped repeats included.
+ */
+function turf_record_raw_hit() {
+	global $wpdb;
+
+	$table = turf_raw_hits_table();
+	$hour  = gmdate( 'Y-m-d H:00:00' );
+
+	$wpdb->query( $wpdb->prepare(
+		"INSERT INTO $table (hit_hour, hits) VALUES (%s, 1)
+		ON DUPLICATE KEY UPDATE hits = hits + 1",
+		$hour
+	) );
+}
+
+/**
  * Current view count, as shown to visitors/admin. $type is 'post' or 'term'.
  */
 function turf_get_views( $object_id, $type = 'post' ) {
@@ -460,6 +522,10 @@ function turf_track_view( $object_id, $object_type = 'post', $extra = array() ) 
 		return array( 'views' => turf_get_views( $object_id, $object_type ), 'event_id' => null );
 	}
 
+	if ( ! empty( $extra['is_pageview'] ) ) {
+		turf_record_raw_hit();
+	}
+
 	global $wpdb;
 	$table        = turf_table();
 	$column       = 'term' === $object_type ? 'term_id' : 'post_id';
@@ -540,6 +606,10 @@ function turf_track_other_view( $page_type, $extra = array() ) {
 		return array( 'event_id' => null );
 	}
 
+	if ( ! empty( $extra['is_pageview'] ) ) {
+		turf_record_raw_hit();
+	}
+
 	global $wpdb;
 	$table        = turf_table();
 	$visitor_hash = turf_visitor_hash( $user_agent );
@@ -594,6 +664,9 @@ function turf_ajax_track_view() {
 		'utm_source'    => isset( $_POST['utm_source'] ) ? turf_sanitize_utm( wp_unslash( $_POST['utm_source'] ) ) : '',
 		'utm_medium'    => isset( $_POST['utm_medium'] ) ? turf_sanitize_utm( wp_unslash( $_POST['utm_medium'] ) ) : '',
 		'utm_campaign'  => isset( $_POST['utm_campaign'] ) ? turf_sanitize_utm( wp_unslash( $_POST['utm_campaign'] ) ) : '',
+		// Flags this as a real browser pageview, so the raw hit counter fires
+		// here but not for REST/app or redirect-time server-side tracking.
+		'is_pageview'   => true,
 	);
 
 	if ( 'other' === $object_type ) {

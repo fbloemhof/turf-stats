@@ -13,7 +13,19 @@ tracked and stored on your own database.
   still counts towards the site-wide totals and breakdowns too, broken out
   by type in its own "Overige pagina's" box - just without the per-object
   detail a specific post/term gets.
-- **Visitors** (unique, deduped per rolling window) alongside raw views.
+- **Visitors** (unique, deduped per rolling window) alongside deduped views.
+- **Raw views** — the deliberate counterpart to the deduplicated "Weergaven"
+  number: a true count of every browser pageview (repeat hits from the same
+  visitor included), so it can be compared apples-to-apples against tools that
+  count every hit (Clicky, Jetpack). Only browser pageviews count towards it -
+  REST/app fetches and redirect-time server-side tracking are excluded, since
+  a JavaScript-based tool like Clicky can't see those either. Deduped views
+  answer "how many distinct things got looked at"; raw views answer "how many
+  page loads happened".
+- **Views per visitor** and **average visit duration** — the deduped views
+  divided by visitors, and the average session length (time from a visit's
+  first to its last pageview plus the reading time recorded on the last page).
+  Both shown as headline stat boxes.
 - **Device, browser, OS** — parsed from the user-agent already present on
   every request.
 - **Language** — from the `Accept-Language` header.
@@ -52,9 +64,11 @@ tracked and stored on your own database.
   attribute — no extra JS or AJAX wiring needed per element.
 - **Outbound link tracking** — automatic, no markup needed anywhere in the
   theme or post content: any `<a href="...">` pointing at a different
-  hostname gets tracked under its destination host. An explicit
-  `data-turf-click` on a link still takes priority over this, for sites
-  that want to label specific outbound links their own way.
+  hostname gets tracked, recording the full destination URL together with the
+  page the visitor was on when they clicked (so the report shows both "which
+  external link" and "from where"). An explicit `data-turf-click` on a link
+  still takes priority over this, for sites that want to label specific
+  outbound links their own way.
 - **Comment counts per period** and a "most discussed" table — reads
   directly from WordPress' own comments, no extra tracking needed.
 - **Online now** — a live, auto-refreshing count of visitors active in the
@@ -165,10 +179,12 @@ you want to keep that history.
   other page's own period tabs. The chart and peak-hours heatmap show the
   last 7 days for context even on "Vandaag" (a single day is too sparse
   for either to be meaningful) - only the headline stat boxes are
-  strictly "today". Those headline numbers (Weergaven/Bezoekers/Reacties/
-  Bouncepercentage) refresh live every 30 seconds via AJAX, same idea as
-  "Nu online" - the chart, heatmap, and every breakdown/table below stay
-  as rendered on page load.
+  strictly "today". "Vandaag" additionally shows a distinct-visitors-per-hour
+  line chart (a single day of daily bars would just be one bar). Those
+  headline numbers (Weergaven/Rauwe weergaven/Bezoekers/Weergaven per
+  bezoeker/Reacties/Bouncepercentage/Gem. tijd per bezoek) refresh live every
+  30 seconds via AJAX, same idea as "Nu online" - the chart, heatmap, and
+  every breakdown/table below stay as rendered on page load.
 - **Content-activiteit** — its own box right under Overzicht: how many
   posts of each trackable type were published or edited during the
   period, one row per type that actually had activity (skipped entirely

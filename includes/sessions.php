@@ -178,3 +178,99 @@ function turf_get_top_transitions( $days, $limit = 10 ) {
 
 	return array_slice( $transitions, 0, $limit );
 }
+
+/**
+ * Average session (visit) duration in seconds. A session's duration is the
+ * time from its first to its last pageview, plus the reading time recorded on
+ * that last page (the engagement beacon's duration_seconds) - so it captures
+ * both the time spent moving between pages and the time spent on the final
+ * one. A single-page session is just that one page's recorded reading time
+ * (0 if the visitor left before the engagement beacon fired).
+ *
+ * This is the honest ceiling of what Turf can know: it can only include
+ * reading time for pages that actually sent an engagement beacon (posts/terms
+ * with the tracker's #post-views hook), so it leans conservative rather than
+ * inventing time. Skipped for "Alles" (days = 0), same as the bounce rate -
+ * an unbounded history isn't a meaningful single average.
+ *
+ * Reuses its own query rather than turf_compute_sessions(), since that
+ * memoized reconstruction deliberately drops per-row timestamps and reading
+ * time (it only needs the page sequence for bounce/routes).
+ */
+function turf_get_avg_session_seconds( $days ) {
+	if ( 0 === $days ) {
+		return null;
+	}
+
+	global $wpdb;
+	$table = turf_table();
+	list( $join, $where, $params ) = turf_site_join_and_where();
+
+	$where_date = '';
+
+	if ( 0 !== $days ) {
+		$where_date = 'AND v.viewed_at >= %s';
+		$params[]   = turf_period_start_sql_date( $days );
+	}
+
+	$params[] = turf_session_row_limit();
+
+	$rows = $wpdb->get_results( $wpdb->prepare(
+		"SELECT v.visitor_hash AS visitor_hash, v.viewed_at AS viewed_at, v.duration_seconds AS duration_seconds
+		FROM $table v
+		$join
+		WHERE $where $where_date
+		ORDER BY v.visitor_hash, v.viewed_at
+		LIMIT %d",
+		$params
+	) );
+
+	if ( ! $rows ) {
+		return null;
+	}
+
+	$gap = turf_session_gap_seconds();
+
+	$total_seconds   = 0;
+	$session_count   = 0;
+	$current_visitor = null;
+	$session_start   = null;
+	$last_time       = null;
+	$last_duration   = 0;
+
+	$flush = function () use ( &$total_seconds, &$session_count, &$session_start, &$last_time, &$last_duration ) {
+		if ( null === $session_start ) {
+			return;
+		}
+
+		$total_seconds += ( $last_time - $session_start ) + $last_duration;
+		++$session_count;
+	};
+
+	foreach ( $rows as $row ) {
+		$time     = strtotime( $row->viewed_at . ' UTC' );
+		$duration = null !== $row->duration_seconds ? (int) $row->duration_seconds : 0;
+
+		$is_new_session = ( $row->visitor_hash !== $current_visitor )
+			|| ( null === $last_time )
+			|| ( $time - $last_time > $gap );
+
+		if ( $is_new_session ) {
+			$flush();
+
+			$current_visitor = $row->visitor_hash;
+			$session_start   = $time;
+		}
+
+		$last_time     = $time;
+		$last_duration = $duration;
+	}
+
+	$flush();
+
+	if ( ! $session_count ) {
+		return null;
+	}
+
+	return (int) round( $total_seconds / $session_count );
+}

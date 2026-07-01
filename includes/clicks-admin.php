@@ -85,24 +85,35 @@ function turf_clicks_get_top_keys( $days, $page = 1 ) {
 	) );
 }
 
+/**
+ * Counts distinct destination-URL + source-page pairs (that's one table row),
+ * so pagination lines up with what turf_clicks_get_top_outbound_links() below
+ * actually lists.
+ */
 function turf_clicks_count_outbound_hosts( $days ) {
 	global $wpdb;
 	$table = turf_clicks_table();
 
 	if ( 0 === $days ) {
 		return (int) $wpdb->get_var( $wpdb->prepare(
-			"SELECT COUNT(DISTINCT target_url) FROM $table WHERE click_key = %s",
+			"SELECT COUNT(DISTINCT target_url, context) FROM $table WHERE click_key = %s",
 			TURF_OUTBOUND_CLICK_KEY
 		) );
 	}
 
 	return (int) $wpdb->get_var( $wpdb->prepare(
-		"SELECT COUNT(DISTINCT target_url) FROM $table WHERE click_key = %s AND clicked_at >= %s",
+		"SELECT COUNT(DISTINCT target_url, context) FROM $table WHERE click_key = %s AND clicked_at >= %s",
 		TURF_OUTBOUND_CLICK_KEY,
 		turf_period_start_sql_date( $days )
 	) );
 }
 
+/**
+ * Top outbound links, broken down by both destination URL and the page the
+ * visitor was on when they clicked (context) - so the same external link
+ * clicked from two different articles shows as two rows, which is usually the
+ * more useful signal than a single lumped total.
+ */
 function turf_clicks_get_top_outbound_links( $days, $page = 1 ) {
 	global $wpdb;
 	$table  = turf_clicks_table();
@@ -110,9 +121,9 @@ function turf_clicks_get_top_outbound_links( $days, $page = 1 ) {
 
 	if ( 0 === $days ) {
 		return $wpdb->get_results( $wpdb->prepare(
-			"SELECT target_url, COUNT(*) AS clicks FROM $table
+			"SELECT target_url, context, COUNT(*) AS clicks FROM $table
 			WHERE click_key = %s
-			GROUP BY target_url ORDER BY clicks DESC LIMIT %d OFFSET %d",
+			GROUP BY target_url, context ORDER BY clicks DESC LIMIT %d OFFSET %d",
 			TURF_OUTBOUND_CLICK_KEY,
 			TURF_PER_PAGE,
 			$offset
@@ -120,9 +131,9 @@ function turf_clicks_get_top_outbound_links( $days, $page = 1 ) {
 	}
 
 	return $wpdb->get_results( $wpdb->prepare(
-		"SELECT target_url, COUNT(*) AS clicks FROM $table
+		"SELECT target_url, context, COUNT(*) AS clicks FROM $table
 		WHERE click_key = %s AND clicked_at >= %s
-		GROUP BY target_url ORDER BY clicks DESC LIMIT %d OFFSET %d",
+		GROUP BY target_url, context ORDER BY clicks DESC LIMIT %d OFFSET %d",
 		TURF_OUTBOUND_CLICK_KEY,
 		turf_period_start_sql_date( $days ),
 		TURF_PER_PAGE,
@@ -192,13 +203,32 @@ function turf_clicks_render_top_outbound_links( $days ) {
 		<thead>
 			<tr>
 				<th><?php esc_html_e( 'Doel', 'turf-stats' ); ?></th>
+				<th><?php esc_html_e( 'Vanaf pagina', 'turf-stats' ); ?></th>
 				<th><?php esc_html_e( 'Kliks', 'turf-stats' ); ?></th>
 			</tr>
 		</thead>
 		<tbody>
-			<?php foreach ( $rows as $row ) : ?>
+			<?php
+			foreach ( $rows as $row ) :
+				$is_url    = (bool) preg_match( '#^https?://#i', (string) $row->target_url );
+				$from_path = (string) $row->context;
+				$from_url  = ( '' !== $from_path ) ? home_url( $from_path ) : '';
+				?>
 				<tr>
-					<td><code><?php echo esc_html( $row->target_url ); ?></code></td>
+					<td>
+						<?php if ( $is_url ) : ?>
+							<a href="<?php echo esc_url( $row->target_url ); ?>" target="_blank" rel="noopener noreferrer nofollow"><code><?php echo esc_html( $row->target_url ); ?></code></a>
+						<?php else : ?>
+							<code><?php echo esc_html( $row->target_url ); ?></code>
+						<?php endif; ?>
+					</td>
+					<td>
+						<?php if ( '' === $from_path ) : ?>
+							<span class="description">&mdash;</span>
+						<?php else : ?>
+							<a href="<?php echo esc_url( $from_url ); ?>" target="_blank" rel="noopener noreferrer"><?php echo esc_html( $from_path ); ?></a>
+						<?php endif; ?>
+					</td>
 					<td><?php echo (int) $row->clicks; ?></td>
 				</tr>
 			<?php endforeach; ?>
