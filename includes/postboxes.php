@@ -35,8 +35,8 @@ function turf_postboxes_enqueue( $hook ) {
 
 	wp_enqueue_script( 'turf-postbox-more', TURF_URL . 'js/postbox-more.js', array(), TURF_VERSION, true );
 	wp_localize_script( 'turf-postbox-more', 'turfPostboxMore', array(
-		'moreLabel' => __( 'Toon %d meer', 'turf-stats' ),
-		'lessLabel' => __( 'Toon minder', 'turf-stats' ),
+		'moreLabel' => __( 'Show %d more', 'turf-stats' ),
+		'lessLabel' => __( 'Show less', 'turf-stats' ),
 	) );
 }
 add_action( 'admin_enqueue_scripts', 'turf_postboxes_enqueue' );
@@ -166,11 +166,11 @@ function turf_previous_period_offset( $days ) {
 function turf_render_period_tabs( $base_url, $default_period = '7' ) {
 	$period = isset( $_GET['period'] ) ? sanitize_key( $_GET['period'] ) : $default_period;
 	$labels = array(
-		'today' => __( 'Vandaag', 'turf-stats' ),
-		'7'   => __( '7 dagen', 'turf-stats' ),
-		'30'  => __( '30 dagen', 'turf-stats' ),
-		'90'  => __( '90 dagen', 'turf-stats' ),
-		'all' => __( 'Alles', 'turf-stats' ),
+		'today' => __( 'Today', 'turf-stats' ),
+		'7'   => __( '7 days', 'turf-stats' ),
+		'30'  => __( '30 days', 'turf-stats' ),
+		'90'  => __( '90 days', 'turf-stats' ),
+		'all' => __( 'All', 'turf-stats' ),
 	);
 	?>
 	<ul class="subsubsub">

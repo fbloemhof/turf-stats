@@ -44,16 +44,16 @@ function turf_forms_render_top_forms( $days ) {
 	$rows = turf_forms_get_top_forms( $days );
 
 	if ( ! $rows ) {
-		echo '<p>' . esc_html__( 'Nog geen formulierinzendingen voor deze periode (of geen Contact Form 7/Gravity Forms actief).', 'turf-stats' ) . '</p>';
+		echo '<p>' . esc_html__( 'No form submissions yet for this period (or no Contact Form 7/Gravity Forms active).', 'turf-stats' ) . '</p>';
 		return;
 	}
 	?>
 	<table class="wp-list-table widefat fixed striped">
 		<thead>
 			<tr>
-				<th><?php esc_html_e( 'Formulier', 'turf-stats' ); ?></th>
-				<th><?php esc_html_e( 'Inzendingen', 'turf-stats' ); ?></th>
-				<th><?php esc_html_e( 'Conversie', 'turf-stats' ); ?></th>
+				<th><?php esc_html_e( 'Form', 'turf-stats' ); ?></th>
+				<th><?php esc_html_e( 'Submissions', 'turf-stats' ); ?></th>
+				<th><?php esc_html_e( 'Conversion', 'turf-stats' ); ?></th>
 			</tr>
 		</thead>
 		<tbody>

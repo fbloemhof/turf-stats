@@ -13,21 +13,21 @@ function turf_render_session_routes( $days ) {
 	} );
 
 	if ( ! $multi_page_sessions ) {
-		echo '<p>' . esc_html__( 'Nog geen sessies met meer dan één paginaweergave voor deze periode.', 'turf-stats' ) . '</p>';
+		echo '<p>' . esc_html__( 'No sessions with more than one page view yet for this period.', 'turf-stats' ) . '</p>';
 		return;
 	}
 
 	$rows = turf_get_top_transitions( $days );
 	?>
 	<p class="description">
-		<?php esc_html_e( 'Van welke pagina bezoekers naar welke andere pagina doorklikken binnen één bezoek (sessies van max. 30 minuten tussen weergaven).', 'turf-stats' ); ?>
+		<?php esc_html_e( 'Which page visitors click through to next within a single visit (sessions with max. 30 minutes between views).', 'turf-stats' ); ?>
 	</p>
 	<table class="wp-list-table widefat fixed striped">
 		<thead>
 			<tr>
-				<th><?php esc_html_e( 'Van', 'turf-stats' ); ?></th>
-				<th><?php esc_html_e( 'Naar', 'turf-stats' ); ?></th>
-				<th><?php esc_html_e( 'Keer', 'turf-stats' ); ?></th>
+				<th><?php esc_html_e( 'From', 'turf-stats' ); ?></th>
+				<th><?php esc_html_e( 'To', 'turf-stats' ); ?></th>
+				<th><?php esc_html_e( 'Times', 'turf-stats' ); ?></th>
 			</tr>
 		</thead>
 		<tbody>

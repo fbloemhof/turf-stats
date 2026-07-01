@@ -43,9 +43,9 @@ function turf_woo_get_funnel( $days ) {
 function turf_woo_render_funnel( $days ) {
 	$funnel = turf_woo_get_funnel( $days );
 	$steps  = array(
-		array( 'label' => __( 'Productweergaven', 'turf-stats' ), 'value' => $funnel['views'] ),
-		array( 'label' => __( 'Toegevoegd aan winkelwagen', 'turf-stats' ), 'value' => $funnel['add_to_cart'] ),
-		array( 'label' => __( 'Afgerond bij checkout', 'turf-stats' ), 'value' => $funnel['checkout'] ),
+		array( 'label' => __( 'Product views', 'turf-stats' ), 'value' => $funnel['views'] ),
+		array( 'label' => __( 'Added to cart', 'turf-stats' ), 'value' => $funnel['add_to_cart'] ),
+		array( 'label' => __( 'Completed at checkout', 'turf-stats' ), 'value' => $funnel['checkout'] ),
 	);
 	?>
 	<div class="bk-stats-overview__totals">
@@ -65,7 +65,7 @@ function turf_woo_render_funnel( $days ) {
 						<?php
 						echo esc_html( sprintf(
 							/* translators: %d: percentage of the previous funnel step */
-							__( '%d%% van vorige stap', 'turf-stats' ),
+							__( '%d%% of previous step', 'turf-stats' ),
 							$pct
 						) );
 						?>

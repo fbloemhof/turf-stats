@@ -58,16 +58,16 @@ function turf_search_render_top_terms( $days ) {
 	$rows = turf_search_get_top_terms( $days );
 
 	if ( ! $rows ) {
-		echo '<p>' . esc_html__( 'Nog geen zoekopdrachten voor deze periode.', 'turf-stats' ) . '</p>';
+		echo '<p>' . esc_html__( 'No searches yet for this period.', 'turf-stats' ) . '</p>';
 		return;
 	}
 	?>
 	<table class="wp-list-table widefat fixed striped">
 		<thead>
 			<tr>
-				<th><?php esc_html_e( 'Zoekterm', 'turf-stats' ); ?></th>
-				<th><?php esc_html_e( 'Keer gezocht', 'turf-stats' ); ?></th>
-				<th><?php esc_html_e( 'Gem. resultaten', 'turf-stats' ); ?></th>
+				<th><?php esc_html_e( 'Search term', 'turf-stats' ); ?></th>
+				<th><?php esc_html_e( 'Times searched', 'turf-stats' ); ?></th>
+				<th><?php esc_html_e( 'Avg. results', 'turf-stats' ); ?></th>
 			</tr>
 		</thead>
 		<tbody>
@@ -87,18 +87,18 @@ function turf_search_render_zero_results( $days ) {
 	$rows = turf_search_get_zero_result_terms( $days );
 
 	if ( ! $rows ) {
-		echo '<p>' . esc_html__( 'Geen zoekopdrachten zonder resultaat voor deze periode.', 'turf-stats' ) . '</p>';
+		echo '<p>' . esc_html__( 'No zero-result searches for this period.', 'turf-stats' ) . '</p>';
 		return;
 	}
 	?>
 	<p class="description">
-		<?php esc_html_e( 'Wat bezoekers zoeken maar niet vinden - kandidaten voor nieuwe content of een redirect.', 'turf-stats' ); ?>
+		<?php esc_html_e( 'What visitors search for but don\'t find - candidates for new content or a redirect.', 'turf-stats' ); ?>
 	</p>
 	<table class="wp-list-table widefat fixed striped">
 		<thead>
 			<tr>
-				<th><?php esc_html_e( 'Zoekterm', 'turf-stats' ); ?></th>
-				<th><?php esc_html_e( 'Keer gezocht', 'turf-stats' ); ?></th>
+				<th><?php esc_html_e( 'Search term', 'turf-stats' ); ?></th>
+				<th><?php esc_html_e( 'Times searched', 'turf-stats' ); ?></th>
 			</tr>
 		</thead>
 		<tbody>

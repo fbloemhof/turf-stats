@@ -20,7 +20,7 @@
 			.then( function ( r ) { return r.json(); } )
 			.then( function ( data ) {
 				if ( data.success ) {
-					el.textContent = data.data.count.toLocaleString( 'nl-NL' );
+					el.textContent = data.data.count.toLocaleString( turfOnlineNow.locale || undefined );
 				}
 			} )
 			.catch( function () {} );

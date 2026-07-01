@@ -483,6 +483,9 @@ function turf_enqueue() {
 		'objectType' => $object_type,
 		'pageType'   => $page_type,
 		'nonce'      => wp_create_nonce( 'turf_track_view' ),
+		/* translators: %s is the (already locale-formatted) view count. */
+		'viewsLabel' => __( '%s times viewed', 'turf-stats' ),
+		'locale'     => get_bloginfo( 'language' ),
 	) );
 }
 add_action( 'wp_enqueue_scripts', 'turf_enqueue' );

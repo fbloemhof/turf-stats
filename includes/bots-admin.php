@@ -9,8 +9,8 @@
 function turf_bots_admin_menu() {
 	$hook = add_submenu_page(
 		'turf-stats',
-		__( "Bots & LLM's", 'turf-stats' ),
-		__( "Bots & LLM's", 'turf-stats' ),
+		__( 'Bots & LLMs', 'turf-stats' ),
+		__( 'Bots & LLMs', 'turf-stats' ),
 		'manage_options',
 		'turf-bots',
 		'turf_bots_render_admin_page'
@@ -26,32 +26,32 @@ function turf_bots_register_metaboxes() {
 
 	$days = turf_get_requested_days();
 
-	add_meta_box( 'turf_bots_overview', __( 'Overzicht', 'turf-stats' ), function () use ( $days ) {
+	add_meta_box( 'turf_bots_overview', __( 'Overview', 'turf-stats' ), function () use ( $days ) {
 		turf_bots_render_overview( $days );
 	}, $hook, 'turf_bots_overview' );
 
-	add_meta_box( 'turf_bots_category', __( 'Categorie', 'turf-stats' ), function () use ( $days ) {
+	add_meta_box( 'turf_bots_category', __( 'Category', 'turf-stats' ), function () use ( $days ) {
 		turf_bots_render_simple_breakdown( turf_bots_get_category_breakdown( $days ), 'turf_bots_category_label' );
 	}, $hook, 'turf_bots_compact' );
 
-	add_meta_box( 'turf_bots_specific', __( 'Specifieke bots', 'turf-stats' ), function () use ( $days ) {
+	add_meta_box( 'turf_bots_specific', __( 'Specific bots', 'turf-stats' ), function () use ( $days ) {
 		turf_bots_render_simple_breakdown( turf_bots_get_top_bots( $days ), function ( $raw ) {
 			return $raw;
 		} );
 	}, $hook, 'turf_bots_compact' );
 
-	add_meta_box( 'turf_bots_pages', __( "Meest gecrawlde pagina's", 'turf-stats' ), function () use ( $days ) {
+	add_meta_box( 'turf_bots_pages', __( 'Most-crawled pages', 'turf-stats' ), function () use ( $days ) {
 		turf_bots_render_top_crawled_pages( $days );
 	}, $hook, 'turf_bots_wide' );
 }
 
 function turf_bots_category_label( $category ) {
 	$labels = array(
-		'llm'    => __( "LLM's / AI", 'turf-stats' ),
-		'search' => __( 'Zoekmachines', 'turf-stats' ),
+		'llm'    => __( 'LLMs / AI', 'turf-stats' ),
+		'search' => __( 'Search engines', 'turf-stats' ),
 		'social' => __( 'Social media', 'turf-stats' ),
-		'seo'    => __( 'SEO-tools', 'turf-stats' ),
-		'other'  => __( 'Overige bots', 'turf-stats' ),
+		'seo'    => __( 'SEO tools', 'turf-stats' ),
+		'other'  => __( 'Other bots', 'turf-stats' ),
 	);
 
 	return $labels[ $category ] ?? $category;
@@ -101,8 +101,8 @@ function turf_bots_render_overview( $days ) {
 		$totals = turf_bots_get_range_totals( 0 );
 		?>
 		<div class="bk-stats-overview__totals">
-			<?php turf_render_stat_box( __( 'Bot-bezoeken', 'turf-stats' ), $totals['hits'], false ); ?>
-			<?php turf_render_stat_box( __( "Pagina's gecrawld", 'turf-stats' ), $totals['pages'], false ); ?>
+			<?php turf_render_stat_box( __( 'Bot visits', 'turf-stats' ), $totals['hits'], false ); ?>
+			<?php turf_render_stat_box( __( 'Pages crawled', 'turf-stats' ), $totals['pages'], false ); ?>
 		</div>
 		<?php
 		return;
@@ -112,8 +112,8 @@ function turf_bots_render_overview( $days ) {
 	$previous = turf_bots_get_range_totals( $days, turf_previous_period_offset( $days ) );
 	?>
 	<div class="bk-stats-overview__totals">
-		<?php turf_render_stat_box( __( 'Bot-bezoeken', 'turf-stats' ), $current['hits'], turf_pct_change( $current['hits'], $previous['hits'] ) ); ?>
-		<?php turf_render_stat_box( __( "Pagina's gecrawld", 'turf-stats' ), $current['pages'], turf_pct_change( $current['pages'], $previous['pages'] ) ); ?>
+		<?php turf_render_stat_box( __( 'Bot visits', 'turf-stats' ), $current['hits'], turf_pct_change( $current['hits'], $previous['hits'] ) ); ?>
+		<?php turf_render_stat_box( __( 'Pages crawled', 'turf-stats' ), $current['pages'], turf_pct_change( $current['pages'], $previous['pages'] ) ); ?>
 	</div>
 	<?php
 }
@@ -161,7 +161,7 @@ function turf_bots_render_simple_breakdown( $rows, $label_callback ) {
 	$max    = $values ? max( 1, max( $values ) ) : 1;
 	?>
 	<?php if ( ! $rows ) : ?>
-		<p><?php esc_html_e( 'Nog geen data voor deze periode.', 'turf-stats' ); ?></p>
+		<p><?php esc_html_e( 'No data yet for this period.', 'turf-stats' ); ?></p>
 	<?php else : ?>
 		<?php foreach ( $rows as $row ) : ?>
 			<?php
@@ -172,7 +172,7 @@ function turf_bots_render_simple_breakdown( $rows, $label_callback ) {
 			<?php
 			$value_text = sprintf(
 				/* translators: 1: number of hits, 2: percentage share of total */
-				__( '%1$s keer (%2$d%%)', 'turf-stats' ),
+				__( '%1$s times (%2$d%%)', 'turf-stats' ),
 				number_format_i18n( $count ),
 				$share
 			);
@@ -226,7 +226,7 @@ function turf_bots_render_top_crawled_pages( $days ) {
 	$total = turf_bots_count_crawled_pages( $days );
 
 	if ( ! $total ) {
-		echo '<p>' . esc_html__( 'Nog geen bot-bezoeken voor deze periode.', 'turf-stats' ) . '</p>';
+		echo '<p>' . esc_html__( 'No bot visits yet for this period.', 'turf-stats' ) . '</p>';
 		return;
 	}
 
@@ -237,9 +237,9 @@ function turf_bots_render_top_crawled_pages( $days ) {
 	<table class="wp-list-table widefat fixed striped">
 		<thead>
 			<tr>
-				<th><?php esc_html_e( 'Titel', 'turf-stats' ); ?></th>
+				<th><?php esc_html_e( 'Title', 'turf-stats' ); ?></th>
 				<th><?php esc_html_e( 'Type', 'turf-stats' ); ?></th>
-				<th><?php esc_html_e( 'Bot-bezoeken', 'turf-stats' ); ?></th>
+				<th><?php esc_html_e( 'Bot visits', 'turf-stats' ); ?></th>
 			</tr>
 		</thead>
 		<tbody>
@@ -277,9 +277,9 @@ function turf_bots_render_admin_page() {
 	turf_admin_inline_style();
 	?>
 	<div class="wrap">
-		<h1><?php esc_html_e( "Bots & LLM's", 'turf-stats' ); ?></h1>
+		<h1><?php esc_html_e( 'Bots & LLMs', 'turf-stats' ); ?></h1>
 		<p class="description">
-			<?php esc_html_e( 'Crawlers en AI-bots draaien meestal geen JavaScript, dus dit telt apart, server-side - los van de gewone bezoekersstatistieken (die bots juist bewust uitsluiten).', 'turf-stats' ); ?>
+			<?php esc_html_e( 'Crawlers and AI bots usually don\'t run JavaScript, so this is counted separately, server-side - apart from the regular visitor stats (which deliberately exclude bots).', 'turf-stats' ); ?>
 		</p>
 
 		<?php turf_render_period_tabs( admin_url( 'admin.php?page=turf-bots' ) ); ?>

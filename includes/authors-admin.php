@@ -66,18 +66,18 @@ function turf_render_author_breakdown( $days ) {
 	$rows = turf_get_author_breakdown( $days );
 
 	if ( ! $rows ) {
-		echo '<p>' . esc_html__( 'Nog geen data voor deze periode.', 'turf-stats' ) . '</p>';
+		echo '<p>' . esc_html__( 'No data yet for this period.', 'turf-stats' ) . '</p>';
 		return;
 	}
 	?>
 	<table class="wp-list-table widefat fixed striped">
 		<thead>
 			<tr>
-				<th><?php esc_html_e( 'Auteur', 'turf-stats' ); ?></th>
-				<th><?php esc_html_e( 'Berichten', 'turf-stats' ); ?></th>
-				<th><?php esc_html_e( 'Weergaven', 'turf-stats' ); ?></th>
-				<th><?php esc_html_e( 'Gem. leestijd', 'turf-stats' ); ?></th>
-				<th><?php esc_html_e( 'Gem. scrolldiepte', 'turf-stats' ); ?></th>
+				<th><?php esc_html_e( 'Author', 'turf-stats' ); ?></th>
+				<th><?php esc_html_e( 'Posts', 'turf-stats' ); ?></th>
+				<th><?php esc_html_e( 'Views', 'turf-stats' ); ?></th>
+				<th><?php esc_html_e( 'Avg. reading time', 'turf-stats' ); ?></th>
+				<th><?php esc_html_e( 'Avg. scroll depth', 'turf-stats' ); ?></th>
 			</tr>
 		</thead>
 		<tbody>

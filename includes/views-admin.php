@@ -14,8 +14,8 @@ define( 'TURF_PER_PAGE', 5 );
 
 function turf_admin_menu() {
 	$hook = add_menu_page(
-		__( 'Statistieken', 'turf-stats' ),
-		__( 'Statistieken', 'turf-stats' ),
+		__( 'Statistics', 'turf-stats' ),
+		__( 'Statistics', 'turf-stats' ),
 		'manage_options',
 		'turf-stats',
 		'turf_render_admin_page',
@@ -42,46 +42,46 @@ function turf_views_register_metaboxes() {
 
 	$days = turf_get_requested_days( 'today' );
 
-	add_meta_box( 'turf_overview', __( 'Overzicht', 'turf-stats' ), function () use ( $days ) {
+	add_meta_box( 'turf_overview', __( 'Overview', 'turf-stats' ), function () use ( $days ) {
 		turf_render_overview( $days );
 	}, $hook, 'turf_overview' );
 
-	add_meta_box( 'turf_content_activity', __( 'Content-activiteit', 'turf-stats' ), function () use ( $days ) {
+	add_meta_box( 'turf_content_activity', __( 'Content activity', 'turf-stats' ), function () use ( $days ) {
 		turf_render_content_activity( $days );
 	}, $hook, 'turf_overview' );
 
 	$compact_boxes = array(
-		array( 'turf_device', __( 'Apparaat', 'turf-stats' ), function () use ( $days ) {
+		array( 'turf_device', __( 'Device', 'turf-stats' ), function () use ( $days ) {
 			turf_render_breakdown( 'device_type', $days );
 		} ),
 		array( 'turf_browser', __( 'Browser', 'turf-stats' ), function () use ( $days ) {
 			turf_render_breakdown( 'browser', $days );
 		} ),
-		array( 'turf_os', __( 'Besturingssysteem', 'turf-stats' ), function () use ( $days ) {
+		array( 'turf_os', __( 'Operating system', 'turf-stats' ), function () use ( $days ) {
 			turf_render_breakdown( 'os', $days );
 		} ),
-		array( 'turf_language', __( 'Taal', 'turf-stats' ), function () use ( $days ) {
+		array( 'turf_language', __( 'Language', 'turf-stats' ), function () use ( $days ) {
 			turf_render_breakdown( 'language', $days );
 		} ),
-		array( 'turf_country', __( 'Land van herkomst', 'turf-stats' ), function () use ( $days ) {
+		array( 'turf_country', __( 'Country of origin', 'turf-stats' ), function () use ( $days ) {
 			turf_render_breakdown( 'country', $days );
 		} ),
-		array( 'turf_new_returning', __( 'Nieuw vs. terugkerend', 'turf-stats' ), function () use ( $days ) {
+		array( 'turf_new_returning', __( 'New vs. returning', 'turf-stats' ), function () use ( $days ) {
 			turf_render_new_vs_returning( $days );
 		} ),
-		array( 'turf_referrer', __( 'Herkomst', 'turf-stats' ), function () use ( $days ) {
+		array( 'turf_referrer', __( 'Source', 'turf-stats' ), function () use ( $days ) {
 			turf_render_referrer_breakdown( $days );
 		} ),
-		array( 'turf_top_referrers', __( 'Top verwijzende sites', 'turf-stats' ), function () use ( $days ) {
+		array( 'turf_top_referrers', __( 'Top referring sites', 'turf-stats' ), function () use ( $days ) {
 			turf_render_top_referrer_hosts( $days );
 		} ),
-		array( 'turf_utm_source', __( 'Campagnebron (UTM)', 'turf-stats' ), function () use ( $days ) {
+		array( 'turf_utm_source', __( 'Campaign source (UTM)', 'turf-stats' ), function () use ( $days ) {
 			turf_render_breakdown( 'utm_source', $days, true );
 		} ),
-		array( 'turf_utm_medium', __( 'Campagnemedium (UTM)', 'turf-stats' ), function () use ( $days ) {
+		array( 'turf_utm_medium', __( 'Campaign medium (UTM)', 'turf-stats' ), function () use ( $days ) {
 			turf_render_breakdown( 'utm_medium', $days, true );
 		} ),
-		array( 'turf_other_pages', __( 'Overige pagina\'s', 'turf-stats' ), function () use ( $days ) {
+		array( 'turf_other_pages', __( 'Other pages', 'turf-stats' ), function () use ( $days ) {
 			turf_render_other_pages_breakdown( $days );
 		} ),
 	);
@@ -91,7 +91,7 @@ function turf_views_register_metaboxes() {
 		add_meta_box( $id, $title, $callback, $hook, 'turf_compact' );
 	}
 
-	add_meta_box( 'turf_peak_hours', __( 'Piekuren', 'turf-stats' ), function () use ( $days ) {
+	add_meta_box( 'turf_peak_hours', __( 'Peak hours', 'turf-stats' ), function () use ( $days ) {
 		// A single day is too sparse for a meaningful 7x24 heatmap - shows
 		// the last 7 days for context instead, same as the Vandaag chart.
 		turf_render_peak_hours( TURF_PERIOD_TODAY === $days ? 7 : $days );
@@ -114,7 +114,7 @@ function turf_views_register_metaboxes() {
 		);
 	}
 
-	add_meta_box( 'turf_comments', __( 'Meest besproken', 'turf-stats' ), function () use ( $days ) {
+	add_meta_box( 'turf_comments', __( 'Most discussed', 'turf-stats' ), function () use ( $days ) {
 		turf_render_top_commented_posts( $days );
 	}, $hook, 'turf_wide' );
 
@@ -349,7 +349,7 @@ function turf_format_views_per_visitor( $views, $visitors ) {
 
 function turf_render_change_badge( $change ) {
 	if ( null === $change ) {
-		echo '<span class="bk-stats-box__change bk-stats-box__change--new">' . esc_html__( 'nieuw', 'turf-stats' ) . '</span>';
+		echo '<span class="bk-stats-box__change bk-stats-box__change--new">' . esc_html__( 'new', 'turf-stats' ) . '</span>';
 		return;
 	}
 
@@ -444,9 +444,9 @@ function turf_ajax_overview_stats() {
 		$totals   = turf_get_alltime_site_totals();
 		$comments = turf_get_comment_totals( 0 );
 
-		$boxes['weergaven'] = turf_capture_stat_box_inner( __( 'Weergaven', 'turf-stats' ), $totals['views'], false );
-		$boxes['bezoekers'] = turf_capture_stat_box_inner( __( 'Bezoekers', 'turf-stats' ), $totals['visitors'], false );
-		$boxes['reacties']  = turf_capture_stat_box_inner( __( 'Reacties', 'turf-stats' ), $comments, false );
+		$boxes['weergaven'] = turf_capture_stat_box_inner( __( 'Views', 'turf-stats' ), $totals['views'], false );
+		$boxes['bezoekers'] = turf_capture_stat_box_inner( __( 'Visitors', 'turf-stats' ), $totals['visitors'], false );
+		$boxes['reacties']  = turf_capture_stat_box_inner( __( 'Comments', 'turf-stats' ), $comments, false );
 	} else {
 		$offset            = turf_previous_period_offset( $days );
 		$current           = turf_get_range_site_totals( $days, 0 );
@@ -454,28 +454,28 @@ function turf_ajax_overview_stats() {
 		$current_comments  = turf_get_comment_totals( $days, 0 );
 		$previous_comments = turf_get_comment_totals( $days, $offset );
 
-		$boxes['weergaven'] = turf_capture_stat_box_inner( __( 'Weergaven', 'turf-stats' ), $current['views'], turf_pct_change( $current['views'], $previous['views'] ) );
+		$boxes['weergaven'] = turf_capture_stat_box_inner( __( 'Views', 'turf-stats' ), $current['views'], turf_pct_change( $current['views'], $previous['views'] ) );
 
 		$raw = turf_get_range_raw_views( $days, 0 );
 		if ( null !== $raw ) {
 			$raw_prev      = turf_get_range_raw_views( $days, $offset );
-			$boxes['rauw'] = turf_capture_stat_box_inner( __( 'Rauwe weergaven', 'turf-stats' ), $raw, turf_pct_change( $raw, (int) $raw_prev ) );
+			$boxes['rauw'] = turf_capture_stat_box_inner( __( 'Raw views', 'turf-stats' ), $raw, turf_pct_change( $raw, (int) $raw_prev ) );
 		}
 
-		$boxes['bezoekers']   = turf_capture_stat_box_inner( __( 'Bezoekers', 'turf-stats' ), $current['visitors'], turf_pct_change( $current['visitors'], $previous['visitors'] ) );
-		$boxes['perbezoeker'] = turf_capture_stat_box_inner( __( 'Weergaven/bezoeker', 'turf-stats' ), turf_format_views_per_visitor( $current['views'], $current['visitors'] ), false, '', true );
-		$boxes['reacties']    = turf_capture_stat_box_inner( __( 'Reacties', 'turf-stats' ), $current_comments, turf_pct_change( $current_comments, $previous_comments ) );
+		$boxes['bezoekers']   = turf_capture_stat_box_inner( __( 'Visitors', 'turf-stats' ), $current['visitors'], turf_pct_change( $current['visitors'], $previous['visitors'] ) );
+		$boxes['perbezoeker'] = turf_capture_stat_box_inner( __( 'Views/visitor', 'turf-stats' ), turf_format_views_per_visitor( $current['views'], $current['visitors'] ), false, '', true );
+		$boxes['reacties']    = turf_capture_stat_box_inner( __( 'Comments', 'turf-stats' ), $current_comments, turf_pct_change( $current_comments, $previous_comments ) );
 
 		$bounce_rate = turf_get_bounce_rate( $days );
 
 		if ( null !== $bounce_rate ) {
-			$boxes['bounce'] = turf_capture_stat_box_inner( __( 'Bouncepercentage', 'turf-stats' ), $bounce_rate, false, '%' );
+			$boxes['bounce'] = turf_capture_stat_box_inner( __( 'Bounce rate', 'turf-stats' ), $bounce_rate, false, '%' );
 		}
 
 		$avg_seconds = turf_get_avg_session_seconds( $days );
 
 		if ( null !== $avg_seconds ) {
-			$boxes['duur'] = turf_capture_stat_box_inner( __( 'Gem. tijd/bezoek', 'turf-stats' ), turf_format_duration( $avg_seconds ), false, '', true );
+			$boxes['duur'] = turf_capture_stat_box_inner( __( 'Avg. time/visit', 'turf-stats' ), turf_format_duration( $avg_seconds ), false, '', true );
 		}
 	}
 
@@ -497,9 +497,9 @@ function turf_render_overview( $days ) {
 		<div class="bk-stats-overview">
 			<div class="bk-stats-overview__totals" id="turf-overview-totals" data-days="<?php echo esc_attr( $days ); ?>">
 				<?php turf_render_online_now(); ?>
-				<?php turf_render_stat_box( __( 'Weergaven', 'turf-stats' ), $totals['views'], false, '', 'weergaven' ); ?>
-				<?php turf_render_stat_box( __( 'Bezoekers', 'turf-stats' ), $totals['visitors'], false, '', 'bezoekers' ); ?>
-				<?php turf_render_stat_box( __( 'Reacties', 'turf-stats' ), $comments, false, '', 'reacties' ); ?>
+				<?php turf_render_stat_box( __( 'Views', 'turf-stats' ), $totals['views'], false, '', 'weergaven' ); ?>
+				<?php turf_render_stat_box( __( 'Visitors', 'turf-stats' ), $totals['visitors'], false, '', 'bezoekers' ); ?>
+				<?php turf_render_stat_box( __( 'Comments', 'turf-stats' ), $comments, false, '', 'reacties' ); ?>
 			</div>
 		</div>
 		<?php
@@ -557,26 +557,26 @@ function turf_render_overview( $days ) {
  *                        the matching preceding window).
  */
 function turf_render_overview_stat_boxes( $days, $current, $previous, $current_comments, $previous_comments, $offset ) {
-	turf_render_stat_box( __( 'Weergaven', 'turf-stats' ), $current['views'], turf_pct_change( $current['views'], $previous['views'] ), '', 'weergaven' );
+	turf_render_stat_box( __( 'Views', 'turf-stats' ), $current['views'], turf_pct_change( $current['views'], $previous['views'] ), '', 'weergaven' );
 
 	$raw = turf_get_range_raw_views( $days, 0 );
 	if ( null !== $raw ) {
 		$raw_prev = turf_get_range_raw_views( $days, $offset );
-		turf_render_stat_box( __( 'Rauwe weergaven', 'turf-stats' ), $raw, turf_pct_change( $raw, (int) $raw_prev ), '', 'rauw' );
+		turf_render_stat_box( __( 'Raw views', 'turf-stats' ), $raw, turf_pct_change( $raw, (int) $raw_prev ), '', 'rauw' );
 	}
 
-	turf_render_stat_box( __( 'Bezoekers', 'turf-stats' ), $current['visitors'], turf_pct_change( $current['visitors'], $previous['visitors'] ), '', 'bezoekers' );
-	turf_render_stat_box( __( 'Weergaven/bezoeker', 'turf-stats' ), turf_format_views_per_visitor( $current['views'], $current['visitors'] ), false, '', 'perbezoeker', true );
-	turf_render_stat_box( __( 'Reacties', 'turf-stats' ), $current_comments, turf_pct_change( $current_comments, $previous_comments ), '', 'reacties' );
+	turf_render_stat_box( __( 'Visitors', 'turf-stats' ), $current['visitors'], turf_pct_change( $current['visitors'], $previous['visitors'] ), '', 'bezoekers' );
+	turf_render_stat_box( __( 'Views/visitor', 'turf-stats' ), turf_format_views_per_visitor( $current['views'], $current['visitors'] ), false, '', 'perbezoeker', true );
+	turf_render_stat_box( __( 'Comments', 'turf-stats' ), $current_comments, turf_pct_change( $current_comments, $previous_comments ), '', 'reacties' );
 
 	$bounce_rate = turf_get_bounce_rate( $days );
 	if ( null !== $bounce_rate ) {
-		turf_render_stat_box( __( 'Bouncepercentage', 'turf-stats' ), $bounce_rate, false, '%', 'bounce' );
+		turf_render_stat_box( __( 'Bounce rate', 'turf-stats' ), $bounce_rate, false, '%', 'bounce' );
 	}
 
 	$avg_seconds = turf_get_avg_session_seconds( $days );
 	if ( null !== $avg_seconds ) {
-		turf_render_stat_box( __( 'Gem. tijd/bezoek', 'turf-stats' ), turf_format_duration( $avg_seconds ), false, '', 'duur', true );
+		turf_render_stat_box( __( 'Avg. time/visit', 'turf-stats' ), turf_format_duration( $avg_seconds ), false, '', 'duur', true );
 	}
 }
 
@@ -590,8 +590,8 @@ function turf_render_daily_chart( $daily ) {
 	$max = max( 1, max( array_column( $daily, 'views' ) ) );
 	?>
 	<div class="bk-stats-overview__legend">
-		<span class="bk-stats-legend bk-stats-legend--views"><?php esc_html_e( 'Weergaven', 'turf-stats' ); ?></span>
-		<span class="bk-stats-legend bk-stats-legend--visitors"><?php esc_html_e( 'Bezoekers', 'turf-stats' ); ?></span>
+		<span class="bk-stats-legend bk-stats-legend--views"><?php esc_html_e( 'Views', 'turf-stats' ); ?></span>
+		<span class="bk-stats-legend bk-stats-legend--visitors"><?php esc_html_e( 'Visitors', 'turf-stats' ); ?></span>
 	</div>
 
 	<div class="bk-stats-chart">
@@ -601,7 +601,7 @@ function turf_render_daily_chart( $daily ) {
 			$visitors_pct = round( ( $day['visitors'] / $max ) * 100 );
 			$title        = sprintf(
 				/* translators: 1: date, 2: number of views, 3: number of visitors */
-				__( '%1$s — %2$s weergaven, %3$s bezoekers', 'turf-stats' ),
+				__( '%1$s — %2$s views, %3$s visitors', 'turf-stats' ),
 				date_i18n( 'd M', strtotime( $day['date'] ) ),
 				number_format_i18n( $day['views'] ),
 				number_format_i18n( $day['visitors'] )
@@ -701,15 +701,15 @@ function turf_render_hourly_visitors_chart() {
 	?>
 	<div class="bk-stats-hourly">
 		<div class="bk-stats-overview__legend">
-			<span class="bk-stats-legend bk-stats-legend--visitors"><?php esc_html_e( 'Bezoekers per uur (vandaag)', 'turf-stats' ); ?></span>
+			<span class="bk-stats-legend bk-stats-legend--visitors"><?php esc_html_e( 'Visitors per hour (today)', 'turf-stats' ); ?></span>
 		</div>
-		<svg class="bk-stats-hourly__svg" viewBox="0 0 <?php echo (int) $w; ?> <?php echo (int) $h; ?>" preserveAspectRatio="none" role="img" aria-label="<?php esc_attr_e( 'Bezoekers per uur vandaag', 'turf-stats' ); ?>">
+		<svg class="bk-stats-hourly__svg" viewBox="0 0 <?php echo (int) $w; ?> <?php echo (int) $h; ?>" preserveAspectRatio="none" role="img" aria-label="<?php esc_attr_e( 'Visitors per hour today', 'turf-stats' ); ?>">
 			<line class="bk-stats-hourly__grid" x1="0" y1="<?php echo esc_attr( $baseline ); ?>" x2="<?php echo (int) $w; ?>" y2="<?php echo esc_attr( $baseline ); ?>" vector-effect="non-scaling-stroke" />
 			<path class="bk-stats-hourly__area" d="<?php echo esc_attr( trim( $area_path ) ); ?>" />
 			<path class="bk-stats-hourly__line" d="<?php echo esc_attr( trim( $line_path ) ); ?>" vector-effect="non-scaling-stroke" />
 			<?php foreach ( $points as $p ) : ?>
 				<circle class="bk-stats-hourly__dot" cx="<?php echo esc_attr( $p['x'] ); ?>" cy="<?php echo esc_attr( $p['y'] ); ?>" r="2.5" vector-effect="non-scaling-stroke">
-					<title><?php printf( esc_html__( '%1$02d:00 — %2$s bezoekers', 'turf-stats' ), (int) $p['hour'], number_format_i18n( $p['visitors'] ) ); ?></title>
+					<title><?php printf( esc_html__( '%1$02d:00 — %2$s visitors', 'turf-stats' ), (int) $p['hour'], number_format_i18n( $p['visitors'] ) ); ?></title>
 				</circle>
 			<?php endforeach; ?>
 			<?php
@@ -765,7 +765,7 @@ function turf_render_content_activity( $days ) {
 	}
 
 	if ( ! $rows ) {
-		echo '<p>' . esc_html__( 'Geen content-activiteit voor deze periode.', 'turf-stats' ) . '</p>';
+		echo '<p>' . esc_html__( 'No content activity for this period.', 'turf-stats' ) . '</p>';
 		return;
 	}
 	?>
@@ -773,8 +773,8 @@ function turf_render_content_activity( $days ) {
 		<thead>
 			<tr>
 				<th><?php esc_html_e( 'Type', 'turf-stats' ); ?></th>
-				<th><?php esc_html_e( 'Toegevoegd', 'turf-stats' ); ?></th>
-				<th><?php esc_html_e( 'Gewijzigd', 'turf-stats' ); ?></th>
+				<th><?php esc_html_e( 'Added', 'turf-stats' ); ?></th>
+				<th><?php esc_html_e( 'Edited', 'turf-stats' ); ?></th>
 			</tr>
 		</thead>
 		<tbody>
@@ -860,17 +860,17 @@ function turf_get_breakdown( $column, $days, $exclude_empty = false ) {
 
 function turf_breakdown_label( $column, $raw ) {
 	if ( 'country' === $column && '' === $raw ) {
-		return __( 'Onbekend (geen Cloudflare-landdetectie of eigen GeoIP-koppeling)', 'turf-stats' );
+		return __( 'Unknown (no Cloudflare country detection or own GeoIP integration)', 'turf-stats' );
 	}
 
 	if ( '' === $raw ) {
-		return __( 'Onbekend (van vóór deze functie)', 'turf-stats' );
+		return __( 'Unknown (from before this feature)', 'turf-stats' );
 	}
 
 	if ( 'device_type' === $column ) {
 		$labels = array(
 			'desktop' => __( 'Desktop', 'turf-stats' ),
-			'mobile'  => __( 'Mobiel', 'turf-stats' ),
+			'mobile'  => __( 'Mobile', 'turf-stats' ),
 			'tablet'  => __( 'Tablet', 'turf-stats' ),
 		);
 
@@ -895,15 +895,15 @@ function turf_breakdown_label( $column, $raw ) {
  */
 function turf_country_label( $code ) {
 	$labels = array(
-		'NL' => __( 'Nederland', 'turf-stats' ),
-		'BE' => __( 'België', 'turf-stats' ),
-		'DE' => __( 'Duitsland', 'turf-stats' ),
-		'GB' => __( 'Verenigd Koninkrijk', 'turf-stats' ),
-		'US' => __( 'Verenigde Staten', 'turf-stats' ),
-		'FR' => __( 'Frankrijk', 'turf-stats' ),
-		'ES' => __( 'Spanje', 'turf-stats' ),
-		'IT' => __( 'Italië', 'turf-stats' ),
-		'PL' => __( 'Polen', 'turf-stats' ),
+		'NL' => __( 'Netherlands', 'turf-stats' ),
+		'BE' => __( 'Belgium', 'turf-stats' ),
+		'DE' => __( 'Germany', 'turf-stats' ),
+		'GB' => __( 'United Kingdom', 'turf-stats' ),
+		'US' => __( 'United States', 'turf-stats' ),
+		'FR' => __( 'France', 'turf-stats' ),
+		'ES' => __( 'Spain', 'turf-stats' ),
+		'IT' => __( 'Italy', 'turf-stats' ),
+		'PL' => __( 'Poland', 'turf-stats' ),
 		'CA' => __( 'Canada', 'turf-stats' ),
 	);
 
@@ -912,11 +912,11 @@ function turf_country_label( $code ) {
 
 function turf_language_label( $code ) {
 	$labels = array(
-		'nl' => __( 'Nederlands', 'turf-stats' ),
-		'fy' => __( 'Frysk', 'turf-stats' ),
-		'en' => __( 'Engels', 'turf-stats' ),
-		'de' => __( 'Duits', 'turf-stats' ),
-		'fr' => __( 'Frans', 'turf-stats' ),
+		'nl' => __( 'Dutch', 'turf-stats' ),
+		'fy' => __( 'Frisian', 'turf-stats' ),
+		'en' => __( 'English', 'turf-stats' ),
+		'de' => __( 'German', 'turf-stats' ),
+		'fr' => __( 'French', 'turf-stats' ),
 	);
 
 	return $labels[ $code ] ?? $code;
@@ -1037,11 +1037,11 @@ function turf_referrer_bucket_label( $bucket ) {
 	$labels = array(
 		'direct'      => __( 'Direct', 'turf-stats' ),
 		'dorpsapp'    => __( 'Dorpsapp', 'turf-stats' ),
-		'app'         => __( 'App / REST API (overig)', 'turf-stats' ),
-		'intern'      => __( 'Intern (eigen site)', 'turf-stats' ),
-		'zoekmachine' => __( 'Zoekmachines', 'turf-stats' ),
+		'app'         => __( 'App / REST API (other)', 'turf-stats' ),
+		'intern'      => __( 'Internal (own site)', 'turf-stats' ),
+		'zoekmachine' => __( 'Search engines', 'turf-stats' ),
 		'social'      => __( 'Social media', 'turf-stats' ),
-		'overig'      => __( 'Overig', 'turf-stats' ),
+		'overig'      => __( 'Other', 'turf-stats' ),
 	);
 
 	return $labels[ $bucket ] ?? $bucket;
@@ -1099,7 +1099,7 @@ function turf_render_breakdown_rows( $rows, $label_callback ) {
 	$max_views   = $views_list ? max( 1, max( $views_list ) ) : 1;
 	?>
 	<?php if ( ! $rows ) : ?>
-		<p><?php esc_html_e( 'Nog geen data voor deze periode.', 'turf-stats' ); ?></p>
+		<p><?php esc_html_e( 'No data yet for this period.', 'turf-stats' ); ?></p>
 	<?php else : ?>
 		<?php foreach ( $rows as $row ) : ?>
 			<?php
@@ -1112,7 +1112,7 @@ function turf_render_breakdown_rows( $rows, $label_callback ) {
 			<?php
 			$value_text = sprintf(
 				/* translators: 1: number of views, 2: percentage share of total views, 3: number of unique visitors */
-				__( '%1$s weergaven (%2$d%%) · %3$s bezoekers', 'turf-stats' ),
+				__( '%1$s views (%2$d%%) · %3$s visitors', 'turf-stats' ),
 				number_format_i18n( $views ),
 				$share,
 				number_format_i18n( $visitors )
@@ -1157,7 +1157,7 @@ function turf_render_referrer_breakdown( $days ) {
 
 	foreach ( $rows as $row ) {
 		if ( in_array( $row->label, array( 'dorpsapp', 'app' ), true ) ) {
-			echo '<p class="description">' . esc_html__( '"Dorpsapp" en "App / REST API" lopen via één centrale backend-server, niet via de apparaten van losse bezoekers - "Bezoekers" is daardoor niet betrouwbaar voor die bronnen. "Weergaven" wel.', 'turf-stats' ) . '</p>';
+			echo '<p class="description">' . esc_html__( '"Dorpsapp" and "App / REST API" run through a single central backend server, not through individual visitors\' devices - so "Visitors" isn\'t reliable for those sources. "Views" is.', 'turf-stats' ) . '</p>';
 			break;
 		}
 	}
@@ -1201,11 +1201,11 @@ function turf_get_other_pages_breakdown( $days ) {
 
 function turf_other_page_type_label( $type ) {
 	$labels = array(
-		'author' => __( 'Auteur-archief', 'turf-stats' ),
-		'date'   => __( 'Datum-archief', 'turf-stats' ),
-		'search' => __( 'Zoekresultaten', 'turf-stats' ),
-		'home'   => __( 'Blogoverzicht', 'turf-stats' ),
-		'other'  => __( 'Overig', 'turf-stats' ),
+		'author' => __( 'Author archive', 'turf-stats' ),
+		'date'   => __( 'Date archive', 'turf-stats' ),
+		'search' => __( 'Search results', 'turf-stats' ),
+		'home'   => __( 'Blog index', 'turf-stats' ),
+		'other'  => __( 'Other', 'turf-stats' ),
 	);
 
 	return $labels[ $type ] ?? $type;
@@ -1260,7 +1260,7 @@ function turf_render_new_vs_returning( $days ) {
 	$rows = turf_get_new_vs_returning( $days );
 
 	turf_render_breakdown_rows( $rows, function ( $raw ) {
-		return 'nieuw' === $raw ? __( 'Nieuwe bezoekers', 'turf-stats' ) : __( 'Terugkerende bezoekers', 'turf-stats' );
+		return 'nieuw' === $raw ? __( 'New visitors', 'turf-stats' ) : __( 'Returning visitors', 'turf-stats' );
 	} );
 }
 
@@ -1368,7 +1368,7 @@ function turf_render_admin_page() {
 	turf_admin_inline_style();
 	?>
 	<div class="wrap">
-		<h1><?php esc_html_e( 'Statistieken', 'turf-stats' ); ?></h1>
+		<h1><?php esc_html_e( 'Statistics', 'turf-stats' ); ?></h1>
 
 		<?php turf_render_period_tabs( admin_url( 'admin.php?page=turf-stats' ), 'today' ); ?>
 
@@ -1542,7 +1542,7 @@ function turf_render_admin_table( $post_type, $days ) {
 	$total = turf_count_posts_for_period( $post_type, $days );
 
 	if ( ! $total ) {
-		echo '<p>' . esc_html__( 'Nog geen data voor deze periode.', 'turf-stats' ) . '</p>';
+		echo '<p>' . esc_html__( 'No data yet for this period.', 'turf-stats' ) . '</p>';
 		return;
 	}
 
@@ -1553,11 +1553,11 @@ function turf_render_admin_table( $post_type, $days ) {
 	<table class="wp-list-table widefat fixed striped">
 		<thead>
 			<tr>
-				<th><?php esc_html_e( 'Titel', 'turf-stats' ); ?></th>
-				<th><?php esc_html_e( 'Weergaven', 'turf-stats' ); ?></th>
-				<th><?php esc_html_e( 'Bezoekers', 'turf-stats' ); ?></th>
-				<th><?php esc_html_e( 'Gem. leestijd', 'turf-stats' ); ?></th>
-				<th><?php esc_html_e( 'Gem. scrolldiepte', 'turf-stats' ); ?></th>
+				<th><?php esc_html_e( 'Title', 'turf-stats' ); ?></th>
+				<th><?php esc_html_e( 'Views', 'turf-stats' ); ?></th>
+				<th><?php esc_html_e( 'Visitors', 'turf-stats' ); ?></th>
+				<th><?php esc_html_e( 'Avg. reading time', 'turf-stats' ); ?></th>
+				<th><?php esc_html_e( 'Avg. scroll depth', 'turf-stats' ); ?></th>
 			</tr>
 		</thead>
 		<tbody>
@@ -1680,7 +1680,7 @@ function turf_render_admin_terms_table( $taxonomy, $days ) {
 	$total = turf_count_terms_for_period( $taxonomy, $days );
 
 	if ( ! $total ) {
-		echo '<p>' . esc_html__( 'Nog geen data voor deze periode.', 'turf-stats' ) . '</p>';
+		echo '<p>' . esc_html__( 'No data yet for this period.', 'turf-stats' ) . '</p>';
 		return;
 	}
 
@@ -1691,11 +1691,11 @@ function turf_render_admin_terms_table( $taxonomy, $days ) {
 	<table class="wp-list-table widefat fixed striped">
 		<thead>
 			<tr>
-				<th><?php esc_html_e( 'Naam', 'turf-stats' ); ?></th>
-				<th><?php esc_html_e( 'Weergaven', 'turf-stats' ); ?></th>
-				<th><?php esc_html_e( 'Bezoekers', 'turf-stats' ); ?></th>
-				<th><?php esc_html_e( 'Gem. leestijd', 'turf-stats' ); ?></th>
-				<th><?php esc_html_e( 'Gem. scrolldiepte', 'turf-stats' ); ?></th>
+				<th><?php esc_html_e( 'Name', 'turf-stats' ); ?></th>
+				<th><?php esc_html_e( 'Views', 'turf-stats' ); ?></th>
+				<th><?php esc_html_e( 'Visitors', 'turf-stats' ); ?></th>
+				<th><?php esc_html_e( 'Avg. reading time', 'turf-stats' ); ?></th>
+				<th><?php esc_html_e( 'Avg. scroll depth', 'turf-stats' ); ?></th>
 			</tr>
 		</thead>
 		<tbody>

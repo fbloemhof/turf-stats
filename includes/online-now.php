@@ -41,7 +41,7 @@ function turf_render_online_now() {
 	<div class="bk-stats-box">
 		<span class="bk-stats-box__label">
 			<span class="bk-stats-online-now__dot"></span>
-			<?php esc_html_e( 'Nu online', 'turf-stats' ); ?>
+			<?php esc_html_e( 'Online now', 'turf-stats' ); ?>
 		</span>
 		<span class="bk-stats-box__value" id="turf-online-now-value"><?php echo esc_html( number_format_i18n( turf_get_online_now_count() ) ); ?></span>
 	</div>
@@ -65,6 +65,7 @@ function turf_online_now_enqueue( $hook ) {
 		'ajaxUrl'  => admin_url( 'admin-ajax.php' ),
 		'nonce'    => wp_create_nonce( 'turf_online_now' ),
 		'interval' => 20000, // ms
+		'locale'   => get_bloginfo( 'language' ),
 	) );
 }
 add_action( 'admin_enqueue_scripts', 'turf_online_now_enqueue' );

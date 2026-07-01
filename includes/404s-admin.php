@@ -6,8 +6,8 @@
 function turf_404s_admin_menu() {
 	$hook = add_submenu_page(
 		'turf-stats',
-		__( "404's", 'turf-stats' ),
-		__( "404's", 'turf-stats' ),
+		__( '404s', 'turf-stats' ),
+		__( '404s', 'turf-stats' ),
 		'manage_options',
 		'turf-404s',
 		'turf_404s_render_admin_page'
@@ -23,7 +23,7 @@ function turf_404s_register_metaboxes() {
 
 	$days = turf_get_requested_days();
 
-	add_meta_box( 'turf_404s_top', __( "Meest geraakte URL's", 'turf-stats' ), function () use ( $days ) {
+	add_meta_box( 'turf_404s_top', __( 'Most-hit URLs', 'turf-stats' ), function () use ( $days ) {
 		turf_404s_render_top_paths( $days );
 	}, $hook, 'normal' );
 }
@@ -77,16 +77,16 @@ function turf_404s_render_top_paths( $days ) {
 	$rows           = $total ? turf_404s_get_top_paths( $days, $page ) : array();
 
 	if ( ! $rows ) {
-		echo '<p>' . esc_html__( 'Geen 404\'s geregistreerd voor deze periode.', 'turf-stats' ) . '</p>';
+		echo '<p>' . esc_html__( 'No 404s recorded for this period.', 'turf-stats' ) . '</p>';
 		return;
 	}
 	?>
 	<table class="wp-list-table widefat fixed striped">
 		<thead>
 			<tr>
-				<th><?php esc_html_e( 'Pad', 'turf-stats' ); ?></th>
-				<th><?php esc_html_e( 'Keer geraakt', 'turf-stats' ); ?></th>
-				<th><?php esc_html_e( 'Laatst', 'turf-stats' ); ?></th>
+				<th><?php esc_html_e( 'Path', 'turf-stats' ); ?></th>
+				<th><?php esc_html_e( 'Times hit', 'turf-stats' ); ?></th>
+				<th><?php esc_html_e( 'Last', 'turf-stats' ); ?></th>
 			</tr>
 		</thead>
 		<tbody>
@@ -110,9 +110,9 @@ function turf_404s_render_top_paths( $days ) {
 function turf_404s_render_admin_page() {
 	?>
 	<div class="wrap">
-		<h1><?php esc_html_e( "404's", 'turf-stats' ); ?></h1>
+		<h1><?php esc_html_e( '404s', 'turf-stats' ); ?></h1>
 		<p class="description">
-			<?php esc_html_e( 'Welke niet-bestaande URL\'s bezoekers raken - handig om kapotte links te vinden en te fixen.', 'turf-stats' ); ?>
+			<?php esc_html_e( 'Which non-existent URLs visitors hit - handy for finding and fixing broken links.', 'turf-stats' ); ?>
 		</p>
 
 		<?php turf_render_period_tabs( admin_url( 'admin.php?page=turf-404s' ) ); ?>

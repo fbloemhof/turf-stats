@@ -95,7 +95,8 @@
 			.then( function ( r ) { return r.json(); } )
 			.then( function ( data ) {
 				if ( data.success && data.data.views > 0 ) {
-					updateLabel( ' • ' + data.data.views.toLocaleString( 'nl-NL' ) + ' keer bekeken' );
+					var count = data.data.views.toLocaleString( turfViews.locale || undefined );
+					updateLabel( ' • ' + turfViews.viewsLabel.replace( '%s', count ) );
 				} else {
 					updateLabel( ' • ' );
 				}

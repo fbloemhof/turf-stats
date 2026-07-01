@@ -29,7 +29,7 @@ function turf_social_share_networks() {
 			'url'   => 'https://www.linkedin.com/sharing/share-offsite/?url=%1$s',
 		),
 		'email'    => array(
-			'label' => __( 'E-mail', 'turf-stats' ),
+			'label' => __( 'Email', 'turf-stats' ),
 			'url'   => 'mailto:?subject=%2$s&body=%1$s',
 		),
 	) );

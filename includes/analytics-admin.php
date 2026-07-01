@@ -13,13 +13,13 @@ function turf_render_peak_hours( $days ) {
 	}
 
 	$weekdays = array(
-		__( 'Ma', 'turf-stats' ),
-		__( 'Di', 'turf-stats' ),
-		__( 'Wo', 'turf-stats' ),
-		__( 'Do', 'turf-stats' ),
-		__( 'Vr', 'turf-stats' ),
-		__( 'Za', 'turf-stats' ),
-		__( 'Zo', 'turf-stats' ),
+		__( 'Mon', 'turf-stats' ),
+		__( 'Tue', 'turf-stats' ),
+		__( 'Wed', 'turf-stats' ),
+		__( 'Thu', 'turf-stats' ),
+		__( 'Fri', 'turf-stats' ),
+		__( 'Sat', 'turf-stats' ),
+		__( 'Sun', 'turf-stats' ),
 	);
 	?>
 	<table class="bk-stats-heatmap">
@@ -40,7 +40,7 @@ function turf_render_peak_hours( $days ) {
 						$intensity = $max ? $views / $max : 0;
 						$title     = sprintf(
 							/* translators: 1: weekday, 2: hour, 3: number of views */
-							__( '%1$s %2$d:00 — %3$s weergaven', 'turf-stats' ),
+							__( '%1$s %2$d:00 — %3$s views', 'turf-stats' ),
 							$weekday_label,
 							$hour,
 							number_format_i18n( $views )
@@ -59,16 +59,16 @@ function turf_render_trending() {
 	$rows = turf_get_trending();
 
 	if ( ! $rows ) {
-		echo '<p>' . esc_html__( 'Nog niet genoeg recente weergaven om trends te bepalen.', 'turf-stats' ) . '</p>';
+		echo '<p>' . esc_html__( 'Not enough recent views yet to determine trends.', 'turf-stats' ) . '</p>';
 		return;
 	}
 	?>
 	<table class="wp-list-table widefat fixed striped">
 		<thead>
 			<tr>
-				<th><?php esc_html_e( 'Titel', 'turf-stats' ); ?></th>
-				<th><?php esc_html_e( 'Weergaven (24u)', 'turf-stats' ); ?></th>
-				<th><?php esc_html_e( 'Verandering', 'turf-stats' ); ?></th>
+				<th><?php esc_html_e( 'Title', 'turf-stats' ); ?></th>
+				<th><?php esc_html_e( 'Views (24h)', 'turf-stats' ); ?></th>
+				<th><?php esc_html_e( 'Change', 'turf-stats' ); ?></th>
 			</tr>
 		</thead>
 		<tbody>

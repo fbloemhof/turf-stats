@@ -101,7 +101,7 @@ function turf_render_top_commented_posts( $days ) {
 	$total = turf_count_commented_posts( $days );
 
 	if ( ! $total ) {
-		echo '<p>' . esc_html__( 'Nog geen reacties voor deze periode.', 'turf-stats' ) . '</p>';
+		echo '<p>' . esc_html__( 'No comments yet for this period.', 'turf-stats' ) . '</p>';
 		return;
 	}
 
@@ -112,9 +112,9 @@ function turf_render_top_commented_posts( $days ) {
 	<table class="wp-list-table widefat fixed striped">
 		<thead>
 			<tr>
-				<th><?php esc_html_e( 'Titel', 'turf-stats' ); ?></th>
+				<th><?php esc_html_e( 'Title', 'turf-stats' ); ?></th>
 				<th><?php esc_html_e( 'Type', 'turf-stats' ); ?></th>
-				<th><?php esc_html_e( 'Reacties', 'turf-stats' ); ?></th>
+				<th><?php esc_html_e( 'Comments', 'turf-stats' ); ?></th>
 			</tr>
 		</thead>
 		<tbody>

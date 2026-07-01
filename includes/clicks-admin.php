@@ -7,8 +7,8 @@
 function turf_clicks_admin_menu() {
 	$hook = add_submenu_page(
 		'turf-stats',
-		__( 'Klikken', 'turf-stats' ),
-		__( 'Klikken', 'turf-stats' ),
+		__( 'Clicks', 'turf-stats' ),
+		__( 'Clicks', 'turf-stats' ),
 		'manage_options',
 		'turf-clicks',
 		'turf_clicks_render_admin_page'
@@ -24,11 +24,11 @@ function turf_clicks_register_metaboxes() {
 
 	$days = turf_get_requested_days();
 
-	add_meta_box( 'turf_clicks_top', __( 'Top kliks', 'turf-stats' ), function () use ( $days ) {
+	add_meta_box( 'turf_clicks_top', __( 'Top clicks', 'turf-stats' ), function () use ( $days ) {
 		turf_clicks_render_top_keys( $days );
 	}, $hook, 'normal' );
 
-	add_meta_box( 'turf_clicks_outbound', __( 'Uitgaande links', 'turf-stats' ), function () use ( $days ) {
+	add_meta_box( 'turf_clicks_outbound', __( 'Outbound links', 'turf-stats' ), function () use ( $days ) {
 		turf_clicks_render_top_outbound_links( $days );
 	}, $hook, 'normal' );
 }
@@ -150,7 +150,7 @@ function turf_clicks_render_top_keys( $days ) {
 	$rows           = $total ? turf_clicks_get_top_keys( $days, $page ) : array();
 
 	if ( ! $rows ) {
-		echo '<p>' . esc_html__( 'Nog geen kliks geregistreerd voor deze periode.', 'turf-stats' ) . '</p>';
+		echo '<p>' . esc_html__( 'No clicks recorded yet for this period.', 'turf-stats' ) . '</p>';
 		return;
 	}
 	?>
@@ -158,7 +158,7 @@ function turf_clicks_render_top_keys( $days ) {
 		<thead>
 			<tr>
 				<th><?php esc_html_e( 'Element', 'turf-stats' ); ?></th>
-				<th><?php esc_html_e( 'Kliks', 'turf-stats' ); ?></th>
+				<th><?php esc_html_e( 'Clicks', 'turf-stats' ); ?></th>
 			</tr>
 		</thead>
 		<tbody>
@@ -192,19 +192,19 @@ function turf_clicks_render_top_outbound_links( $days ) {
 	$rows           = $total ? turf_clicks_get_top_outbound_links( $days, $page ) : array();
 
 	if ( ! $rows ) {
-		echo '<p>' . esc_html__( 'Nog geen klikken op uitgaande links geregistreerd voor deze periode.', 'turf-stats' ) . '</p>';
+		echo '<p>' . esc_html__( 'No outbound link clicks recorded yet for this period.', 'turf-stats' ) . '</p>';
 		return;
 	}
 	?>
 	<p class="description">
-		<?php esc_html_e( 'Klikken op links naar andere websites - automatisch herkend, geen data-turf-click nodig.', 'turf-stats' ); ?>
+		<?php esc_html_e( 'Clicks on links to other websites - detected automatically, no data-turf-click needed.', 'turf-stats' ); ?>
 	</p>
 	<table class="wp-list-table widefat fixed striped">
 		<thead>
 			<tr>
-				<th><?php esc_html_e( 'Doel', 'turf-stats' ); ?></th>
-				<th><?php esc_html_e( 'Vanaf pagina', 'turf-stats' ); ?></th>
-				<th><?php esc_html_e( 'Kliks', 'turf-stats' ); ?></th>
+				<th><?php esc_html_e( 'Destination', 'turf-stats' ); ?></th>
+				<th><?php esc_html_e( 'From page', 'turf-stats' ); ?></th>
+				<th><?php esc_html_e( 'Clicks', 'turf-stats' ); ?></th>
 			</tr>
 		</thead>
 		<tbody>
@@ -245,9 +245,9 @@ function turf_clicks_render_top_outbound_links( $days ) {
 function turf_clicks_render_admin_page() {
 	?>
 	<div class="wrap">
-		<h1><?php esc_html_e( 'Klikken', 'turf-stats' ); ?></h1>
+		<h1><?php esc_html_e( 'Clicks', 'turf-stats' ); ?></h1>
 		<p class="description">
-			<?php esc_html_e( 'Hoe vaak specifieke UI-elementen (bv. weergave-knoppen, filters, social-iconen) daadwerkelijk worden aangeklikt - los van paginaweergaven.', 'turf-stats' ); ?>
+			<?php esc_html_e( 'How often specific UI elements (e.g. view buttons, filters, social icons) are actually clicked - separate from page views.', 'turf-stats' ); ?>
 		</p>
 
 		<?php turf_render_period_tabs( admin_url( 'admin.php?page=turf-clicks' ) ); ?>

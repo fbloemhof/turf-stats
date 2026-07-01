@@ -133,7 +133,7 @@ function turf_classify_bot( $user_agent ) {
 	}
 
 	if ( preg_match( '/bot|crawl|spider|slurp/i', $user_agent ) ) {
-		return array( 'name' => __( 'Overige bot', 'turf-stats' ), 'category' => 'other' );
+		return array( 'name' => __( 'Other bot', 'turf-stats' ), 'category' => 'other' );
 	}
 
 	return null;
