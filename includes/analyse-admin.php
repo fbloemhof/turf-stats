@@ -8,6 +8,10 @@
  * added in v1.8.0/v1.9.0 lives here instead.
  */
 
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 function turf_analyse_admin_menu() {
 	$hook = add_submenu_page(
 		'turf-stats',

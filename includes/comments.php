@@ -10,6 +10,10 @@
  * "Statistieken" page already reports on.
  */
 
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 /**
  * Comment totals for a date range (UTC), or all-time when $days is 0.
  */
@@ -22,7 +26,7 @@ function turf_get_comment_totals( $days, $offset_days = 0 ) {
 		return (int) $wpdb->get_var( $wpdb->prepare(
 			"SELECT COUNT(*) FROM $wpdb->comments c
 			INNER JOIN $wpdb->posts p ON p.ID = c.comment_post_ID
-			WHERE c.comment_approved = '1' AND p.post_type IN ($placeholders) AND p.post_status = 'publish'",
+			WHERE c.comment_approved = '1' AND p.post_type IN ($placeholders) AND p.post_status = 'publish'", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- $placeholders is a generated %s list; values go through prepare().
 			$post_types
 		) );
 	}
@@ -39,7 +43,7 @@ function turf_get_comment_totals( $days, $offset_days = 0 ) {
 		"SELECT COUNT(*) FROM $wpdb->comments c
 		INNER JOIN $wpdb->posts p ON p.ID = c.comment_post_ID
 		WHERE c.comment_approved = '1' AND p.post_type IN ($placeholders) AND p.post_status = 'publish'
-		AND c.comment_date_gmt >= %s AND c.comment_date_gmt < %s",
+		AND c.comment_date_gmt >= %s AND c.comment_date_gmt < %s", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- $placeholders is a generated %s list; values go through prepare().
 		array_merge( $post_types, array( $start, $end ) )
 	) );
 }
@@ -66,7 +70,7 @@ function turf_get_top_commented_posts( $days ) {
 		WHERE c.comment_approved = '1' AND p.post_type IN ($placeholders) AND p.post_status = 'publish' $where_date
 		GROUP BY c.comment_post_ID
 		ORDER BY comments DESC
-		LIMIT %d",
+		LIMIT %d", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- $placeholders is a generated %s list; values go through prepare().
 		$params
 	) );
 }

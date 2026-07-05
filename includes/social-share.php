@@ -7,6 +7,10 @@
  * existing Klikken admin page with no extra wiring.
  */
 
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 function turf_social_share_networks() {
 	return apply_filters( 'turf_social_share_networks', array(
 		'facebook' => array(

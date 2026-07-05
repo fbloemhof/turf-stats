@@ -4,6 +4,10 @@
  * "Piekuren" and "Trending" metaboxes on the Statistieken page.
  */
 
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 function turf_render_peak_hours( $days ) {
 	$grid = turf_get_peak_hours( $days );
 	$max  = 1;

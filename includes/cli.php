@@ -18,6 +18,10 @@
  * deactivated, so it can run anywhere.
  */
 
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 define( 'TURF_LEGACY_ENTRY_VIEWS_META_KEY', 'Views' );
 
 class Turf_CLI_Command {

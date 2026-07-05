@@ -13,6 +13,10 @@
  * just pointed at GitHub instead.
  */
 
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 require_once TURF_PATH . 'vendor/plugin-update-checker/plugin-update-checker.php';
 
 use YahnisElsts\PluginUpdateChecker\v5\PucFactory;

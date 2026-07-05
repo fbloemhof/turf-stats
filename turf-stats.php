@@ -1,9 +1,9 @@
 <?php
 /**
- * Plugin Name: Turf
+ * Plugin Name: Turf Stats
  * Plugin URI: https://github.com/fbloemhof/turf-stats
  * Description: Self-hosted, cookieless page-view and click analytics for WordPress - no Google Analytics, no Jetpack, no external calls for tracking. Tracks views, archive pages, referrers, UTM campaigns, scroll depth/reading time, 404s, and arbitrary UI clicks.
- * Version: 1.16.1
+ * Version: 1.17.0
  * Author: fbloemhof
  * Author URI: https://github.com/fbloemhof/turf-stats
  * License: GPL-2.0-or-later
@@ -18,7 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'TURF_VERSION', '1.16.1' );
+define( 'TURF_VERSION', '1.17.0' );
 define( 'TURF_PATH', plugin_dir_path( __FILE__ ) );
 define( 'TURF_URL', plugin_dir_url( __FILE__ ) );
 
@@ -32,7 +32,15 @@ add_action( 'init', function () {
 	load_plugin_textdomain( 'turf-stats', false, dirname( plugin_basename( __FILE__ ) ) . '/languages' );
 } );
 
-require_once TURF_PATH . 'includes/updater.php';
+// GitHub-based update checker - present in the GitHub distribution only. The
+// WordPress.org build strips this file and vendor/plugin-update-checker/
+// entirely (see scripts/build-zip.sh): wp.org-hosted plugins must receive
+// their updates from wordpress.org, not from a third-party server
+// (plugin directory guideline 8), and wp.org handles those updates itself.
+if ( file_exists( TURF_PATH . 'includes/updater.php' ) ) {
+	require_once TURF_PATH . 'includes/updater.php';
+}
+
 require_once TURF_PATH . 'includes/views.php';
 require_once TURF_PATH . 'includes/postboxes.php';
 require_once TURF_PATH . 'includes/views-admin.php';

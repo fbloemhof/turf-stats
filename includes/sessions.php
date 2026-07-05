@@ -9,6 +9,10 @@
  * (which page visitors go to next).
  */
 
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 /**
  * How long a gap between two pageviews from the same visitor is still
  * considered the same session.

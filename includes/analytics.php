@@ -4,6 +4,10 @@
  * no new tracking. Peak-hours heatmap and trending content.
  */
 
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 /**
  * 7x24 grid of view counts by weekday (0 = Monday) and hour of day, in the
  * site's own local time (not UTC, which is how viewed_at is stored) - a

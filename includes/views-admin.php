@@ -10,6 +10,10 @@
  * recorded since this plugin went live.
  */
 
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 function turf_admin_menu() {
 	$hook = add_menu_page(
 		__( 'Statistics', 'turf-stats' ),
@@ -339,7 +343,7 @@ function turf_get_alltime_site_totals() {
 	$post_views = $wpdb->get_var( $wpdb->prepare(
 		"SELECT SUM(m.meta_value + 0) FROM $wpdb->posts p
 		INNER JOIN $wpdb->postmeta m ON m.post_id = p.ID AND m.meta_key = %s
-		WHERE p.post_type IN ($placeholders) AND p.post_status = 'publish'",
+		WHERE p.post_type IN ($placeholders) AND p.post_status = 'publish'", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- $placeholders is a generated %s list; values go through prepare().
 		array_merge( array( TURF_META_KEY ), $post_types )
 	) );
 
@@ -398,12 +402,12 @@ function turf_render_change_badge( $change ) {
 	}
 
 	$class     = $change >= 0 ? 'up' : 'down';
-	$direction = $change >= 0 ? '&uarr;' : '&darr;';
+	$direction = $change >= 0 ? '↑' : '↓';
 
 	printf(
 		'<span class="bk-stats-box__change bk-stats-box__change--%s">%s %s%%</span>',
 		esc_attr( $class ),
-		$direction,
+		esc_html( $direction ),
 		esc_html( abs( $change ) )
 	);
 }
@@ -753,7 +757,16 @@ function turf_render_hourly_visitors_chart() {
 			<path class="bk-stats-hourly__line" d="<?php echo esc_attr( trim( $line_path ) ); ?>" vector-effect="non-scaling-stroke" />
 			<?php foreach ( $points as $p ) : ?>
 				<circle class="bk-stats-hourly__dot" cx="<?php echo esc_attr( $p['x'] ); ?>" cy="<?php echo esc_attr( $p['y'] ); ?>" r="2.5" vector-effect="non-scaling-stroke">
-					<title><?php printf( esc_html__( '%1$02d:00 — %2$s visitors', 'turf-stats' ), (int) $p['hour'], number_format_i18n( $p['visitors'] ) ); ?></title>
+					<title>
+				<?php
+				printf(
+					/* translators: 1: hour of day (0-23), 2: number of visitors */
+					esc_html__( '%1$02d:00 — %2$s visitors', 'turf-stats' ),
+					(int) $p['hour'],
+					esc_html( number_format_i18n( $p['visitors'] ) )
+				);
+				?>
+				</title>
 				</circle>
 			<?php endforeach; ?>
 			<?php
@@ -945,7 +958,7 @@ function turf_get_breakdown( $column, $days, $exclude_empty = false ) {
 		$join
 		WHERE $where $where_date $where_empty
 		GROUP BY v.$column
-		ORDER BY views DESC",
+		ORDER BY views DESC", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- $column is checked against the fixed $allowed whitelist above; table/join/where are internal literals.
 		$params
 	) );
 }
@@ -1120,7 +1133,7 @@ function turf_get_referrer_breakdown( $days ) {
 		$join
 		WHERE $where $where_date
 		GROUP BY label
-		ORDER BY views DESC",
+		ORDER BY views DESC", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- $case/$join/$where are built entirely from literals in turf_referrer_case_sql()/turf_site_join_and_where(); no user input.
 		$params
 	) );
 }
@@ -1218,8 +1231,8 @@ function turf_render_breakdown_rows( $rows, $label_callback ) {
 		<div class="bk-stats-bar-row" title="<?php echo esc_attr( $value_text ); ?>">
 			<span class="bk-stats-bar-row__label"><?php echo esc_html( call_user_func( $label_callback, $row->label ) ); ?></span>
 			<span class="bk-stats-bar-row__track">
-				<span class="bk-stats-bar-row__fill bk-stats-bar-row__fill--views" style="width:<?php echo $views_pct; ?>%"></span>
-				<span class="bk-stats-bar-row__fill bk-stats-bar-row__fill--visitors" style="width:<?php echo $visitors_pct; ?>%"></span>
+				<span class="bk-stats-bar-row__fill bk-stats-bar-row__fill--views" style="width:<?php echo (int) $views_pct; ?>%"></span>
+				<span class="bk-stats-bar-row__fill bk-stats-bar-row__fill--visitors" style="width:<?php echo (int) $visitors_pct; ?>%"></span>
 			</span>
 			<span class="bk-stats-bar-row__value"><?php echo esc_html( $value_text ); ?></span>
 		</div>
@@ -1490,9 +1503,10 @@ function turf_render_admin_page() {
 
 function turf_get_alltime_visitors( $post_id ) {
 	global $wpdb;
+	$table = turf_table();
 
 	return (int) $wpdb->get_var( $wpdb->prepare(
-		"SELECT COUNT(DISTINCT visitor_hash) FROM " . turf_table() . ' WHERE post_id = %d',
+		"SELECT COUNT(DISTINCT visitor_hash) FROM {$table} WHERE post_id = %d", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- own-prefix table name.
 		$post_id
 	) );
 }
@@ -1505,12 +1519,13 @@ function turf_get_alltime_visitors( $post_id ) {
  */
 function turf_get_alltime_engagement( $object_id, $type = 'post' ) {
 	global $wpdb;
-	$column = 'term' === $type ? 'term_id' : 'post_id';
+	$table  = turf_table();
+	$column = 'term' === $type ? 'term_id' : 'post_id'; // Fixed two-value whitelist, never user input.
 
 	$row = $wpdb->get_row( $wpdb->prepare(
 		"SELECT AVG(duration_seconds) AS avg_duration, AVG(scroll_depth) AS avg_scroll
-		FROM " . turf_table() . "
-		WHERE $column = %d AND duration_seconds IS NOT NULL",
+		FROM {$table}
+		WHERE {$column} = %d AND duration_seconds IS NOT NULL", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- own-prefix table name and whitelisted column.
 		$object_id
 	) );
 
@@ -1640,8 +1655,10 @@ function turf_render_admin_table( $post_type, $days ) {
 function turf_get_alltime_term_visitors( $term_id ) {
 	global $wpdb;
 
+	$table = turf_table();
+
 	return (int) $wpdb->get_var( $wpdb->prepare(
-		"SELECT COUNT(DISTINCT visitor_hash) FROM " . turf_table() . ' WHERE term_id = %d',
+		"SELECT COUNT(DISTINCT visitor_hash) FROM {$table} WHERE term_id = %d", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- own-prefix table name.
 		$term_id
 	) );
 }

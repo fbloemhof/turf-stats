@@ -7,6 +7,10 @@
  * auto-refreshing widget on the admin page.
  */
 
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 /**
  * How recent a view has to be to count as "still online". Filterable.
  */

@@ -7,6 +7,10 @@
  * template_redirect, no JS involved.
  */
 
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 define( 'TURF_SEARCH_DB_VERSION', '1.0' );
 
 function turf_search_table() {

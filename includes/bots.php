@@ -16,6 +16,10 @@
  * page"), not refresh noise to filter out.
  */
 
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 define( 'TURF_BOTS_DB_VERSION', '1.0' );
 
 function turf_bots_table() {

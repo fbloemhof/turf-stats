@@ -10,6 +10,10 @@
  * check can't happen at file top-level, only once `init` has fired.
  */
 
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 define( 'TURF_WOO_DB_VERSION', '1.0' );
 
 function turf_woo_active() {

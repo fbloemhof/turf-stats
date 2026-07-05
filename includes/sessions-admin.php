@@ -5,6 +5,10 @@
  * views-admin.php.
  */
 
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 function turf_render_session_routes( $days ) {
 	$sessions = turf_compute_sessions( $days );
 

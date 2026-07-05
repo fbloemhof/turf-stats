@@ -35,6 +35,10 @@
  * lumped into "App / REST API (overig)".
  */
 
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 function turf_register_rest_tracking() {
 	foreach ( turf_trackable_post_types() as $post_type ) {
 		$post_type_object = get_post_type_object( $post_type );

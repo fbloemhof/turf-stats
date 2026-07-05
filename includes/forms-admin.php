@@ -6,6 +6,10 @@
  * empty state if neither Contact Form 7 nor Gravity Forms is active.
  */
 
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 function turf_forms_get_top_forms( $days, $limit = 10 ) {
 	global $wpdb;
 	$table = turf_forms_table();
@@ -66,8 +70,9 @@ function turf_forms_render_top_forms( $days ) {
 					global $wpdb;
 
 					if ( 0 !== $days ) {
-						$page_views = (int) $wpdb->get_var( $wpdb->prepare(
-							"SELECT COUNT(*) FROM " . turf_table() . " WHERE post_id = %d AND viewed_at >= %s",
+						$views_table = turf_table();
+						$page_views  = (int) $wpdb->get_var( $wpdb->prepare(
+							"SELECT COUNT(*) FROM {$views_table} WHERE post_id = %d AND viewed_at >= %s", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- own-prefix table name.
 							$post_id,
 							turf_period_start_sql_date( $days )
 						) );

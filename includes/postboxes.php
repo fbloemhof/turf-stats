@@ -8,6 +8,10 @@
  * widgets use, just pointed at our own pages.
  */
 
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 /**
  * Tracks which admin page hooks have postboxes, so turf_postboxes_enqueue()
  * only loads the postbox JS where it's actually needed.
@@ -35,6 +39,7 @@ function turf_postboxes_enqueue( $hook ) {
 
 	wp_enqueue_script( 'turf-postbox-more', TURF_URL . 'js/postbox-more.js', array(), TURF_VERSION, true );
 	wp_localize_script( 'turf-postbox-more', 'turfPostboxMore', array(
+		/* translators: %d: number of additional rows hidden behind the toggle */
 		'moreLabel' => __( 'Show %d more', 'turf-stats' ),
 		'lessLabel' => __( 'Show less', 'turf-stats' ),
 	) );
@@ -45,7 +50,7 @@ function turf_postboxes_enqueue( $hook ) {
 	// toggles .turf-expanded to reveal them - no per-row show/hide on load.
 	// A list can raise its initial visible count with data-turf-visible="N"
 	// (the 404s table uses 20); the default is 5.
-	wp_register_style( 'turf-postbox-more', false );
+	wp_register_style( 'turf-postbox-more', false, array(), TURF_VERSION );
 	wp_enqueue_style( 'turf-postbox-more' );
 	wp_add_inline_style( 'turf-postbox-more',
 		'.bk-stats-bar-list:not(.turf-expanded) > .bk-stats-bar-row:nth-child(n+6){display:none}' .

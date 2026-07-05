@@ -6,6 +6,10 @@
  * side signal, not a UI interaction).
  */
 
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 define( 'TURF_404S_DB_VERSION', '1.0' );
 
 function turf_404s_table() {

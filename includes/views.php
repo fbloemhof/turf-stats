@@ -16,6 +16,10 @@
  * visitor at that PoP) - falls back to REMOTE_ADDR automatically otherwise.
  */
 
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 define( 'TURF_META_KEY', '_turf_views' );
 define( 'TURF_DB_VERSION', '1.5' );
 
@@ -783,6 +787,11 @@ function turf_track_engagement( $event_id, $scroll_depth, $duration_seconds ) {
 }
 
 function turf_ajax_track_engagement() {
+	// No nonce, same rationale as turf_clicks_ajax_track() (includes/clicks.php):
+	// sent via sendBeacon on page-hide (a nonce would be stale on cached pages),
+	// and the update below is already constrained to the caller's own row -
+	// turf_track_engagement() requires the stored visitor_hash to match, and
+	// clamps both values to harmless ranges.
 	$event_id = isset( $_POST['event_id'] ) ? absint( $_POST['event_id'] ) : 0;
 
 	if ( ! $event_id ) {

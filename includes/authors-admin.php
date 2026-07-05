@@ -5,8 +5,17 @@
  * the Statistieken page from turf_views_register_metaboxes().
  */
 
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 function turf_get_author_breakdown( $days, $limit = 15 ) {
 	global $wpdb;
+	$table = turf_table();
+
+	// $placeholders is a generated "%s, %s, ..." placeholder list (one per
+	// trackable post type), not data - the values themselves are passed to
+	// $wpdb->prepare() below. Same for $placeholders_authors further down.
 	list( $placeholders, $post_types ) = turf_post_type_in_clause();
 
 	if ( 0 === $days ) {
@@ -17,19 +26,19 @@ function turf_get_author_breakdown( $days, $limit = 15 ) {
 			WHERE p.post_type IN ($placeholders) AND p.post_status = 'publish'
 			GROUP BY p.post_author
 			ORDER BY views DESC
-			LIMIT %d",
+			LIMIT %d", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- $placeholders is a generated %s list, see above.
 			array_merge( array( TURF_META_KEY ), $post_types, array( $limit ) )
 		) );
 	} else {
 		$rows = $wpdb->get_results( $wpdb->prepare(
 			"SELECT p.post_author AS author_id, COUNT(*) AS views, COUNT(DISTINCT v.post_id) AS posts
-			FROM " . turf_table() . " v
+			FROM {$table} v
 			INNER JOIN $wpdb->posts p ON p.ID = v.post_id
 			WHERE p.post_type IN ($placeholders) AND p.post_status = 'publish'
 			AND v.viewed_at >= %s
 			GROUP BY p.post_author
 			ORDER BY views DESC
-			LIMIT %d",
+			LIMIT %d", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- own-prefix table name; $placeholders is a generated %s list.
 			array_merge( $post_types, array( turf_period_start_sql_date( $days ), $limit ) )
 		) );
 	}
@@ -46,10 +55,10 @@ function turf_get_author_breakdown( $days, $limit = 15 ) {
 
 	$engagement = $wpdb->get_results( $wpdb->prepare(
 		"SELECT p.post_author AS author_id, AVG(v.duration_seconds) AS avg_duration, AVG(v.scroll_depth) AS avg_scroll
-		FROM " . turf_table() . " v
+		FROM {$table} v
 		INNER JOIN $wpdb->posts p ON p.ID = v.post_id
 		WHERE p.post_author IN ($placeholders_authors) AND p.post_type IN ($placeholders) AND v.duration_seconds IS NOT NULL
-		GROUP BY p.post_author",
+		GROUP BY p.post_author", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- own-prefix table name; both $placeholders_* are generated %d/%s lists.
 		array_merge( $author_ids, $post_types )
 	), OBJECT_K );
 

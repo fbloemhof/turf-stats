@@ -5,6 +5,10 @@
  * in views-admin.php, not their own submenu page.
  */
 
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 function turf_search_get_top_terms( $days, $limit = 15 ) {
 	global $wpdb;
 	$table = turf_search_table();

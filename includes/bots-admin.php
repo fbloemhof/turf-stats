@@ -6,6 +6,10 @@
  * dimension the way human traffic does.
  */
 
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 function turf_bots_admin_menu() {
 	$hook = add_submenu_page(
 		'turf-stats',
@@ -180,7 +184,7 @@ function turf_bots_render_simple_breakdown( $rows, $label_callback ) {
 			<div class="bk-stats-bar-row" title="<?php echo esc_attr( $value_text ); ?>">
 				<span class="bk-stats-bar-row__label"><?php echo esc_html( call_user_func( $label_callback, $row->label ) ); ?></span>
 				<span class="bk-stats-bar-row__track">
-					<span class="bk-stats-bar-row__fill bk-stats-bar-row__fill--views" style="width:<?php echo $pct; ?>%"></span>
+					<span class="bk-stats-bar-row__fill bk-stats-bar-row__fill--views" style="width:<?php echo (int) $pct; ?>%"></span>
 				</span>
 				<span class="bk-stats-bar-row__value"><?php echo esc_html( $value_text ); ?></span>
 			</div>

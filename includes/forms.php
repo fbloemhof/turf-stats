@@ -10,6 +10,10 @@
  * "gravityforms" - a top-level class_exists() check would always be false).
  */
 
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 define( 'TURF_FORMS_DB_VERSION', '1.0' );
 
 function turf_forms_table() {

@@ -11,6 +11,10 @@
  * stay intact forever.
  */
 
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 /**
  * How many months of raw rows to keep. 0 or less disables pruning entirely.
  * Filterable for sites that want a different policy.
@@ -29,42 +33,29 @@ function turf_prune_old_events() {
 	global $wpdb;
 	$cutoff = gmdate( 'Y-m-d H:i:s', strtotime( "-{$months} months" ) );
 
-	$wpdb->query( $wpdb->prepare(
-		'DELETE FROM ' . turf_table() . ' WHERE viewed_at < %s',
-		$cutoff
-	) );
-
-	$wpdb->query( $wpdb->prepare(
-		'DELETE FROM ' . turf_clicks_table() . ' WHERE clicked_at < %s',
-		$cutoff
-	) );
-
-	$wpdb->query( $wpdb->prepare(
-		'DELETE FROM ' . turf_404s_table() . ' WHERE hit_at < %s',
-		$cutoff
-	) );
-
-	$wpdb->query( $wpdb->prepare(
-		'DELETE FROM ' . turf_bots_table() . ' WHERE visited_at < %s',
-		$cutoff
-	) );
-
-	$wpdb->query( $wpdb->prepare(
-		'DELETE FROM ' . turf_search_table() . ' WHERE searched_at < %s',
-		$cutoff
-	) );
+	// Table name -> its timestamp column. All table names come from the
+	// plugin's own fixed turf_*_table() helpers ($wpdb->prefix plus a literal),
+	// never from user input; only $cutoff is variable, and it goes through
+	// $wpdb->prepare().
+	$tables = array(
+		turf_table()        => 'viewed_at',
+		turf_clicks_table() => 'clicked_at',
+		turf_404s_table()   => 'hit_at',
+		turf_bots_table()   => 'visited_at',
+		turf_search_table() => 'searched_at',
+		turf_forms_table()  => 'submitted_at',
+	);
 
 	if ( turf_woo_active() ) {
+		$tables[ turf_woo_table() ] = 'occurred_at';
+	}
+
+	foreach ( $tables as $table => $time_column ) {
 		$wpdb->query( $wpdb->prepare(
-			'DELETE FROM ' . turf_woo_table() . ' WHERE occurred_at < %s',
+			"DELETE FROM {$table} WHERE {$time_column} < %s", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- own-prefix table name and literal column from the fixed list above.
 			$cutoff
 		) );
 	}
-
-	$wpdb->query( $wpdb->prepare(
-		'DELETE FROM ' . turf_forms_table() . ' WHERE submitted_at < %s',
-		$cutoff
-	) );
 }
 add_action( 'turf_prune_old_events', 'turf_prune_old_events' );
 

@@ -18,6 +18,10 @@
  * site can deliberately label specific outbound links its own way instead).
  */
 
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 define( 'TURF_CLICKS_DB_VERSION', '1.2' );
 
 /**
@@ -96,9 +100,20 @@ function turf_clicks_ajax_track() {
 
 	$user_agent = isset( $_SERVER['HTTP_USER_AGENT'] ) ? sanitize_text_field( wp_unslash( $_SERVER['HTTP_USER_AGENT'] ) ) : '';
 
-	// No nonce here on purpose: this is low-stakes interaction analytics, and
-	// navigator.sendBeacon - needed for clicks that immediately navigate away
-	// - doesn't combine well with nonces.
+	// No nonce here, deliberately. Rationale for reviewers:
+	// 1. This endpoint performs no privileged action and touches no user
+	//    context: it appends one row of anonymous interaction analytics
+	//    (a sanitize_key()'d slug, a path, optionally an esc_url_raw()'d
+	//    URL). There is nothing for a CSRF attack to gain - a forged
+	//    request can do exactly what a legitimate one does: increment a
+	//    counter.
+	// 2. The click is sent via navigator.sendBeacon at the moment the
+	//    visitor navigates away (often to another site, for outbound
+	//    links). A nonce would regularly be stale by then on cached pages
+	//    (page caches serve HTML older than the nonce lifetime), silently
+	//    dropping real data while providing no security benefit for (1).
+	// This mirrors how the REST API treats unauthenticated, non-mutating
+	// traffic: nonces protect authenticated state changes, which this is not.
 	if ( turf_is_bot( $user_agent ) ) {
 		wp_send_json_success();
 	}

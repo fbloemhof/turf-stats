@@ -3,6 +3,10 @@
  * "404's" submenu page - top requested-but-missing paths per period.
  */
 
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 function turf_404s_admin_menu() {
 	$hook = add_submenu_page(
 		'turf-stats',

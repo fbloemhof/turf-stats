@@ -4,6 +4,10 @@
  * registered when WooCommerce is active.
  */
 
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 function turf_woo_get_funnel( $days ) {
 	global $wpdb;
 	$woo_table = turf_woo_table();
@@ -18,13 +22,14 @@ function turf_woo_get_funnel( $days ) {
 		$add_to_cart = (int) $wpdb->get_var( "SELECT COUNT(*) FROM $woo_table WHERE event_type = 'add_to_cart'" );
 		$checkout    = (int) $wpdb->get_var( "SELECT COUNT(*) FROM $woo_table WHERE event_type = 'checkout'" );
 	} else {
-		$since = turf_period_start_sql_date( $days );
+		$since       = turf_period_start_sql_date( $days );
+		$views_table = turf_table();
 
 		$views = (int) $wpdb->get_var( $wpdb->prepare(
-			"SELECT COUNT(*) FROM " . turf_table() . " v
+			"SELECT COUNT(*) FROM {$views_table} v
 			INNER JOIN $wpdb->posts p ON p.ID = v.post_id
 			WHERE p.post_type = 'product' AND p.post_status = 'publish'
-			AND v.viewed_at >= %s",
+			AND v.viewed_at >= %s", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- own-prefix table name.
 			$since
 		) );
 		$add_to_cart = (int) $wpdb->get_var( $wpdb->prepare(

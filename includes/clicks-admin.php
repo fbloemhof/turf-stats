@@ -5,6 +5,10 @@
  * the shared "Show more" toggle (js/postbox-more.js).
  */
 
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 function turf_clicks_admin_menu() {
 	$hook = add_submenu_page(
 		'turf-stats',
