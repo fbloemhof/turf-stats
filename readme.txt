@@ -4,7 +4,7 @@ Tags: analytics, statistics, privacy, page views, cookieless
 Requires at least: 6.0
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 1.17.1
+Stable tag: 1.17.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -107,6 +107,11 @@ the `turf_remove_data_on_uninstall` option to `1`) before deleting the plugin.
 
 == Changelog ==
 
+= 1.17.2 =
+* Fixed a WordPress.org submission error: the Plugin URI and Author URI
+  headers pointed at the same URL. Author URI now points at the author's
+  GitHub profile instead of the plugin repo.
+
 = 1.17.1 =
 * Cleared the remaining WordPress.org Plugin Check warnings: dropped the
   now-redundant load_plugin_textdomain() call (translations for wp.org-hosted
@@ -141,6 +146,9 @@ the `turf_remove_data_on_uninstall` option to `1`) before deleting the plugin.
 * See https://github.com/fbloemhof/turf-stats/releases for the full history.
 
 == Upgrade Notice ==
+
+= 1.17.2 =
+Packaging fix only (duplicate Plugin/Author URI headers); no functional changes.
 
 = 1.17.1 =
 Plugin Check warning cleanup; no changes to tracking or reports.

@@ -3,9 +3,9 @@
  * Plugin Name: Turf Stats
  * Plugin URI: https://github.com/fbloemhof/turf-stats
  * Description: Self-hosted, cookieless page-view and click analytics for WordPress - no Google Analytics, no Jetpack, no external calls for tracking. Tracks views, archive pages, referrers, UTM campaigns, scroll depth/reading time, 404s, and arbitrary UI clicks.
- * Version: 1.17.1
+ * Version: 1.17.2
  * Author: fbloemhof
- * Author URI: https://github.com/fbloemhof/turf-stats
+ * Author URI: https://github.com/fbloemhof
  * License: GPL-2.0-or-later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain: turf-stats
@@ -18,7 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'TURF_VERSION', '1.17.1' );
+define( 'TURF_VERSION', '1.17.2' );
 define( 'TURF_PATH', plugin_dir_path( __FILE__ ) );
 define( 'TURF_URL', plugin_dir_url( __FILE__ ) );
 
