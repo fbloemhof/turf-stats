@@ -38,6 +38,23 @@ function turf_postboxes_enqueue( $hook ) {
 		'moreLabel' => __( 'Show %d more', 'turf-stats' ),
 		'lessLabel' => __( 'Show less', 'turf-stats' ),
 	) );
+
+	// The collapse is done in CSS that's in the <head> before the page paints,
+	// so the extra rows are never rendered-then-hidden (which caused a visible
+	// jump/reflow on load). JavaScript then only adds the "Show more" button and
+	// toggles .turf-expanded to reveal them - no per-row show/hide on load.
+	// A list can raise its initial visible count with data-turf-visible="N"
+	// (the 404s table uses 20); the default is 5.
+	wp_register_style( 'turf-postbox-more', false );
+	wp_enqueue_style( 'turf-postbox-more' );
+	wp_add_inline_style( 'turf-postbox-more',
+		'.bk-stats-bar-list:not(.turf-expanded) > .bk-stats-bar-row:nth-child(n+6){display:none}' .
+		'.postbox .inside > table:not(.bk-stats-heatmap):not(.turf-expanded) > tbody > tr:nth-child(n+6){display:none}' .
+		'.postbox .inside > table[data-turf-visible="20"]:not(.turf-expanded) > tbody > tr:nth-child(-n+20){display:table-row}' .
+		'.postbox .inside > table[data-turf-visible="20"]:not(.turf-expanded) > tbody > tr:nth-child(n+21){display:none}' .
+		'.bk-stats-more-link{display:block;margin:6px 0 2px;background:none;border:none;padding:0;color:var(--wp-admin-theme-color,#2271b1);cursor:pointer;font-size:12px;text-decoration:underline}' .
+		'.bk-stats-more-link:hover{text-decoration:none}'
+	);
 }
 add_action( 'admin_enqueue_scripts', 'turf_postboxes_enqueue' );
 

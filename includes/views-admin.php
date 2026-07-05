@@ -1196,6 +1196,11 @@ function turf_render_breakdown_rows( $rows, $label_callback ) {
 	$total_views = array_sum( $views_list );
 	$max_views   = $views_list ? max( 1, max( $views_list ) ) : 1;
 
+	// Wrapper so the before-paint collapse CSS and the "Show more" toggle can
+	// target exactly these bar-rows (the .inside can also hold a description
+	// <p> or note as a sibling, which must not be counted as a row).
+	echo '<div class="bk-stats-bar-list">';
+
 	foreach ( $rows as $row ) :
 		$views        = (int) $row->views;
 		$visitors     = (int) $row->visitors;
@@ -1220,6 +1225,8 @@ function turf_render_breakdown_rows( $rows, $label_callback ) {
 		</div>
 		<?php
 	endforeach;
+
+	echo '</div>';
 }
 
 function turf_render_breakdown( $column, $days, $exclude_empty = false ) {
@@ -1414,8 +1421,6 @@ function turf_admin_inline_style() {
 		   instead of lining up. overflow+ellipsis is the backstop for an
 		   edge-case number wider than this. */
 		.bk-stats-bar-row__value { flex-shrink: 0; width: 220px; overflow: hidden; text-align: right; color: #646970; white-space: nowrap; text-overflow: ellipsis; }
-		.bk-stats-more-link { display: block; margin: 2px 0 4px; background: none; border: none; padding: 0; color: var(--wp-admin-theme-color, #2271b1); cursor: pointer; font-size: 12px; text-decoration: underline; }
-		.bk-stats-more-link:hover { text-decoration: none; }
 		.turf-postbox-grid .meta-box-sortables {
 			display: grid;
 			grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
