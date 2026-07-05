@@ -147,7 +147,7 @@ function turf_maybe_log_rest_debug( $request, $counted, $item_label ) {
 	$route      = ( $request instanceof WP_REST_Request ) ? $request->get_route() : '(onbekend)';
 	$method     = ( $request instanceof WP_REST_Request ) ? $request->get_method() : '?';
 
-	error_log( sprintf(
+	error_log( sprintf( // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- opt-in diagnostic, gated behind the TURF_DEBUG_REST constant above (off by default).
 		'[Turf REST debug] %s %s (%s) - geteld als view: %s - UA: %s',
 		$method,
 		$route,

@@ -3,7 +3,7 @@
  * Plugin Name: Turf Stats
  * Plugin URI: https://github.com/fbloemhof/turf-stats
  * Description: Self-hosted, cookieless page-view and click analytics for WordPress - no Google Analytics, no Jetpack, no external calls for tracking. Tracks views, archive pages, referrers, UTM campaigns, scroll depth/reading time, 404s, and arbitrary UI clicks.
- * Version: 1.17.0
+ * Version: 1.17.1
  * Author: fbloemhof
  * Author URI: https://github.com/fbloemhof/turf-stats
  * License: GPL-2.0-or-later
@@ -18,7 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'TURF_VERSION', '1.17.0' );
+define( 'TURF_VERSION', '1.17.1' );
 define( 'TURF_PATH', plugin_dir_path( __FILE__ ) );
 define( 'TURF_URL', plugin_dir_url( __FILE__ ) );
 
@@ -26,11 +26,9 @@ define( 'TURF_URL', plugin_dir_url( __FILE__ ) );
  * Source strings are English; a Dutch translation ships in
  * languages/turf-stats-nl_NL.mo. WordPress loads it automatically on nl_NL
  * sites (and any other locale that gets its own .mo later) - English is the
- * fallback everywhere else.
+ * fallback everywhere else. No load_plugin_textdomain() call needed: since
+ * WP 4.6, translations for wp.org-hosted plugins are loaded automatically.
  */
-add_action( 'init', function () {
-	load_plugin_textdomain( 'turf-stats', false, dirname( plugin_basename( __FILE__ ) ) . '/languages' );
-} );
 
 // GitHub-based update checker - present in the GitHub distribution only. The
 // WordPress.org build strips this file and vendor/plugin-update-checker/
