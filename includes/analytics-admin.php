@@ -59,8 +59,7 @@ function turf_render_trending() {
 	$rows = turf_get_trending();
 
 	if ( ! $rows ) {
-		echo '<p>' . esc_html__( 'Not enough recent views yet to determine trends.', 'turf-stats' ) . '</p>';
-		return;
+		return; // No output, so turf_maybe_add_meta_box() drops the box.
 	}
 	?>
 	<table class="wp-list-table widefat fixed striped">

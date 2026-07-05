@@ -274,3 +274,47 @@ function turf_get_avg_session_seconds( $days ) {
 
 	return (int) round( $total_seconds / $session_count );
 }
+
+/**
+ * Top landing pages: the first pageview of each reconstructed session, i.e.
+ * where visits actually begin. Aggregated by page, with the share of those
+ * sessions that were single-page (bounced) as a per-landing bounce rate.
+ * Reuses the same session reconstruction as bounce rate and visitor routes.
+ *
+ * Only post/term landings are represented - the session log
+ * (turf_get_session_rows()) carries post_id/term_id, not the "other" page
+ * types (author/date/search/home), so a visit that starts on one of those
+ * isn't counted here.
+ *
+ * @return array[] Each: array('type','id','sessions','bounced')
+ */
+function turf_get_top_landing_pages( $days, $limit = null ) {
+	$limit    = ( null === $limit ) ? turf_list_max() : $limit;
+	$sessions = turf_compute_sessions( $days );
+	$landings = array();
+
+	foreach ( $sessions as $session ) {
+		if ( empty( $session['pages'] ) ) {
+			continue;
+		}
+
+		$first = $session['pages'][0];
+		$key   = $first['type'] . ':' . $first['id'];
+
+		if ( ! isset( $landings[ $key ] ) ) {
+			$landings[ $key ] = array( 'type' => $first['type'], 'id' => $first['id'], 'sessions' => 0, 'bounced' => 0 );
+		}
+
+		++$landings[ $key ]['sessions'];
+
+		if ( 1 === count( $session['pages'] ) ) {
+			++$landings[ $key ]['bounced'];
+		}
+	}
+
+	usort( $landings, function ( $a, $b ) {
+		return $b['sessions'] - $a['sessions'];
+	} );
+
+	return array_slice( $landings, 0, $limit );
+}

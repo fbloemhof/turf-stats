@@ -44,7 +44,7 @@ function turf_get_comment_totals( $days, $offset_days = 0 ) {
 	) );
 }
 
-function turf_count_commented_posts( $days ) {
+function turf_get_top_commented_posts( $days ) {
 	global $wpdb;
 
 	list( $placeholders, $post_types ) = turf_post_type_in_clause();
@@ -57,30 +57,7 @@ function turf_count_commented_posts( $days ) {
 		$params[]   = turf_period_start_sql_date( $days );
 	}
 
-	return (int) $wpdb->get_var( $wpdb->prepare(
-		"SELECT COUNT(DISTINCT c.comment_post_ID) FROM $wpdb->comments c
-		INNER JOIN $wpdb->posts p ON p.ID = c.comment_post_ID
-		WHERE c.comment_approved = '1' AND p.post_type IN ($placeholders) AND p.post_status = 'publish' $where_date",
-		$params
-	) );
-}
-
-function turf_get_top_commented_posts( $days, $page = 1 ) {
-	global $wpdb;
-
-	list( $placeholders, $post_types ) = turf_post_type_in_clause();
-	$offset = ( max( 1, $page ) - 1 ) * TURF_PER_PAGE;
-
-	$where_date = '';
-	$params     = $post_types;
-
-	if ( 0 !== $days ) {
-		$where_date = 'AND c.comment_date_gmt >= %s';
-		$params[]   = turf_period_start_sql_date( $days );
-	}
-
-	$params[] = TURF_PER_PAGE;
-	$params[] = $offset;
+	$params[] = turf_list_max();
 
 	return $wpdb->get_results( $wpdb->prepare(
 		"SELECT c.comment_post_ID AS post_id, COUNT(*) AS comments
@@ -89,25 +66,17 @@ function turf_get_top_commented_posts( $days, $page = 1 ) {
 		WHERE c.comment_approved = '1' AND p.post_type IN ($placeholders) AND p.post_status = 'publish' $where_date
 		GROUP BY c.comment_post_ID
 		ORDER BY comments DESC
-		LIMIT %d OFFSET %d",
+		LIMIT %d",
 		$params
 	) );
 }
 
 function turf_render_top_commented_posts( $days ) {
-	$param          = 'pg_comments';
-	$requested_page = isset( $_GET[ $param ] ) ? max( 1, absint( $_GET[ $param ] ) ) : 1;
+	$rows = turf_get_top_commented_posts( $days );
 
-	$total = turf_count_commented_posts( $days );
-
-	if ( ! $total ) {
-		echo '<p>' . esc_html__( 'No comments yet for this period.', 'turf-stats' ) . '</p>';
-		return;
+	if ( ! $rows ) {
+		return; // No output, so turf_maybe_add_meta_box() drops the box.
 	}
-
-	$total_pages = max( 1, (int) ceil( $total / TURF_PER_PAGE ) );
-	$page        = min( $requested_page, $total_pages );
-	$rows        = turf_get_top_commented_posts( $days, $page );
 	?>
 	<table class="wp-list-table widefat fixed striped">
 		<thead>
@@ -132,10 +101,5 @@ function turf_render_top_commented_posts( $days ) {
 			<?php endforeach; ?>
 		</tbody>
 	</table>
-	<?php if ( $total_pages > 1 ) : ?>
-		<div class="tablenav"><div class="tablenav-pages">
-			<?php turf_render_pagination( $param, $page, $total_pages ); ?>
-		</div></div>
-	<?php endif; ?>
 	<?php
 }

@@ -49,6 +49,11 @@ WordPress 6.0+, PHP 7.4+. No other plugins required.
   Clicky or Jetpack; see [Deduplicated vs. raw views](#deduplicated-vs-raw-views).
 - **Visitors** (unique, deduped), **views per visitor**, and **average visit
   duration** (first-to-last pageview plus reading time on the last page).
+- **Cache offload** — how much traffic is served from cache instead of running
+  PHP. A cached page never reaches WordPress, but its tracking JS still fires,
+  so `raw pageviews − origin renders = served from cache`. Shown as a combined
+  percentage (it can't be split per layer from the origin) plus badges for the
+  caching layers Turf can detect (Cloudflare, SiteGround Optimizer).
 - **Device, browser, OS** — parsed from the user-agent already on every request.
 - **Language** (from `Accept-Language`) and **country** (from Cloudflare's
   `CF-IPCountry` header when present — no GeoIP database, no extra lookups; see
@@ -93,6 +98,9 @@ WordPress 6.0+, PHP 7.4+. No other plugins required.
 - **Bounce-rate proxy** — the share of sessions with exactly one pageview that
   never clicked onward (skipped for "All", where an unbounded history makes a
   single rate meaningless).
+- **Landing pages** — where visits begin (the first pageview of each session),
+  with a per-landing bounce rate. Reconstructed from the same sessions as
+  visitor routes (post/taxonomy landings only).
 - **Peak-hours heatmap** — a 7×24 day/hour grid of when views actually happen, in
   the site's own local time.
 - **Trending content** — what's rising fastest right now (last 24h vs. the 24h
@@ -144,11 +152,14 @@ already deliberately exclude bots). The signature list is filterable
 
 | Page | What's on it |
 |---|---|
-| **Statistics** | The core audience picture: overview chart, headline stat boxes, the compact device/browser/OS/language/country/referrer/UTM breakdowns (two columns), a peak-hours heatmap, and per-post-type/per-taxonomy tables. Defaults to "Today". |
-| **Analysis** | The deeper, diagnostic stats: search terms (+ zero-result), visitor routes, trending content, per-author stats, form submissions, and the WooCommerce funnel. Kept separate so Statistics doesn't become a wall of boxes. |
+| **Statistics** | The core audience picture: overview chart, headline stat boxes, the compact device/browser/OS/language/country/referrer/UTM breakdowns (two columns), a cache-offload box, a peak-hours heatmap, and per-post-type/per-taxonomy tables. Defaults to "Today". |
+| **Analysis** | The deeper, diagnostic stats: landing pages, search terms (+ zero-result), visitor routes, trending content, per-author stats, form submissions, and the WooCommerce funnel. Kept separate so Statistics doesn't become a wall of boxes. |
 | **Clicks** | Top `data-turf-click` keys, plus an "Outbound links" breakdown (full destination URL + source page). |
-| **404s** | Top requested-but-missing paths, 20 per page. |
+| **404s** | Top requested-but-missing paths. |
 | **Bots & LLMs** | See above. |
+
+Blocks with no data for the selected period are hidden entirely on the
+Statistics and Analysis pages, rather than shown as empty placeholders.
 
 **Statistics — "Today" specifics.** The headline boxes are strictly "today"
 (since local midnight, vs. yesterday for the %-change), while the daily chart and
@@ -161,7 +172,9 @@ idea as "Online now"; everything below stays as rendered on page load.
 Every block on every Turf admin page is a real wp-admin postbox: collapsible,
 draggable/reorderable (order remembered per user), and individually hideable via
 "Screen Options". Colors follow the user's chosen admin color scheme. Lists
-longer than 5 items collapse behind a "Show more" link.
+collapse behind a "Show more" / "Show less" toggle that expands in place — no
+page-reload pagination anywhere. Each list shows 5 rows by default (the 404s
+list shows 20) and caps at `turf_list_max` (50) rows total.
 
 ---
 
@@ -246,7 +259,9 @@ is *method* (deduplication) versus real *loss* (ad-blockers, etc.).
 | `turf_bot_signatures` | see `includes/bots.php` | Known bot/LLM user-agent signatures, grouped by category |
 | `turf_visitor_country` | `''` | Supply a country code when Cloudflare's `CF-IPCountry` header isn't present |
 | `turf_session_gap_seconds` | 30 minutes | Gap between two pageviews that still counts as the same session |
-| `turf_session_row_limit` | 20000 | Max rows pulled into PHP for session reconstruction (bounce rate, routes) |
+| `turf_session_row_limit` | 20000 | Max rows pulled into PHP for session reconstruction (bounce rate, routes, landing pages) |
+| `turf_list_max` | 50 | Max rows any in-box list fetches (the "Show more" toggle expands up to this) |
+| `turf_cache_environment` | Cloudflare / SiteGround auto-detection | Add/override the caching layers shown as detected on the cache-offload box |
 | `turf_referrer_app_labels` | see `includes/views-admin.php` | Android/iOS app package names mapped to friendly labels in the referrer list |
 | `turf_social_share_networks` | Facebook/X/WhatsApp/LinkedIn/email | Customize or add networks for `turf_social_share_links()` |
 

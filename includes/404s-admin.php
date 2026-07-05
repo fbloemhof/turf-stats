@@ -28,60 +28,43 @@ function turf_404s_register_metaboxes() {
 	}, $hook, 'normal' );
 }
 
-define( 'TURF_404S_PER_PAGE', 20 );
+/**
+ * Initial rows shown before the "Show more" toggle on the 404s list -
+ * deliberately higher than the default 5 (404-hunting wants a longer list at a
+ * glance), passed to the list via data-turf-visible below.
+ */
+define( 'TURF_404S_VISIBLE', 20 );
 
-function turf_404s_count_paths( $days ) {
+function turf_404s_get_top_paths( $days ) {
 	global $wpdb;
 	$table = turf_404s_table();
 
 	if ( 0 === $days ) {
-		return (int) $wpdb->get_var( "SELECT COUNT(DISTINCT path) FROM $table" );
-	}
-
-	return (int) $wpdb->get_var( $wpdb->prepare(
-		"SELECT COUNT(DISTINCT path) FROM $table WHERE hit_at >= %s",
-		turf_period_start_sql_date( $days )
-	) );
-}
-
-function turf_404s_get_top_paths( $days, $page = 1 ) {
-	global $wpdb;
-	$table  = turf_404s_table();
-	$offset = ( max( 1, $page ) - 1 ) * TURF_404S_PER_PAGE;
-
-	if ( 0 === $days ) {
 		return $wpdb->get_results( $wpdb->prepare(
 			"SELECT path, COUNT(*) AS hits, MAX(hit_at) AS last_hit FROM $table
-			GROUP BY path ORDER BY hits DESC LIMIT %d OFFSET %d",
-			TURF_404S_PER_PAGE,
-			$offset
+			GROUP BY path ORDER BY hits DESC LIMIT %d",
+			turf_list_max()
 		) );
 	}
 
 	return $wpdb->get_results( $wpdb->prepare(
 		"SELECT path, COUNT(*) AS hits, MAX(hit_at) AS last_hit FROM $table
 		WHERE hit_at >= %s
-		GROUP BY path ORDER BY hits DESC LIMIT %d OFFSET %d",
+		GROUP BY path ORDER BY hits DESC LIMIT %d",
 		turf_period_start_sql_date( $days ),
-		TURF_404S_PER_PAGE,
-		$offset
+		turf_list_max()
 	) );
 }
 
 function turf_404s_render_top_paths( $days ) {
-	$param          = 'pg';
-	$requested_page = isset( $_GET[ $param ] ) ? max( 1, absint( $_GET[ $param ] ) ) : 1;
-	$total          = turf_404s_count_paths( $days );
-	$total_pages    = max( 1, (int) ceil( $total / TURF_404S_PER_PAGE ) );
-	$page           = min( $requested_page, $total_pages );
-	$rows           = $total ? turf_404s_get_top_paths( $days, $page ) : array();
+	$rows = turf_404s_get_top_paths( $days );
 
 	if ( ! $rows ) {
 		echo '<p>' . esc_html__( 'No 404s recorded for this period.', 'turf-stats' ) . '</p>';
 		return;
 	}
 	?>
-	<table class="wp-list-table widefat fixed striped">
+	<table class="wp-list-table widefat fixed striped" data-turf-visible="<?php echo (int) TURF_404S_VISIBLE; ?>">
 		<thead>
 			<tr>
 				<th><?php esc_html_e( 'Path', 'turf-stats' ); ?></th>
@@ -99,11 +82,6 @@ function turf_404s_render_top_paths( $days ) {
 			<?php endforeach; ?>
 		</tbody>
 	</table>
-	<?php if ( $total_pages > 1 ) : ?>
-		<div class="tablenav"><div class="tablenav-pages">
-			<?php turf_render_pagination( $param, $page, $total_pages ); ?>
-		</div></div>
-	<?php endif; ?>
 	<?php
 }
 

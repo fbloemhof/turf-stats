@@ -112,6 +112,9 @@ msgstr "Klikken"
 msgid "Clicks on links to other websites - detected automatically, no data-turf-click needed."
 msgstr "Klikken op links naar andere websites - automatisch herkend, geen data-turf-click nodig."
 
+msgid "Combined across all caches in front of the site - a cache hit never reaches WordPress, so it can't be split per layer. Approximate: visitors who block the tracker are counted as origin renders."
+msgstr "Gecombineerd over alle caches vóór de site - een cache-hit bereikt WordPress nooit, dus is niet per laag te splitsen. Benadering: bezoekers die de tracker blokkeren tellen als origin-renders."
+
 msgid "Comments"
 msgstr "Reacties"
 
@@ -138,6 +141,9 @@ msgstr "Diepere analyse naast de hoofdcijfers op Statistieken: zoekgedrag, navig
 
 msgid "Destination"
 msgstr "Doel"
+
+msgid "Detected in front of the site:"
+msgstr "Gedetecteerd vóór de site:"
 
 msgid "Device"
 msgstr "Apparaat"
@@ -193,6 +199,12 @@ msgstr "Intern (eigen site)"
 msgid "Italy"
 msgstr "Italië"
 
+msgid "Landing page"
+msgstr "Landingspagina"
+
+msgid "Landing pages"
+msgstr "Landingspagina's"
+
 msgid "Language"
 msgstr "Taal"
 
@@ -238,6 +250,9 @@ msgstr "Geen 404's geregistreerd voor deze periode."
 msgid "No bot visits yet for this period."
 msgstr "Nog geen bot-bezoeken voor deze periode."
 
+msgid "no caching layer detected"
+msgstr "geen cachelaag gedetecteerd"
+
 msgid "No clicks recorded yet for this period."
 msgstr "Nog geen kliks geregistreerd voor deze periode."
 
@@ -273,6 +288,9 @@ msgstr "Nu online"
 
 msgid "Operating system"
 msgstr "Besturingssysteem"
+
+msgid "Origin renders"
+msgstr "Origin-renders"
 
 msgid "Other"
 msgstr "Overig"
@@ -310,6 +328,9 @@ msgstr "Berichten"
 msgid "Product views"
 msgstr "Productweergaven"
 
+msgid "Raw pageviews"
+msgstr "Rauwe paginaweergaven"
+
 msgid "Raw views"
 msgstr "Rauwe weergaven"
 
@@ -334,6 +355,12 @@ msgstr "Zoekwoorden"
 msgid "SEO tools"
 msgstr "SEO-tools"
 
+msgid "Served from cache"
+msgstr "Uit cache geserveerd"
+
+msgid "Sessions"
+msgstr "Bezoeken"
+
 msgid "Show %d more"
 msgstr "Toon %d meer"
 
@@ -357,6 +384,9 @@ msgstr "Inzendingen"
 
 msgid "Sun"
 msgstr "Zo"
+
+msgid "The first page of each visit - where visitors arrive. Bounce % is the share of those visits that ended on this same page."
+msgstr "De eerste pagina van elk bezoek - waar bezoekers binnenkomen. Bouncepercentage is het aandeel van die bezoeken dat op deze pagina eindigde."
 
 msgid "Thu"
 msgstr "Do"

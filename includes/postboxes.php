@@ -42,6 +42,31 @@ function turf_postboxes_enqueue( $hook ) {
 add_action( 'admin_enqueue_scripts', 'turf_postboxes_enqueue' );
 
 /**
+ * Registers a metabox only if its content callback actually produces output -
+ * so blocks with no data for the selected period disappear entirely instead of
+ * showing an empty "No data yet" placeholder. The callback is run once here
+ * (its output captured) and the captured HTML is what the box echoes at
+ * do_meta_boxes() time, so there's no double query: the same work that would
+ * have happened at render just happens a moment earlier, at registration.
+ *
+ * For this to hide a box, the render callback must emit nothing when it has no
+ * data (return early without echoing), rather than printing a placeholder.
+ */
+function turf_maybe_add_meta_box( $id, $title, $render_callback, $hook, $context = 'normal' ) {
+	ob_start();
+	call_user_func( $render_callback );
+	$html = trim( ob_get_clean() );
+
+	if ( '' === $html ) {
+		return;
+	}
+
+	add_meta_box( $id, $title, function () use ( $html ) {
+		echo $html; // phpcs:ignore WordPress.Security.EscapeOutput -- already-escaped markup captured from the render callback.
+	}, $hook, $context );
+}
+
+/**
  * Renders just one postbox-container + its boxes, with no outer wrapper -
  * the building block for everything below. A page with several sections
  * (e.g. Statistieken's overview / compact-breakdowns / tables) calls this
@@ -102,6 +127,17 @@ define( 'TURF_PERIOD_TODAY', -1 );
 
 function turf_period_days_map() {
 	return array( 'today' => TURF_PERIOD_TODAY, '7' => 7, '30' => 30, '90' => 90, 'all' => 0 );
+}
+
+/**
+ * Maximum number of rows any in-box ranked list fetches. The lists collapse to
+ * a handful of visible rows and expand in place via js/postbox-more.js (no
+ * page-reload pagination), so this is the upper bound the toggle can reveal -
+ * enough to be useful at a glance without pulling an unbounded list into an
+ * admin postbox. Filterable for sites that want longer lists.
+ */
+function turf_list_max() {
+	return (int) apply_filters( 'turf_list_max', 50 );
 }
 
 /**

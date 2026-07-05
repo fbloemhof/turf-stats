@@ -58,8 +58,7 @@ function turf_search_render_top_terms( $days ) {
 	$rows = turf_search_get_top_terms( $days );
 
 	if ( ! $rows ) {
-		echo '<p>' . esc_html__( 'No searches yet for this period.', 'turf-stats' ) . '</p>';
-		return;
+		return; // No output, so turf_maybe_add_meta_box() drops the box.
 	}
 	?>
 	<table class="wp-list-table widefat fixed striped">
@@ -87,8 +86,7 @@ function turf_search_render_zero_results( $days ) {
 	$rows = turf_search_get_zero_result_terms( $days );
 
 	if ( ! $rows ) {
-		echo '<p>' . esc_html__( 'No zero-result searches for this period.', 'turf-stats' ) . '</p>';
-		return;
+		return; // No output, so turf_maybe_add_meta_box() drops the box.
 	}
 	?>
 	<p class="description">

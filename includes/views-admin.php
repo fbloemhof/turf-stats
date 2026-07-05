@@ -10,8 +10,6 @@
  * recorded since this plugin went live.
  */
 
-define( 'TURF_PER_PAGE', 5 );
-
 function turf_admin_menu() {
 	$hook = add_menu_page(
 		__( 'Statistics', 'turf-stats' ),
@@ -46,7 +44,7 @@ function turf_views_register_metaboxes() {
 		turf_render_overview( $days );
 	}, $hook, 'turf_overview' );
 
-	add_meta_box( 'turf_content_activity', __( 'Content activity', 'turf-stats' ), function () use ( $days ) {
+	turf_maybe_add_meta_box( 'turf_content_activity', __( 'Content activity', 'turf-stats' ), function () use ( $days ) {
 		turf_render_content_activity( $days );
 	}, $hook, 'turf_overview' );
 
@@ -88,8 +86,12 @@ function turf_views_register_metaboxes() {
 
 	foreach ( $compact_boxes as $box ) {
 		list( $id, $title, $callback ) = $box;
-		add_meta_box( $id, $title, $callback, $hook, 'turf_compact' );
+		turf_maybe_add_meta_box( $id, $title, $callback, $hook, 'turf_compact' );
 	}
+
+	turf_maybe_add_meta_box( 'turf_caching', __( 'Caching', 'turf-stats' ), function () use ( $days ) {
+		turf_render_caching( $days );
+	}, $hook, 'turf_wide' );
 
 	add_meta_box( 'turf_peak_hours', __( 'Peak hours', 'turf-stats' ), function () use ( $days ) {
 		// A single day is too sparse for a meaningful 7x24 heatmap - shows
@@ -103,7 +105,7 @@ function turf_views_register_metaboxes() {
 	} );
 
 	foreach ( $post_types as $post_type ) {
-		add_meta_box(
+		turf_maybe_add_meta_box(
 			'turf_posts_' . $post_type,
 			turf_get_post_type_label( $post_type ),
 			function () use ( $post_type, $days ) {
@@ -114,7 +116,7 @@ function turf_views_register_metaboxes() {
 		);
 	}
 
-	add_meta_box( 'turf_comments', __( 'Most discussed', 'turf-stats' ), function () use ( $days ) {
+	turf_maybe_add_meta_box( 'turf_comments', __( 'Most discussed', 'turf-stats' ), function () use ( $days ) {
 		turf_render_top_commented_posts( $days );
 	}, $hook, 'turf_wide' );
 
@@ -124,7 +126,7 @@ function turf_views_register_metaboxes() {
 	} );
 
 	foreach ( $taxonomies as $taxonomy ) {
-		add_meta_box(
+		turf_maybe_add_meta_box(
 			'turf_terms_' . $taxonomy,
 			turf_get_taxonomy_label( $taxonomy ),
 			function () use ( $taxonomy, $days ) {
@@ -244,6 +246,48 @@ function turf_get_range_raw_views( $days, $offset_days = 0 ) {
 	) );
 
 	return ( null === $sum ) ? null : (int) $sum;
+}
+
+/**
+ * Raw browser pageviews and origin (PHP) renders for a single date range, in
+ * one query - the two numbers behind the cache-offload metric. Same boundary
+ * logic as turf_get_range_raw_views(). Returns null when there's no raw-hit
+ * data at all for the range (so the caching box can hide rather than divide by
+ * zero).
+ *
+ * @return array{raw:int, origin:int}|null
+ */
+function turf_get_range_cache_totals( $days, $offset_days = 0 ) {
+	global $wpdb;
+
+	$table = turf_raw_hits_table();
+
+	if ( 0 === $days ) {
+		// "All" - whole table, no date bounds (the offset math below collapses
+		// to an empty range at days = 0).
+		$row = $wpdb->get_row( "SELECT SUM(hits) AS raw, SUM(origin_hits) AS origin FROM $table" );
+	} else {
+		if ( TURF_PERIOD_TODAY === $days ) {
+			$end   = ( 0 === $offset_days ) ? current_time( 'mysql', true ) : turf_local_midnight_utc( 0 );
+			$start = turf_local_midnight_utc( $offset_days );
+		} else {
+			$end   = gmdate( 'Y-m-d H:i:s', strtotime( "-{$offset_days} days" ) );
+			$start = gmdate( 'Y-m-d H:i:s', strtotime( '-' . ( $offset_days + $days ) . ' days' ) );
+		}
+
+		$row = $wpdb->get_row( $wpdb->prepare(
+			"SELECT SUM(hits) AS raw, SUM(origin_hits) AS origin
+			FROM $table WHERE hit_hour >= %s AND hit_hour < %s",
+			$start,
+			$end
+		) );
+	}
+
+	if ( ! $row || null === $row->raw ) {
+		return null;
+	}
+
+	return array( 'raw' => (int) $row->raw, 'origin' => (int) $row->origin );
 }
 
 /**
@@ -736,6 +780,55 @@ function turf_render_hourly_visitors_chart() {
  * day/period, so it doesn't clutter the overview otherwise.
  */
 /**
+ * "Caching" box: how much of the site's traffic is served from cache instead
+ * of running PHP. A page served from cache (SiteGround dynamic cache,
+ * Cloudflare full-page cache, …) never reaches WordPress, but the cached HTML
+ * still carries Turf's tracking JS - so it fires a raw hit without a matching
+ * origin render. Offload % = (raw pageviews - origin renders) / raw pageviews.
+ *
+ * The number is a combined figure across whatever caches sit in front of the
+ * site: from the origin's side a cache hit is invisible, so it can't be
+ * attributed to one layer. The detected-layers badges give context, not a
+ * per-layer split. It's also an estimate: a visitor with JavaScript disabled
+ * or an ad-blocker that blocks the tracker is origin-rendered but sends no raw
+ * hit, nudging the percentage down.
+ */
+function turf_render_caching( $days ) {
+	$totals = turf_get_range_cache_totals( $days, 0 );
+
+	if ( null === $totals || $totals['raw'] <= 0 ) {
+		return; // No output, so turf_maybe_add_meta_box() drops the box.
+	}
+
+	$raw     = $totals['raw'];
+	$origin  = $totals['origin'];
+	$offload = max( 0, min( 100, (int) round( ( ( $raw - $origin ) / $raw ) * 100 ) ) );
+	$env     = turf_cache_environment();
+	?>
+	<div class="bk-stats-overview__totals">
+		<?php turf_render_stat_box( __( 'Served from cache', 'turf-stats' ), $offload, false, '%', 'cache' ); ?>
+		<?php turf_render_stat_box( __( 'Origin renders', 'turf-stats' ), $origin, false ); ?>
+		<?php turf_render_stat_box( __( 'Raw pageviews', 'turf-stats' ), $raw, false ); ?>
+	</div>
+
+	<p class="description bk-stats-cache-env">
+		<?php esc_html_e( 'Detected in front of the site:', 'turf-stats' ); ?>
+		<?php if ( $env ) : ?>
+			<?php foreach ( $env as $label ) : ?>
+				<span class="bk-stats-badge"><?php echo esc_html( $label ); ?></span>
+			<?php endforeach; ?>
+		<?php else : ?>
+			<em><?php esc_html_e( 'no caching layer detected', 'turf-stats' ); ?></em>
+		<?php endif; ?>
+	</p>
+
+	<p class="description">
+		<?php esc_html_e( 'Combined across all caches in front of the site - a cache hit never reaches WordPress, so it can\'t be split per layer. Approximate: visitors who block the tracker are counted as origin renders.', 'turf-stats' ); ?>
+	</p>
+	<?php
+}
+
+/**
  * Compact table, not stat-box tiles - over a longer period (30/90 days),
  * most trackable post types end up with at least some activity, which
  * made the original stat-box version visually overwhelming. A table row
@@ -765,8 +858,7 @@ function turf_render_content_activity( $days ) {
 	}
 
 	if ( ! $rows ) {
-		echo '<p>' . esc_html__( 'No content activity for this period.', 'turf-stats' ) . '</p>';
-		return;
+		return; // No output, so turf_maybe_add_meta_box() drops the box.
 	}
 	?>
 	<table class="wp-list-table widefat fixed striped">
@@ -1094,41 +1186,40 @@ function turf_get_top_referrer_hosts( $days, $limit = 10 ) {
  * @param callable $label_callback Maps a raw $row->label to a display label.
  */
 function turf_render_breakdown_rows( $rows, $label_callback ) {
+	// No output at all when empty, so turf_maybe_add_meta_box() can drop the
+	// whole box instead of showing an empty "No data yet" placeholder.
+	if ( ! $rows ) {
+		return;
+	}
+
 	$views_list  = array_map( 'intval', wp_list_pluck( $rows, 'views' ) );
 	$total_views = array_sum( $views_list );
 	$max_views   = $views_list ? max( 1, max( $views_list ) ) : 1;
-	?>
-	<?php if ( ! $rows ) : ?>
-		<p><?php esc_html_e( 'No data yet for this period.', 'turf-stats' ); ?></p>
-	<?php else : ?>
-		<?php foreach ( $rows as $row ) : ?>
-			<?php
-			$views        = (int) $row->views;
-			$visitors     = (int) $row->visitors;
-			$views_pct    = (int) round( ( $views / $max_views ) * 100 );
-			$visitors_pct = (int) round( ( $visitors / $max_views ) * 100 );
-			$share        = $total_views ? (int) round( ( $views / $total_views ) * 100 ) : 0;
-			?>
-			<?php
-			$value_text = sprintf(
-				/* translators: 1: number of views, 2: percentage share of total views, 3: number of unique visitors */
-				__( '%1$s views (%2$d%%) · %3$s visitors', 'turf-stats' ),
-				number_format_i18n( $views ),
-				$share,
-				number_format_i18n( $visitors )
-			);
-			?>
-			<div class="bk-stats-bar-row" title="<?php echo esc_attr( $value_text ); ?>">
-				<span class="bk-stats-bar-row__label"><?php echo esc_html( call_user_func( $label_callback, $row->label ) ); ?></span>
-				<span class="bk-stats-bar-row__track">
-					<span class="bk-stats-bar-row__fill bk-stats-bar-row__fill--views" style="width:<?php echo $views_pct; ?>%"></span>
-					<span class="bk-stats-bar-row__fill bk-stats-bar-row__fill--visitors" style="width:<?php echo $visitors_pct; ?>%"></span>
-				</span>
-				<span class="bk-stats-bar-row__value"><?php echo esc_html( $value_text ); ?></span>
-			</div>
-		<?php endforeach; ?>
-	<?php endif; ?>
-	<?php
+
+	foreach ( $rows as $row ) :
+		$views        = (int) $row->views;
+		$visitors     = (int) $row->visitors;
+		$views_pct    = (int) round( ( $views / $max_views ) * 100 );
+		$visitors_pct = (int) round( ( $visitors / $max_views ) * 100 );
+		$share        = $total_views ? (int) round( ( $views / $total_views ) * 100 ) : 0;
+		$value_text   = sprintf(
+			/* translators: 1: number of views, 2: percentage share of total views, 3: number of unique visitors */
+			__( '%1$s views (%2$d%%) · %3$s visitors', 'turf-stats' ),
+			number_format_i18n( $views ),
+			$share,
+			number_format_i18n( $visitors )
+		);
+		?>
+		<div class="bk-stats-bar-row" title="<?php echo esc_attr( $value_text ); ?>">
+			<span class="bk-stats-bar-row__label"><?php echo esc_html( call_user_func( $label_callback, $row->label ) ); ?></span>
+			<span class="bk-stats-bar-row__track">
+				<span class="bk-stats-bar-row__fill bk-stats-bar-row__fill--views" style="width:<?php echo $views_pct; ?>%"></span>
+				<span class="bk-stats-bar-row__fill bk-stats-bar-row__fill--visitors" style="width:<?php echo $visitors_pct; ?>%"></span>
+			</span>
+			<span class="bk-stats-bar-row__value"><?php echo esc_html( $value_text ); ?></span>
+		</div>
+		<?php
+	endforeach;
 }
 
 function turf_render_breakdown( $column, $days, $exclude_empty = false ) {
@@ -1250,6 +1341,12 @@ function turf_get_new_vs_returning( $days ) {
 	$new       = $row ? (int) $row->new_visitors : 0;
 	$returning = $row ? (int) $row->returning_visitors : 0;
 
+	// Nothing at all this period - return empty so the box hides rather than
+	// showing two zero-length bars.
+	if ( 0 === $new && 0 === $returning ) {
+		return array();
+	}
+
 	return array(
 		(object) array( 'label' => 'nieuw', 'views' => $new, 'visitors' => $new ),
 		(object) array( 'label' => 'terugkerend', 'views' => $returning, 'visitors' => $returning ),
@@ -1302,6 +1399,8 @@ function turf_admin_inline_style() {
 		.bk-stats-hourly__dot { fill: var(--wp-admin-theme-color, #2271b1); }
 		.bk-stats-hourly__axis { fill: #646970; font-size: 10px; }
 		.bk-stats-hourly__grid { stroke: #dcdcde; stroke-width: 1; }
+		.bk-stats-cache-env { margin-top: 12px; }
+		.bk-stats-badge { display: inline-block; margin-left: 6px; padding: 2px 8px; border-radius: 10px; background: var(--wp-admin-theme-color, #2271b1); color: #fff; font-size: 11px; line-height: 1.6; }
 		.bk-stats-bar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 12px; min-width: 0; max-width: 100%; }
 		.bk-stats-bar-row__label { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 		.bk-stats-bar-row__track { position: relative; width: 150px; flex-shrink: 0; background: #f0f0f1; border-radius: 3px; height: 10px; overflow: hidden; }
@@ -1384,31 +1483,6 @@ function turf_render_admin_page() {
 	<?php
 }
 
-function turf_count_posts_for_period( $post_type, $days ) {
-	global $wpdb;
-
-	if ( 0 === $days ) {
-		return (int) $wpdb->get_var( $wpdb->prepare(
-			"SELECT COUNT(*) FROM $wpdb->posts p
-			INNER JOIN $wpdb->postmeta m ON m.post_id = p.ID AND m.meta_key = %s
-			WHERE p.post_type = %s AND p.post_status = 'publish' AND m.meta_value + 0 > 0",
-			TURF_META_KEY,
-			$post_type
-		) );
-	}
-
-	$table = turf_table();
-
-	return (int) $wpdb->get_var( $wpdb->prepare(
-		"SELECT COUNT(DISTINCT v.post_id) FROM $table v
-		INNER JOIN $wpdb->posts p ON p.ID = v.post_id
-		WHERE p.post_type = %s AND p.post_status = 'publish'
-		AND v.viewed_at >= %s",
-		$post_type,
-		turf_period_start_sql_date( $days )
-	) );
-}
-
 function turf_get_alltime_visitors( $post_id ) {
 	global $wpdb;
 
@@ -1469,17 +1543,14 @@ function turf_format_scroll( $pct ) {
 	return null === $pct ? '—' : $pct . '%';
 }
 
-function turf_get_top_posts_for_period( $post_type, $days, $page = 1 ) {
+function turf_get_top_posts_for_period( $post_type, $days ) {
 	global $wpdb;
-
-	$offset = ( max( 1, $page ) - 1 ) * TURF_PER_PAGE;
 
 	if ( 0 === $days ) {
 		$query = new WP_Query( array(
 			'post_type'           => $post_type,
 			'post_status'         => 'publish',
-			'posts_per_page'      => TURF_PER_PAGE,
-			'paged'               => $page,
+			'posts_per_page'      => turf_list_max(),
 			'orderby'             => 'meta_value_num',
 			'order'               => 'DESC',
 			'meta_key'            => TURF_META_KEY,
@@ -1513,42 +1584,19 @@ function turf_get_top_posts_for_period( $post_type, $days, $page = 1 ) {
 		AND v.viewed_at >= %s
 		GROUP BY v.post_id
 		ORDER BY views DESC
-		LIMIT %d OFFSET %d",
+		LIMIT %d",
 		$post_type,
 		turf_period_start_sql_date( $days ),
-		TURF_PER_PAGE,
-		$offset
-	) );
-}
-
-function turf_render_pagination( $param, $current_page, $total_pages ) {
-	$current_url = remove_query_arg( $param );
-	$separator   = ( false === strpos( $current_url, '?' ) ) ? '?' : '&';
-
-	echo paginate_links( array(
-		'base'      => $current_url . '%_%',
-		'format'    => $separator . $param . '=%#%',
-		'current'   => $current_page,
-		'total'     => $total_pages,
-		'prev_text' => '&laquo;',
-		'next_text' => '&raquo;',
+		turf_list_max()
 	) );
 }
 
 function turf_render_admin_table( $post_type, $days ) {
-	$param          = 'pg_' . $post_type;
-	$requested_page = isset( $_GET[ $param ] ) ? max( 1, absint( $_GET[ $param ] ) ) : 1;
+	$rows = turf_get_top_posts_for_period( $post_type, $days );
 
-	$total = turf_count_posts_for_period( $post_type, $days );
-
-	if ( ! $total ) {
-		echo '<p>' . esc_html__( 'No data yet for this period.', 'turf-stats' ) . '</p>';
-		return;
+	if ( ! $rows ) {
+		return; // No output, so turf_maybe_add_meta_box() drops the box.
 	}
-
-	$total_pages = max( 1, (int) ceil( $total / TURF_PER_PAGE ) );
-	$page        = min( $requested_page, $total_pages );
-	$rows        = turf_get_top_posts_for_period( $post_type, $days, $page );
 	?>
 	<table class="wp-list-table widefat fixed striped">
 		<thead>
@@ -1578,42 +1626,12 @@ function turf_render_admin_table( $post_type, $days ) {
 			<?php endforeach; ?>
 		</tbody>
 	</table>
-	<?php if ( $total_pages > 1 ) : ?>
-		<div class="tablenav"><div class="tablenav-pages">
-			<?php turf_render_pagination( $param, $page, $total_pages ); ?>
-		</div></div>
-	<?php endif; ?>
 	<?php
 }
 
 /**
  * Taxonomy-term equivalents of the post-table functions above.
  */
-function turf_count_terms_for_period( $taxonomy, $days ) {
-	global $wpdb;
-
-	if ( 0 === $days ) {
-		return (int) $wpdb->get_var( $wpdb->prepare(
-			"SELECT COUNT(*) FROM $wpdb->term_taxonomy tt
-			INNER JOIN $wpdb->termmeta m ON m.term_id = tt.term_id AND m.meta_key = %s
-			WHERE tt.taxonomy = %s AND m.meta_value + 0 > 0",
-			TURF_META_KEY,
-			$taxonomy
-		) );
-	}
-
-	$table = turf_table();
-
-	return (int) $wpdb->get_var( $wpdb->prepare(
-		"SELECT COUNT(DISTINCT v.term_id) FROM $table v
-		INNER JOIN $wpdb->term_taxonomy tt ON tt.term_id = v.term_id
-		WHERE tt.taxonomy = %s
-		AND v.viewed_at >= %s",
-		$taxonomy,
-		turf_period_start_sql_date( $days )
-	) );
-}
-
 function turf_get_alltime_term_visitors( $term_id ) {
 	global $wpdb;
 
@@ -1623,17 +1641,14 @@ function turf_get_alltime_term_visitors( $term_id ) {
 	) );
 }
 
-function turf_get_top_terms_for_period( $taxonomy, $days, $page = 1 ) {
+function turf_get_top_terms_for_period( $taxonomy, $days ) {
 	global $wpdb;
-
-	$offset = ( max( 1, $page ) - 1 ) * TURF_PER_PAGE;
 
 	if ( 0 === $days ) {
 		$query = new WP_Term_Query( array(
 			'taxonomy'   => $taxonomy,
 			'hide_empty' => false,
-			'number'     => TURF_PER_PAGE,
-			'offset'     => $offset,
+			'number'     => turf_list_max(),
 			'orderby'    => 'meta_value_num',
 			'order'      => 'DESC',
 			'meta_key'   => TURF_META_KEY,
@@ -1665,28 +1680,19 @@ function turf_get_top_terms_for_period( $taxonomy, $days, $page = 1 ) {
 		AND v.viewed_at >= %s
 		GROUP BY v.term_id
 		ORDER BY views DESC
-		LIMIT %d OFFSET %d",
+		LIMIT %d",
 		$taxonomy,
 		turf_period_start_sql_date( $days ),
-		TURF_PER_PAGE,
-		$offset
+		turf_list_max()
 	) );
 }
 
 function turf_render_admin_terms_table( $taxonomy, $days ) {
-	$param          = 'pgt_' . $taxonomy;
-	$requested_page = isset( $_GET[ $param ] ) ? max( 1, absint( $_GET[ $param ] ) ) : 1;
+	$rows = turf_get_top_terms_for_period( $taxonomy, $days );
 
-	$total = turf_count_terms_for_period( $taxonomy, $days );
-
-	if ( ! $total ) {
-		echo '<p>' . esc_html__( 'No data yet for this period.', 'turf-stats' ) . '</p>';
-		return;
+	if ( ! $rows ) {
+		return; // No output, so turf_maybe_add_meta_box() drops the box.
 	}
-
-	$total_pages = max( 1, (int) ceil( $total / TURF_PER_PAGE ) );
-	$page        = min( $requested_page, $total_pages );
-	$rows        = turf_get_top_terms_for_period( $taxonomy, $days, $page );
 	?>
 	<table class="wp-list-table widefat fixed striped">
 		<thead>
@@ -1717,10 +1723,5 @@ function turf_render_admin_terms_table( $taxonomy, $days ) {
 			<?php endforeach; ?>
 		</tbody>
 	</table>
-	<?php if ( $total_pages > 1 ) : ?>
-		<div class="tablenav"><div class="tablenav-pages">
-			<?php turf_render_pagination( $param, $page, $total_pages ); ?>
-		</div></div>
-	<?php endif; ?>
 	<?php
 }

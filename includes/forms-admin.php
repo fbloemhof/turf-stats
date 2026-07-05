@@ -44,8 +44,7 @@ function turf_forms_render_top_forms( $days ) {
 	$rows = turf_forms_get_top_forms( $days );
 
 	if ( ! $rows ) {
-		echo '<p>' . esc_html__( 'No form submissions yet for this period (or no Contact Form 7/Gravity Forms active).', 'turf-stats' ) . '</p>';
-		return;
+		return; // No output, so turf_maybe_add_meta_box() drops the box.
 	}
 	?>
 	<table class="wp-list-table widefat fixed striped">

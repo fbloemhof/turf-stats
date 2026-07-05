@@ -1,7 +1,8 @@
 <?php
 /**
- * "Klikken" submenu page - top clicked data-turf-click keys per period.
- * Reuses turf_render_pagination() from views-admin.php.
+ * "Clicks" submenu page - top clicked data-turf-click keys per period, plus an
+ * outbound-links breakdown. Lists cap at turf_list_max() and collapse behind
+ * the shared "Show more" toggle (js/postbox-more.js).
  */
 
 function turf_clicks_admin_menu() {
@@ -40,71 +41,27 @@ function turf_clicks_register_metaboxes() {
  * their own breakdown by destination host instead - see
  * turf_clicks_get_top_outbound_links() below.
  */
-function turf_clicks_count_keys( $days ) {
+function turf_clicks_get_top_keys( $days ) {
 	global $wpdb;
 	$table = turf_clicks_table();
-
-	if ( 0 === $days ) {
-		return (int) $wpdb->get_var( $wpdb->prepare(
-			"SELECT COUNT(DISTINCT click_key) FROM $table WHERE click_key != %s",
-			TURF_OUTBOUND_CLICK_KEY
-		) );
-	}
-
-	return (int) $wpdb->get_var( $wpdb->prepare(
-		"SELECT COUNT(DISTINCT click_key) FROM $table WHERE click_key != %s AND clicked_at >= %s",
-		TURF_OUTBOUND_CLICK_KEY,
-		turf_period_start_sql_date( $days )
-	) );
-}
-
-function turf_clicks_get_top_keys( $days, $page = 1 ) {
-	global $wpdb;
-	$table  = turf_clicks_table();
-	$offset = ( max( 1, $page ) - 1 ) * TURF_PER_PAGE;
 
 	if ( 0 === $days ) {
 		return $wpdb->get_results( $wpdb->prepare(
 			"SELECT click_key, COUNT(*) AS clicks FROM $table
 			WHERE click_key != %s
-			GROUP BY click_key ORDER BY clicks DESC LIMIT %d OFFSET %d",
+			GROUP BY click_key ORDER BY clicks DESC LIMIT %d",
 			TURF_OUTBOUND_CLICK_KEY,
-			TURF_PER_PAGE,
-			$offset
+			turf_list_max()
 		) );
 	}
 
 	return $wpdb->get_results( $wpdb->prepare(
 		"SELECT click_key, COUNT(*) AS clicks FROM $table
 		WHERE click_key != %s AND clicked_at >= %s
-		GROUP BY click_key ORDER BY clicks DESC LIMIT %d OFFSET %d",
+		GROUP BY click_key ORDER BY clicks DESC LIMIT %d",
 		TURF_OUTBOUND_CLICK_KEY,
 		turf_period_start_sql_date( $days ),
-		TURF_PER_PAGE,
-		$offset
-	) );
-}
-
-/**
- * Counts distinct destination-URL + source-page pairs (that's one table row),
- * so pagination lines up with what turf_clicks_get_top_outbound_links() below
- * actually lists.
- */
-function turf_clicks_count_outbound_hosts( $days ) {
-	global $wpdb;
-	$table = turf_clicks_table();
-
-	if ( 0 === $days ) {
-		return (int) $wpdb->get_var( $wpdb->prepare(
-			"SELECT COUNT(DISTINCT target_url, context) FROM $table WHERE click_key = %s",
-			TURF_OUTBOUND_CLICK_KEY
-		) );
-	}
-
-	return (int) $wpdb->get_var( $wpdb->prepare(
-		"SELECT COUNT(DISTINCT target_url, context) FROM $table WHERE click_key = %s AND clicked_at >= %s",
-		TURF_OUTBOUND_CLICK_KEY,
-		turf_period_start_sql_date( $days )
+		turf_list_max()
 	) );
 }
 
@@ -114,40 +71,32 @@ function turf_clicks_count_outbound_hosts( $days ) {
  * clicked from two different articles shows as two rows, which is usually the
  * more useful signal than a single lumped total.
  */
-function turf_clicks_get_top_outbound_links( $days, $page = 1 ) {
+function turf_clicks_get_top_outbound_links( $days ) {
 	global $wpdb;
-	$table  = turf_clicks_table();
-	$offset = ( max( 1, $page ) - 1 ) * TURF_PER_PAGE;
+	$table = turf_clicks_table();
 
 	if ( 0 === $days ) {
 		return $wpdb->get_results( $wpdb->prepare(
 			"SELECT target_url, context, COUNT(*) AS clicks FROM $table
 			WHERE click_key = %s
-			GROUP BY target_url, context ORDER BY clicks DESC LIMIT %d OFFSET %d",
+			GROUP BY target_url, context ORDER BY clicks DESC LIMIT %d",
 			TURF_OUTBOUND_CLICK_KEY,
-			TURF_PER_PAGE,
-			$offset
+			turf_list_max()
 		) );
 	}
 
 	return $wpdb->get_results( $wpdb->prepare(
 		"SELECT target_url, context, COUNT(*) AS clicks FROM $table
 		WHERE click_key = %s AND clicked_at >= %s
-		GROUP BY target_url, context ORDER BY clicks DESC LIMIT %d OFFSET %d",
+		GROUP BY target_url, context ORDER BY clicks DESC LIMIT %d",
 		TURF_OUTBOUND_CLICK_KEY,
 		turf_period_start_sql_date( $days ),
-		TURF_PER_PAGE,
-		$offset
+		turf_list_max()
 	) );
 }
 
 function turf_clicks_render_top_keys( $days ) {
-	$param          = 'pg';
-	$requested_page = isset( $_GET[ $param ] ) ? max( 1, absint( $_GET[ $param ] ) ) : 1;
-	$total          = turf_clicks_count_keys( $days );
-	$total_pages    = max( 1, (int) ceil( $total / TURF_PER_PAGE ) );
-	$page           = min( $requested_page, $total_pages );
-	$rows           = $total ? turf_clicks_get_top_keys( $days, $page ) : array();
+	$rows = turf_clicks_get_top_keys( $days );
 
 	if ( ! $rows ) {
 		echo '<p>' . esc_html__( 'No clicks recorded yet for this period.', 'turf-stats' ) . '</p>';
@@ -170,26 +119,11 @@ function turf_clicks_render_top_keys( $days ) {
 			<?php endforeach; ?>
 		</tbody>
 	</table>
-	<?php if ( $total_pages > 1 ) : ?>
-		<div class="tablenav"><div class="tablenav-pages">
-			<?php turf_render_pagination( $param, $page, $total_pages ); ?>
-		</div></div>
-	<?php endif; ?>
 	<?php
 }
 
-/**
- * Own pagination param ('pg_outbound', not 'pg') so paging through this
- * box doesn't also move the separate "Top kliks" box to the same page
- * number.
- */
 function turf_clicks_render_top_outbound_links( $days ) {
-	$param          = 'pg_outbound';
-	$requested_page = isset( $_GET[ $param ] ) ? max( 1, absint( $_GET[ $param ] ) ) : 1;
-	$total          = turf_clicks_count_outbound_hosts( $days );
-	$total_pages    = max( 1, (int) ceil( $total / TURF_PER_PAGE ) );
-	$page           = min( $requested_page, $total_pages );
-	$rows           = $total ? turf_clicks_get_top_outbound_links( $days, $page ) : array();
+	$rows = turf_clicks_get_top_outbound_links( $days );
 
 	if ( ! $rows ) {
 		echo '<p>' . esc_html__( 'No outbound link clicks recorded yet for this period.', 'turf-stats' ) . '</p>';
@@ -234,11 +168,6 @@ function turf_clicks_render_top_outbound_links( $days ) {
 			<?php endforeach; ?>
 		</tbody>
 	</table>
-	<?php if ( $total_pages > 1 ) : ?>
-		<div class="tablenav"><div class="tablenav-pages">
-			<?php turf_render_pagination( $param, $page, $total_pages ); ?>
-		</div></div>
-	<?php endif; ?>
 	<?php
 }
 

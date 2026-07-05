@@ -189,22 +189,9 @@ function turf_bots_render_simple_breakdown( $rows, $label_callback ) {
 	<?php
 }
 
-function turf_bots_count_crawled_pages( $days ) {
+function turf_bots_get_top_crawled_pages( $days ) {
 	global $wpdb;
 	$table = turf_bots_table();
-
-	$where_date = 0 !== $days ? $wpdb->prepare( 'AND visited_at >= %s', turf_period_start_sql_date( $days ) ) : '';
-
-	$posts = (int) $wpdb->get_var( "SELECT COUNT(DISTINCT post_id) FROM $table WHERE post_id IS NOT NULL $where_date" );
-	$terms = (int) $wpdb->get_var( "SELECT COUNT(DISTINCT term_id) FROM $table WHERE term_id IS NOT NULL $where_date" );
-
-	return $posts + $terms;
-}
-
-function turf_bots_get_top_crawled_pages( $days, $page = 1 ) {
-	global $wpdb;
-	$table  = turf_bots_table();
-	$offset = ( max( 1, $page ) - 1 ) * TURF_PER_PAGE;
 
 	$where_date = 0 !== $days ? $wpdb->prepare( 'AND visited_at >= %s', turf_period_start_sql_date( $days ) ) : '';
 
@@ -213,26 +200,18 @@ function turf_bots_get_top_crawled_pages( $days, $page = 1 ) {
 		UNION ALL
 		(SELECT 'term' AS kind, term_id AS object_id, COUNT(*) AS hits FROM $table WHERE term_id IS NOT NULL $where_date GROUP BY term_id)
 		ORDER BY hits DESC
-		LIMIT %d OFFSET %d",
-		TURF_PER_PAGE,
-		$offset
+		LIMIT %d",
+		turf_list_max()
 	) );
 }
 
 function turf_bots_render_top_crawled_pages( $days ) {
-	$param          = 'pg_bots';
-	$requested_page = isset( $_GET[ $param ] ) ? max( 1, absint( $_GET[ $param ] ) ) : 1;
+	$rows = turf_bots_get_top_crawled_pages( $days );
 
-	$total = turf_bots_count_crawled_pages( $days );
-
-	if ( ! $total ) {
+	if ( ! $rows ) {
 		echo '<p>' . esc_html__( 'No bot visits yet for this period.', 'turf-stats' ) . '</p>';
 		return;
 	}
-
-	$total_pages = max( 1, (int) ceil( $total / TURF_PER_PAGE ) );
-	$page        = min( $requested_page, $total_pages );
-	$rows        = turf_bots_get_top_crawled_pages( $days, $page );
 	?>
 	<table class="wp-list-table widefat fixed striped">
 		<thead>
@@ -265,11 +244,6 @@ function turf_bots_render_top_crawled_pages( $days ) {
 			<?php endforeach; ?>
 		</tbody>
 	</table>
-	<?php if ( $total_pages > 1 ) : ?>
-		<div class="tablenav"><div class="tablenav-pages">
-			<?php turf_render_pagination( $param, $page, $total_pages ); ?>
-		</div></div>
-	<?php endif; ?>
 	<?php
 }
 

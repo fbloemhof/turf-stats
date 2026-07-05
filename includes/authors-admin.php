@@ -66,8 +66,7 @@ function turf_render_author_breakdown( $days ) {
 	$rows = turf_get_author_breakdown( $days );
 
 	if ( ! $rows ) {
-		echo '<p>' . esc_html__( 'No data yet for this period.', 'turf-stats' ) . '</p>';
-		return;
+		return; // No output, so turf_maybe_add_meta_box() drops the box.
 	}
 	?>
 	<table class="wp-list-table widefat fixed striped">

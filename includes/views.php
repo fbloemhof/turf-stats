@@ -126,7 +126,7 @@ add_action( 'init', 'turf_install' );
  * server-side tracking are excluded, since Clicky/Jetpack's own JS can't see
  * those either, so including them would break the comparison.
  */
-define( 'TURF_RAW_HITS_DB_VERSION', '1.0' );
+define( 'TURF_RAW_HITS_DB_VERSION', '1.1' );
 
 function turf_raw_hits_table() {
 	global $wpdb;
@@ -147,9 +147,16 @@ function turf_raw_hits_install() {
 	// hit_hour is the top of the UTC hour (e.g. 2026-07-01 14:00:00), so the
 	// same turf_period_start_sql_date() boundary every other query uses works
 	// here unchanged, and a per-hour breakdown stays possible later.
+	//
+	// origin_hits (added in 1.1) counts PHP front-end renders of a trackable
+	// page - a cache miss. hits counts every browser pageview (from the JS,
+	// which fires whether the HTML came from cache or origin). So
+	// hits - origin_hits = pages served from cache without running PHP. dbDelta
+	// adds the column in place on an existing install.
 	dbDelta( "CREATE TABLE $table (
 		hit_hour DATETIME NOT NULL,
 		hits INT UNSIGNED NOT NULL DEFAULT 0,
+		origin_hits INT UNSIGNED NOT NULL DEFAULT 0,
 		PRIMARY KEY  (hit_hour)
 	) $charset_collate;" );
 
@@ -164,16 +171,64 @@ add_action( 'init', 'turf_raw_hits_install' );
  * dedup check - so every genuine pageview counts, deduped repeats included.
  */
 function turf_record_raw_hit() {
+	turf_bump_raw_hits_column( 'hits' );
+}
+
+/**
+ * Increments the origin-render counter for the current UTC hour - one per real
+ * PHP front-end render of a trackable page (see turf_enqueue()). Compared
+ * against `hits` (browser pageviews, cached or not) this yields the cache
+ * offload rate: the JS fires on cached pages too, but PHP - and therefore this
+ * counter - only runs on a cache miss.
+ */
+function turf_record_origin_render() {
+	turf_bump_raw_hits_column( 'origin_hits' );
+}
+
+/**
+ * Shared upsert for the per-hour aggregate. $column is a hard-coded internal
+ * literal ('hits' or 'origin_hits'), never user input - it can't go through
+ * $wpdb->prepare() as a value, so it's whitelisted here instead.
+ */
+function turf_bump_raw_hits_column( $column ) {
+	if ( 'hits' !== $column && 'origin_hits' !== $column ) {
+		return;
+	}
+
 	global $wpdb;
 
 	$table = turf_raw_hits_table();
 	$hour  = gmdate( 'Y-m-d H:00:00' );
 
 	$wpdb->query( $wpdb->prepare(
-		"INSERT INTO $table (hit_hour, hits) VALUES (%s, 1)
-		ON DUPLICATE KEY UPDATE hits = hits + 1",
+		"INSERT INTO $table (hit_hour, $column) VALUES (%s, 1)
+		ON DUPLICATE KEY UPDATE $column = $column + 1",
 		$hour
 	) );
+}
+
+/**
+ * Which caching/edge layers are detectable from the origin, to give context to
+ * the cache-offload number. Deliberately shallow - it answers "is this layer in
+ * front of the site", not "did it cache this specific request" (a cache hit
+ * never reaches PHP, so the origin can't see or attribute it). Cloudflare is
+ * inferred from its own request headers; SiteGround from its optimizer plugin.
+ * Filterable so other stacks (Varnish, a reverse proxy, …) can add themselves.
+ *
+ * @return array<string,string> label keyed by slug, e.g. array( 'cloudflare' => 'Cloudflare' )
+ */
+function turf_cache_environment() {
+	$detected = array();
+
+	if ( ! empty( $_SERVER['HTTP_CF_RAY'] ) || ! empty( $_SERVER['HTTP_CF_CONNECTING_IP'] ) ) {
+		$detected['cloudflare'] = 'Cloudflare';
+	}
+
+	if ( defined( 'SiteGround_Optimizer_VERSION' ) || class_exists( 'SiteGround_Optimizer\Options\Options' ) ) {
+		$detected['siteground'] = 'SiteGround Optimizer';
+	}
+
+	return apply_filters( 'turf_cache_environment', $detected );
 }
 
 /**
@@ -467,6 +522,18 @@ function turf_enqueue() {
 		} else {
 			return;
 		}
+	}
+
+	// This function runs only when PHP actually renders a trackable page (a
+	// cache miss), so it's the right place to count an "origin render" for the
+	// cache-offload metric. Guard it with the same bot/editor exclusion the raw
+	// hit uses: bots and editors don't fire the tracking JS, so counting their
+	// renders here would push origin renders above browser pageviews and skew
+	// the offload rate negative.
+	$user_agent = isset( $_SERVER['HTTP_USER_AGENT'] ) ? sanitize_text_field( wp_unslash( $_SERVER['HTTP_USER_AGENT'] ) ) : '';
+
+	if ( ! turf_is_bot( $user_agent ) && ! current_user_can( 'edit_posts' ) ) {
+		turf_record_origin_render();
 	}
 
 	wp_enqueue_script(
