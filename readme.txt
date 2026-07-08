@@ -4,7 +4,7 @@ Tags: analytics, statistics, privacy, page views, cookieless
 Requires at least: 6.0
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 1.18.0
+Stable tag: 1.18.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -110,7 +110,21 @@ the `turf_remove_data_on_uninstall` option to `1`) before deleting the plugin.
 
 On the plugin's GitHub repository: https://github.com/fbloemhof/turf-stats/issues
 
+== Screenshots ==
+
+1. Statistics overview - views, visitors, device/browser/OS breakdowns, cache
+   offload, peak hours, and top pages and posts for the selected period.
+2. Analysis - landing pages with bounce rate, on-site search terms
+   (including zero-result searches), trending content, and per-author stats.
+3. Bots & LLMs - crawler and AI-bot visits (Googlebot, GPTBot, ClaudeBot, ...)
+   tracked separately from human visitors, with the pages they crawl most.
+
 == Changelog ==
+
+= 1.18.1 =
+* Added wordpress.org listing screenshots (Statistics overview, Analysis,
+  Bots & LLMs) and the corresponding == Screenshots == section. No
+  functional or tracking changes.
 
 = 1.18.0 =
 * The GitHub-based update checker is removed entirely (updater.php and its
@@ -170,6 +184,9 @@ On the plugin's GitHub repository: https://github.com/fbloemhof/turf-stats/issue
 * See https://github.com/fbloemhof/turf-stats/releases for the full history.
 
 == Upgrade Notice ==
+
+= 1.18.1 =
+Listing/packaging update only (screenshots); no functional changes.
 
 = 1.18.0 =
 Updates now come from wordpress.org instead of GitHub; postbox order/collapse
