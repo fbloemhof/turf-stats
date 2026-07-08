@@ -60,8 +60,32 @@ function turf_postboxes_enqueue( $hook ) {
 		'.bk-stats-more-link{display:block;margin:6px 0 2px;background:none;border:none;padding:0;color:var(--wp-admin-theme-color,#2271b1);cursor:pointer;font-size:12px;text-decoration:underline}' .
 		'.bk-stats-more-link:hover{text-decoration:none}'
 	);
+
+	wp_add_inline_style( 'turf-postbox-more', turf_admin_inline_css() );
 }
 add_action( 'admin_enqueue_scripts', 'turf_postboxes_enqueue' );
+
+/**
+ * Outputs the two hidden nonce fields WP core's own postboxes.js looks for
+ * by ID (#meta-box-order-nonce, #closedpostboxesnonce) when it saves drag
+ * order / open-closed state via AJAX (the 'meta-box-order' and
+ * 'closed-postboxes' actions, both handled by wp-admin/includes/ajax-actions.php
+ * with no extra wiring needed on our side). Core pages like post.php and
+ * index.php (Dashboard) get these for free from their own templates; a
+ * custom admin page has to print them itself, or those AJAX calls 404/fail
+ * their nonce check silently and nothing ever gets persisted.
+ */
+function turf_postboxes_nonce_fields() {
+	$screen = get_current_screen();
+
+	if ( ! $screen || ! in_array( $screen->id, turf_register_postbox_hook(), true ) ) {
+		return;
+	}
+
+	wp_nonce_field( 'meta-box-order', 'meta-box-order-nonce', false );
+	wp_nonce_field( 'closedpostboxes', 'closedpostboxesnonce', false );
+}
+add_action( 'in_admin_header', 'turf_postboxes_nonce_fields' );
 
 /**
  * Registers a metabox only if its content callback actually produces output -

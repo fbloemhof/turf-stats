@@ -1,10 +1,10 @@
 === Turf Stats ===
-Contributors: fbloemhof
+Contributors: freakstar
 Tags: analytics, statistics, privacy, page views, cookieless
 Requires at least: 6.0
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 1.17.2
+Stable tag: 1.18.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -56,8 +56,9 @@ interface is English and ships with a full Dutch (nl_NL) translation.
    taxonomy. Find the reports under the "Statistics" menu in wp-admin.
 
 Optional extras (a visible view counter, click tracking on specific elements,
-social-share links, WP-CLI import of historical Jetpack view counts) are
-documented in the plugin's README on GitHub.
+social-share links, importing historical Jetpack/entry-views view counts via
+the "Statistics > Import" admin page or WP-CLI) are documented in the plugin's
+README on GitHub.
 
 == Frequently Asked Questions ==
 
@@ -105,7 +106,30 @@ uninstall/reinstall. To remove everything on uninstall, add
 `define( 'TURF_REMOVE_DATA_ON_UNINSTALL', true );` to wp-config.php (or set
 the `turf_remove_data_on_uninstall` option to `1`) before deleting the plugin.
 
+= Where do I suggest a feature or report a bug? =
+
+On the plugin's GitHub repository: https://github.com/fbloemhof/turf-stats/issues
+
 == Changelog ==
+
+= 1.18.0 =
+* The GitHub-based update checker is removed entirely (updater.php and its
+  vendored library) - releases now deploy straight to WordPress.org via a
+  GitHub Action, and updates are handled by wordpress.org like any other
+  hosted plugin.
+* Fixed postbox drag-order and collapse/expand state not actually being
+  saved: the admin pages were missing the nonce fields WordPress core's own
+  postbox AJAX handlers look for, so those requests silently failed. Order
+  and collapsed state now persist correctly per user.
+* The site-specific "Dorpsapp" companion-app integration is now a generic,
+  opt-in connector-app mechanism (`turf_connector_app_route_patterns` /
+  `turf_connector_app_label` filters) - no behavior change unless you were
+  using the old `turf_dorpsapp_route_patterns` filter, which is renamed.
+* Added a GitHub issues link (bug reports / feature suggestions) to the FAQ.
+* The legacy view-count import (Jetpack Stats / the old entry-views plugin) is
+  now also available as a "Statistics > Import" admin page, alongside the
+  existing `wp turf-stats import-legacy-views` WP-CLI command - same import,
+  run in small AJAX batches with a progress bar instead of the command line.
 
 = 1.17.2 =
 * Fixed a WordPress.org submission error: the Plugin URI and Author URI
@@ -146,6 +170,11 @@ the `turf_remove_data_on_uninstall` option to `1`) before deleting the plugin.
 * See https://github.com/fbloemhof/turf-stats/releases for the full history.
 
 == Upgrade Notice ==
+
+= 1.18.0 =
+Updates now come from wordpress.org instead of GitHub; postbox order/collapse
+state now actually persists. Rename turf_dorpsapp_route_patterns to
+turf_connector_app_route_patterns if you used it.
 
 = 1.17.2 =
 Packaging fix only (duplicate Plugin/Author URI headers); no functional changes.

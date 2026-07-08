@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 772 250">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="772" y2="250">
+      <stop offset="0" stop-color="#4caf50"/>
+      <stop offset="1" stop-color="#1b5e20"/>
+    </linearGradient>
+  </defs>
+  <rect width="772" height="250" fill="url(#bg)"/>
+  <path d="M0,250 L0,228 L48,206 L96,232 L144,202 L192,230 L240,200 L288,228
+           Q 340,244 392,228 L440,200 L488,230 L536,202 L584,232 L632,206 L680,228
+           L728,204 L772,224 L772,250 Z"
+        fill="#154d19" opacity="0.5"/>
+  <text x="50" y="118" font-family="Arial, Helvetica, sans-serif" font-size="66"
+        font-weight="700" fill="#ffffff">Turf Stats</text>
+  <text x="52" y="156" font-family="Arial, Helvetica, sans-serif" font-size="25"
+        fill="#e8f5e9" opacity="0.92">Self-hosted, cookieless analytics</text>
+  <polyline points="560,190 610,150 655,168 715,86"
+            fill="none" stroke="#ffffff" stroke-width="12"
+            stroke-linecap="round" stroke-linejoin="round" opacity="0.95"/>
+  <circle cx="715" cy="86" r="12" fill="#ffffff"/>
+</svg>

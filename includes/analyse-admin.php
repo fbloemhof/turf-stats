@@ -68,7 +68,6 @@ function turf_analyse_register_metaboxes() {
 }
 
 function turf_analyse_render_admin_page() {
-	turf_admin_inline_style();
 	?>
 	<div class="wrap">
 		<h1><?php esc_html_e( 'Analysis', 'turf-stats' ); ?></h1>

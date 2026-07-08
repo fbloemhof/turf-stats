@@ -252,7 +252,6 @@ function turf_bots_render_top_crawled_pages( $days ) {
 }
 
 function turf_bots_render_admin_page() {
-	turf_admin_inline_style();
 	?>
 	<div class="wrap">
 		<h1><?php esc_html_e( 'Bots & LLMs', 'turf-stats' ); ?></h1>

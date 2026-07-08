@@ -16,9 +16,9 @@ translation; on a Dutch site the admin pages show up in Dutch automatically.
   (no consent banner) — see [GDPR](#gdpr).
 - **Self-hosted.** All data lives in your own database; nothing is sent to a
   third party.
-- **No external calls for tracking.** The only network request Turf itself makes
-  is the periodic "is there a newer version" update check against GitHub — the
-  same thing WordPress already does for wordpress.org plugins.
+- **No external calls for tracking.** Turf itself makes no network requests at
+  all — updates are handled entirely by WordPress.org, like any other
+  wordpress.org-hosted plugin.
 - **Zero configuration.** Every public post type and taxonomy is tracked
   automatically, including ones you add later.
 
@@ -26,8 +26,8 @@ translation; on a Dutch site the admin pages show up in Dutch automatically.
 
 ## Installation
 
-1. Copy this folder into `wp-content/plugins/turf` (or `turf-stats`) and activate
-   it like any other plugin.
+1. Install "Turf Stats" from Plugins > Add New (or copy this folder into
+   `wp-content/plugins/turf-stats` and activate it manually) and activate it.
 2. That's it — views start counting immediately for every public post type and
    taxonomy.
 
@@ -75,13 +75,14 @@ WordPress 6.0+, PHP 7.4+. No other plugins required.
 - **REST API views** — views that come in through `/wp-json/wp/v2/…` instead of
   a normal page load (e.g. a companion app), shown as their own "App / REST API"
   bucket. Only single-item `GET` requests count.
-- **Dorpsapp** — the "Dorpsapp"/"Doarpsapp" village-app product (used by several
-  Dutch local sites) registers its own `doarpsapp/v1` REST namespace; Turf
-  recognizes it and shows it as its own bucket rather than the generic REST one.
-  For both REST buckets, "Views" reflects real fetch activity but "Visitors"
-  does not — these requests come from the connector's own backend server (one
-  fixed IP/user-agent), not from individual devices, so Turf shows a note about
-  this on the Source breakdown whenever either bucket has data.
+- **Custom connector apps** — a site-specific companion-app connector that
+  registers its own REST namespace (rather than using `/wp/v2/…`) can be
+  recognized specifically via the `turf_connector_app_route_patterns` filter,
+  and shown as its own bucket rather than the generic REST one. For both REST
+  buckets, "Views" reflects real fetch activity but "Visitors" does not — these
+  requests come from the connector's own backend server (one fixed
+  IP/user-agent), not from individual devices, so Turf shows a note about this
+  on the Source breakdown whenever either bucket has data.
 
 > **Recognizing another app by name:** set `define( 'TURF_DEBUG_REST', true );`
 > in `wp-config.php` for a while and watch your PHP error log to see exactly what
@@ -210,6 +211,8 @@ clicks show up on the Clicks page automatically. Customize networks via the
 
 ### Importing historical view counts
 
+Available both as a **Statistics > Import** admin page and as WP-CLI:
+
 ```
 wp turf-stats import-legacy-views --source=jetpack
 wp turf-stats import-legacy-views --source=entry-views
@@ -218,7 +221,10 @@ wp turf-stats import-legacy-views --source=all [--force] [--dry-run]
 
 `--source=jetpack` needs Jetpack's Stats module still active (it calls Jetpack's
 own `stats_get_csv()`), so run it before disconnecting Jetpack if you want to
-keep that history.
+keep that history. The admin page runs the same import in small AJAX batches
+(the Jetpack source is deliberately rate-limited, so a large library can take a
+while either way) and shows a live progress bar; WP-CLI has no such time limit
+and is the better choice for very large sites run from the command line.
 
 ---
 
@@ -255,7 +261,8 @@ is *method* (deduplication) versus real *loss* (ad-blockers, etc.).
 | `turf_retention_months` | 18 | How long raw event rows are kept before pruning (0 disables pruning) |
 | `turf_clicks_allowed_keys` | none (any key allowed) | Optional strict allow-list for `data-turf-click` keys |
 | `turf_online_now_window` | 5 minutes | How recent a view has to be to count toward "online now" |
-| `turf_dorpsapp_route_patterns` | `doarpsapp/v1/{posts,events,info}/…` | Route patterns recognized as Dorpsapp single-item requests |
+| `turf_connector_app_route_patterns` | none (opt-in) | Route patterns recognized as a specific connector app's single-item requests |
+| `turf_connector_app_label` | `Connector app` | Display label for the connector-app bucket in the Source breakdown |
 | `turf_bot_signatures` | see `includes/bots.php` | Known bot/LLM user-agent signatures, grouped by category |
 | `turf_visitor_country` | `''` | Supply a country code when Cloudflare's `CF-IPCountry` header isn't present |
 | `turf_session_gap_seconds` | 30 minutes | Gap between two pageviews that still counts as the same session |
@@ -306,20 +313,17 @@ English is the fallback everywhere else. To add another language, translate the
 
 ## Updates
 
-Turf isn't on the WordPress.org directory, so it bundles
-[Plugin Update Checker](https://github.com/YahnisElsts/plugin-update-checker)
-(MIT, vendored in `vendor/plugin-update-checker/`) pointed at this repo's
-[releases](https://github.com/fbloemhof/turf-stats/releases). Install once and
-you'll get the normal "update available" notice whenever a new release is
-published here.
+Turf is distributed through the WordPress.org plugin directory, so updates
+show up as the normal "update available" notice on the Plugins page - no
+bundled updater, no third-party update server.
 
 To cut a release: bump the `Version` header in `turf-stats.php` (and
-`TURF_VERSION`), tag it (`vX.Y.Z`), and attach a zip of the plugin folder (with
-the `turf-stats/turf-stats.php` structure, not the files at the zip root) to a
-GitHub release. Pre-releases are ignored.
-
-This update check is the only network request Turf makes that isn't part of
-tracking a visitor. No visitor or site data is included.
+`TURF_VERSION`) and the `Stable tag` in `readme.txt`, then push a `vX.Y.Z` tag.
+The "Deploy to WordPress.org" GitHub Action
+(`.github/workflows/deploy.yml`, using
+[10up/action-wordpress-plugin-deploy](https://github.com/10up/action-wordpress-plugin-deploy))
+commits that tag straight to the wordpress.org SVN repo (respecting
+`.distignore`) and attaches a zip to the matching GitHub release.
 
 ---
 
@@ -330,6 +334,13 @@ first-party, aggregate analytics: no cookies, no cross-site tracking, no raw IP
 storage, automatic data-retention limits. That's not legal advice — check with
 whoever maintains your privacy policy, especially before enabling country
 detection or anything else that touches visitor-identifiable data.
+
+---
+
+## Support
+
+Found a bug, or have a feature suggestion? Open an issue on
+[GitHub](https://github.com/fbloemhof/turf-stats/issues).
 
 ---
 

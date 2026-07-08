@@ -27,7 +27,6 @@
 		body.set( 'utm_source', urlParams.get( 'utm_source' ) || '' );
 		body.set( 'utm_medium', urlParams.get( 'utm_medium' ) || '' );
 		body.set( 'utm_campaign', urlParams.get( 'utm_campaign' ) || '' );
-		body.set( 'nonce', turfViews.nonce );
 
 		function updateLabel( text ) {
 			var el = document.getElementById( 'post-views' );

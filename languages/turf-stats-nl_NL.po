@@ -7,9 +7,6 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-msgid "\"Dorpsapp\" and \"App / REST API\" run through a single central backend server, not through individual visitors' devices - so \"Visitors\" isn't reliable for those sources. \"Views\" is."
-msgstr "\"Dorpsapp\" en \"App / REST API\" lopen via één centrale backend-server, niet via de apparaten van losse bezoekers - \"Bezoekers\" is daardoor niet betrouwbaar voor die bronnen. \"Weergaven\" wel."
-
 msgid "%1$02d:00 — %2$s visitors"
 msgstr "%1$02d:00 — %2$s bezoekers"
 
@@ -24,6 +21,15 @@ msgstr "%1$s weergaven (%2$d%%) · %3$s bezoekers"
 
 msgid "%1$s — %2$s views, %3$s visitors"
 msgstr "%1$s — %2$s weergaven, %3$s bezoekers"
+
+msgid "%1$s — imported: %2$d, skipped (already had a value): %3$d, no/zero legacy views: %4$d"
+msgstr "%1$s — geïmporteerd: %2$d, overgeslagen (had al een waarde): %3$d, geen/nul legacy-weergaven: %4$d"
+
+msgid "%1$s: %2$d / %3$d posts…"
+msgstr "%1$s: %2$d / %3$d berichten…"
+
+msgid "%d published post(s) are eligible for import."
+msgstr "%d bericht(en) komen in aanmerking voor import."
 
 msgid "%d%% of previous step"
 msgstr "%d%% van vorige stap"
@@ -121,6 +127,9 @@ msgstr "Reacties"
 msgid "Completed at checkout"
 msgstr "Afgerond bij checkout"
 
+msgid "Connector app"
+msgstr "Connector-app"
+
 msgid "Content activity"
 msgstr "Content-activiteit"
 
@@ -148,6 +157,15 @@ msgstr "Gedetecteerd vóór de site:"
 msgid "Device"
 msgstr "Apparaat"
 
+msgid "Done."
+msgstr "Klaar."
+
+msgid "Dry run - report what would happen without writing anything"
+msgstr "Droogloop - toon wat er zou gebeuren zonder iets weg te schrijven"
+
+msgid " (dry run, nothing written)"
+msgstr " (droogloop, niets weggeschreven)"
+
 msgid "Dutch"
 msgstr "Nederlands"
 
@@ -159,6 +177,9 @@ msgstr "E-mail"
 
 msgid "English"
 msgstr "Engels"
+
+msgid "entry-views plugin"
+msgstr "entry-views-plugin"
 
 msgid "Form"
 msgstr "Formulier"
@@ -193,11 +214,29 @@ msgstr "Duitsland"
 msgid "How often specific UI elements (e.g. view buttons, filters, social icons) are actually clicked - separate from page views."
 msgstr "Hoe vaak specifieke UI-elementen (bv. weergave-knoppen, filters, social-iconen) daadwerkelijk worden aangeklikt - los van paginaweergaven."
 
+msgid "Import"
+msgstr "Import"
+
+msgid "Import legacy views"
+msgstr "Legacy-weergaven importeren"
+
+msgid "Import source"
+msgstr "Importbron"
+
+msgid "Importing…"
+msgstr "Bezig met importeren…"
+
 msgid "Internal (own site)"
 msgstr "Intern (eigen site)"
 
 msgid "Italy"
 msgstr "Italië"
+
+msgid "Jetpack Stats"
+msgstr "Jetpack Stats"
+
+msgid "Jetpack Stats isn't active on this site, so the \"Jetpack\" source will be skipped if selected. It only works where Jetpack is actually connected - typically production, not a local/staging copy."
+msgstr "Jetpack Stats is niet actief op deze site, dus de bron \"Jetpack\" wordt overgeslagen indien geselecteerd. Dit werkt alleen op een omgeving waar Jetpack daadwerkelijk verbonden is - meestal productie, niet een lokale/staging-kopie."
 
 msgid "Landing page"
 msgstr "Landingspagina"
@@ -283,11 +322,17 @@ msgstr "Geen zoekopdrachten zonder resultaat voor deze periode."
 msgid "Not enough recent views yet to determine trends."
 msgstr "Nog niet genoeg recente weergaven om trends te bepalen."
 
+msgid "One-time import of historical view counts from Jetpack Stats and/or the old entry-views plugin, so switching to Turf doesn't lose them. Imported numbers have no timestamp or visitor data, so they only ever show up in the \"Views\" total under \"All\" - never in the 7/30/90-day windows or in \"Visitors\"."
+msgstr "Eenmalige import van historische weergavecijfers uit Jetpack Stats en/of de oude entry-views-plugin, zodat overstappen naar Turf deze niet verloren laat gaan. Geïmporteerde aantallen hebben geen tijdstempel of bezoekersgegevens, dus ze verschijnen alleen in het \"Weergaven\"-totaal onder \"Alles\" - nooit in de 7/30/90-dagen-vensters of in \"Bezoekers\"."
+
 msgid "Online now"
 msgstr "Nu online"
 
 msgid "Operating system"
 msgstr "Besturingssysteem"
+
+msgid "Options"
+msgstr "Opties"
 
 msgid "Origin renders"
 msgstr "Origin-renders"
@@ -309,6 +354,9 @@ msgstr "Uitgaande links"
 
 msgid "Overview"
 msgstr "Overzicht"
+
+msgid "Overwrite posts that already have a value for the new counter"
+msgstr "Overschrijf berichten die al een waarde hebben voor de nieuwe teller"
 
 msgid "Pages crawled"
 msgstr "Pagina's gecrawld"
@@ -367,6 +415,9 @@ msgstr "Toon %d meer"
 msgid "Show less"
 msgstr "Toon minder"
 
+msgid "Something went wrong - check the browser console and try again."
+msgstr "Er ging iets mis - controleer de browserconsole en probeer het opnieuw."
+
 msgid "Source"
 msgstr "Herkomst"
 
@@ -375,6 +426,9 @@ msgstr "Spanje"
 
 msgid "Specific bots"
 msgstr "Specifieke bots"
+
+msgid "Start import"
+msgstr "Import starten"
 
 msgid "Statistics"
 msgstr "Statistieken"
@@ -387,6 +441,9 @@ msgstr "Zo"
 
 msgid "The first page of each visit - where visitors arrive. Bounce % is the share of those visits that ended on this same page."
 msgstr "De eerste pagina van elk bezoek - waar bezoekers binnenkomen. Bouncepercentage is het aandeel van die bezoeken dat op deze pagina eindigde."
+
+msgid "These sources run through a backend server on the connector's side, not through individual visitors' devices - so \"Visitors\" isn't reliable for them. \"Views\" still is."
+msgstr "Deze bronnen lopen via een backend-server aan de kant van de connector, niet via de apparaten van losse bezoekers - \"Bezoekers\" is daardoor niet betrouwbaar voor die bronnen. \"Weergaven\" wel."
 
 msgid "Thu"
 msgstr "Do"

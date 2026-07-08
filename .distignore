@@ -1,0 +1,9 @@
+.git
+.github
+.gitignore
+.gitattributes
+.distignore
+.wordpress-org
+scripts
+local
+*.zip

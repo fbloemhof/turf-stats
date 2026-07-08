@@ -31,14 +31,13 @@ define( 'TURF_DB_VERSION', '1.5' );
 define( 'TURF_REST_SOURCE_MARKER', 'rest-api' );
 
 /**
- * Sentinel referrer_host value specifically for the "Dorpsapp"/"Doarpsapp"
- * village-app integration (a custom doarpsapp/v1 REST namespace registered
- * by a site-specific connector plugin - common on Dutch village/community
- * sites). Distinct from the generic REST marker above, since this one is
- * positively identified rather than "some unknown API consumer". See
- * includes/rest.php.
+ * Sentinel referrer_host value for a specifically-recognized companion-app
+ * connector plugin (a custom REST namespace opted in via the
+ * turf_connector_app_route_patterns filter - see includes/rest.php).
+ * Distinct from the generic REST marker above, since this one is positively
+ * identified rather than "some unknown API consumer".
  */
-define( 'TURF_DORPSAPP_SOURCE_MARKER', 'dorpsapp' );
+define( 'TURF_CONNECTOR_APP_SOURCE_MARKER', 'connector-app' );
 
 /**
  * Every public post type gets tracked automatically - so a new CPT shows up
@@ -436,8 +435,8 @@ function turf_classify_referrer( $host ) {
 		return 'direct';
 	}
 
-	if ( TURF_DORPSAPP_SOURCE_MARKER === $host ) {
-		return 'dorpsapp';
+	if ( TURF_CONNECTOR_APP_SOURCE_MARKER === $host ) {
+		return 'connector';
 	}
 
 	if ( TURF_REST_SOURCE_MARKER === $host ) {
@@ -553,7 +552,6 @@ function turf_enqueue() {
 		'postId'     => $object_id,
 		'objectType' => $object_type,
 		'pageType'   => $page_type,
-		'nonce'      => wp_create_nonce( 'turf_track_view' ),
 		/* translators: %s is the (already locale-formatted) view count. */
 		'viewsLabel' => __( '%s times viewed', 'turf-stats' ),
 		'locale'     => get_bloginfo( 'language' ),
@@ -723,12 +721,15 @@ function turf_track_other_view( $page_type, $extra = array() ) {
 }
 
 function turf_ajax_track_view() {
-	if ( ! isset( $_POST['post_id'], $_POST['nonce'] ) ) {
+	// No nonce, same rationale as turf_clicks_ajax_track() (includes/clicks.php):
+	// this is an anonymous, unauthenticated endpoint that only ever appends one
+	// row of analytics data - there's no privileged state for a forged request
+	// to gain over a legitimate one. A nonce here would also be embedded in the
+	// cached HTML via wp_localize_script(), so it would go stale (and start
+	// silently dropping real views) on any page cached longer than the nonce's
+	// lifetime - exactly the scenario this plugin's cache-offload support expects.
+	if ( ! isset( $_POST['post_id'] ) ) {
 		wp_send_json_error( 'invalid request', 400 );
-	}
-
-	if ( ! wp_verify_nonce( sanitize_key( $_POST['nonce'] ), 'turf_track_view' ) ) {
-		wp_send_json_error( 'bad nonce', 403 );
 	}
 
 	$object_type = isset( $_POST['object_type'] ) ? sanitize_key( $_POST['object_type'] ) : 'post';
