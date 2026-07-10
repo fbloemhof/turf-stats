@@ -103,7 +103,10 @@ function turf_legacy_import_jetpack_top_posts( array $post_ids, $force, $dry_run
 	$counts  = array( 'imported' => 0, 'skipped' => 0, 'empty' => 0 );
 	$handled = array();
 
-	if ( ! function_exists( 'stats_get_csv' ) ) {
+	// The empty-list check matters beyond neatness: an exhausted --offset/
+	// --limit CLI shard would otherwise still pay the remote top-posts call
+	// just to match its result against nothing.
+	if ( ! function_exists( 'stats_get_csv' ) || ! $post_ids ) {
 		return array( 'counts' => $counts, 'handled_post_ids' => $handled );
 	}
 

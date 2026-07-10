@@ -13,6 +13,9 @@ msgstr "%1$02d:00 — %2$s bezoekers"
 msgid "%1$02d:00 yesterday — %2$s visitors"
 msgstr "%1$02d:00 gisteren — %2$s bezoekers"
 
+msgid "%1$d post(s) failed with a request error — run the import again (without overwrite) to retry them."
+msgstr "%1$d bericht(en) mislukt door een verzoekfout — voer de import opnieuw uit (zonder overschrijven) om ze alsnog te proberen."
+
 msgid "%1$s %2$d:00 — %3$s views"
 msgstr "%1$s %2$d:00 — %3$s weergaven"
 

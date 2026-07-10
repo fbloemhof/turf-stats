@@ -109,7 +109,9 @@ function turf_install() {
 		KEY post_lookup (post_id, viewed_at),
 		KEY term_lookup (term_id, viewed_at),
 		KEY dedup_lookup (post_id, visitor_hash, viewed_at),
-		KEY page_type_lookup (page_type, visitor_hash, viewed_at)
+		KEY page_type_lookup (page_type, visitor_hash, viewed_at),
+		KEY visitor_lookup (visitor_hash, viewed_at),
+		KEY viewed_at_lookup (viewed_at)
 	) $charset_collate;" );
 
 	// dbDelta doesn't reliably relax an existing NOT NULL column - do that explicitly
@@ -431,9 +433,9 @@ function turf_sanitize_utm( $value ) {
 }
 
 /**
- * Clamps a client-supplied screen width/height (in physical pixels, i.e.
- * already multiplied by devicePixelRatio - see js/views.js) to a sane range.
- * 10000px comfortably covers even large multi-monitor/8K setups; anything
+ * Clamps a client-supplied screen width/height (in CSS pixels, deliberately
+ * not multiplied by devicePixelRatio - see js/views.js) to a sane range.
+ * 10000px comfortably covers even 8K screens at 100% scaling; anything
  * outside that range is bogus input, not a real screen.
  */
 function turf_sanitize_screen_dimension( $value ) {
@@ -806,8 +808,12 @@ function turf_track_engagement( $event_id, $scroll_depth, $duration_seconds, $lo
 	);
 	$formats = array( '%d', '%d' );
 
-	if ( null !== $load_time_ms ) {
-		$data['load_time_ms'] = max( 0, min( 60000, (int) $load_time_ms ) );
+	// Strictly positive: the endpoint is nonce-less by design, so a junk
+	// value coerced to 0 would be stored as a plausible-looking "0ms load"
+	// and silently drag the site-wide average down. A genuine load time is
+	// never 0 - the JS only sends loadEventEnd values it read as > 0.
+	if ( null !== $load_time_ms && (int) $load_time_ms > 0 ) {
+		$data['load_time_ms'] = min( 60000, (int) $load_time_ms );
 		$formats[]            = '%d';
 	}
 
@@ -836,7 +842,10 @@ function turf_ajax_track_engagement() {
 		$event_id,
 		isset( $_POST['scroll_depth'] ) ? absint( $_POST['scroll_depth'] ) : 0,
 		isset( $_POST['duration'] ) ? absint( $_POST['duration'] ) : 0,
-		isset( $_POST['load_time_ms'] ) ? absint( $_POST['load_time_ms'] ) : null
+		// is_numeric, not just absint: absint coerces junk to 0, which
+		// turf_track_engagement() would otherwise have to guess about -
+		// non-numeric input means "no measurement", the same as absent.
+		isset( $_POST['load_time_ms'] ) && is_numeric( $_POST['load_time_ms'] ) ? absint( $_POST['load_time_ms'] ) : null
 	);
 
 	wp_send_json_success();

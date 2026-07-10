@@ -50,6 +50,8 @@ function turf_import_enqueue() {
 			'progress' => __( '%1$s: %2$d / %3$d posts…', 'turf-stats' ),
 			/* translators: 1: source label, 2: number imported, 3: number skipped, 4: number with no legacy views */
 			'result'   => __( '%1$s — imported: %2$d, skipped (already had a value): %3$d, no/zero legacy views: %4$d', 'turf-stats' ),
+			/* translators: %1$d: number of posts whose import request failed */
+			'failed'   => __( '%1$d post(s) failed with a request error — run the import again (without overwrite) to retry them.', 'turf-stats' ),
 			'dryRun'   => __( ' (dry run, nothing written)', 'turf-stats' ),
 			'done'     => __( 'Done.', 'turf-stats' ),
 			'running'  => __( 'Importing…', 'turf-stats' ),

@@ -18,12 +18,14 @@
 
 		var urlParams = new URLSearchParams( window.location.search );
 
-		// Physical pixels (CSS pixels * devicePixelRatio), so a Retina/HiDPI
-		// display reports its actual panel resolution rather than the smaller
-		// CSS-pixel viewport - matches what "screen resolution" conventionally means.
-		var dpr          = window.devicePixelRatio || 1;
-		var screenWidth  = window.screen ? Math.round( screen.width * dpr ) : 0;
-		var screenHeight = window.screen ? Math.round( screen.height * dpr ) : 0;
+		// CSS pixels, deliberately NOT multiplied by devicePixelRatio: on
+		// desktop browsers devicePixelRatio also reflects page zoom (and on
+		// mobile it's often fractional), so multiplying fragments one physical
+		// screen into many near-duplicate "resolutions" (1920×1080 at 110%
+		// zoom would report 2112×1188). Raw screen.width/height is what most
+		// analytics tools report and keeps the breakdown buckets stable.
+		var screenWidth  = window.screen ? screen.width : 0;
+		var screenHeight = window.screen ? screen.height : 0;
 
 		var body = new URLSearchParams();
 		body.set( 'action', 'turf_track_view' );

@@ -168,9 +168,18 @@ function turf_post_type_in_clause() {
  * in the totals; "other" rows have no such per-object check (there's no
  * single post/term to validate against), they're just always included.
  *
+ * @param string $alias Table alias of the events table in the calling query.
+ *                      The default 'v' keeps the historical 'p'/'tt' join
+ *                      aliases (some callers reference those directly); any
+ *                      other alias derives its own join aliases, so the same
+ *                      conditions can also scope a correlated subquery (see
+ *                      turf_get_online_now_pages()) without colliding with
+ *                      the outer query's joins. Internal literal, never user
+ *                      input.
+ *
  * @return array{0: string, 1: string, 2: array} [$join_sql, $where_sql, $params]
  */
-function turf_site_join_and_where() {
+function turf_site_join_and_where( $alias = 'v' ) {
 	global $wpdb;
 
 	list( $post_placeholders, $post_types ) = turf_post_type_in_clause();
@@ -178,13 +187,16 @@ function turf_site_join_and_where() {
 	$taxonomies        = turf_trackable_taxonomies();
 	$tax_placeholders  = implode( ',', array_fill( 0, count( $taxonomies ), '%s' ) );
 
-	$join = "LEFT JOIN $wpdb->posts p ON p.ID = v.post_id
-		LEFT JOIN $wpdb->term_taxonomy tt ON tt.term_id = v.term_id";
+	$p  = 'v' === $alias ? 'p' : "{$alias}_p";
+	$tt = 'v' === $alias ? 'tt' : "{$alias}_tt";
+
+	$join = "LEFT JOIN $wpdb->posts $p ON $p.ID = $alias.post_id
+		LEFT JOIN $wpdb->term_taxonomy $tt ON $tt.term_id = $alias.term_id";
 
 	$where = "(
-		(v.post_id IS NOT NULL AND p.post_type IN ($post_placeholders) AND p.post_status = 'publish')
-		OR (v.term_id IS NOT NULL AND tt.taxonomy IN ($tax_placeholders))
-		OR (v.page_type IS NOT NULL)
+		($alias.post_id IS NOT NULL AND $p.post_type IN ($post_placeholders) AND $p.post_status = 'publish')
+		OR ($alias.term_id IS NOT NULL AND $tt.taxonomy IN ($tax_placeholders))
+		OR ($alias.page_type IS NOT NULL)
 	)";
 
 	return array( $join, $where, array_merge( $post_types, $taxonomies ) );
@@ -531,11 +543,12 @@ function turf_ajax_overview_stats() {
 			$boxes['duur'] = turf_capture_stat_box_inner( __( 'Avg. time/visit', 'turf-stats' ), turf_format_duration( $avg_seconds ), false, '', true );
 		}
 
-		$avg_load_ms = turf_get_avg_load_time_ms( $days );
-
-		if ( null !== $avg_load_ms ) {
-			$boxes['laadtijd'] = turf_capture_stat_box_inner( __( 'Avg. load time', 'turf-stats' ), turf_format_load_time( $avg_load_ms ), false, '', true );
-		}
+		// Always included (turf_format_load_time( null ) renders '—'), unlike
+		// the older optional boxes: the refresh JS can only update boxes that
+		// already exist in the DOM, so a key that comes and goes would either
+		// never appear (absent at page load) or go stale (absent from a later
+		// response) - see js/overview-refresh.js.
+		$boxes['laadtijd'] = turf_capture_stat_box_inner( __( 'Avg. load time', 'turf-stats' ), turf_format_load_time( turf_get_avg_load_time_ms( $days ) ), false, '', true );
 	}
 
 	wp_send_json_success( array( 'boxes' => $boxes ) );
@@ -638,10 +651,10 @@ function turf_render_overview_stat_boxes( $days, $current, $previous, $current_c
 		turf_render_stat_box( __( 'Avg. time/visit', 'turf-stats' ), turf_format_duration( $avg_seconds ), false, '', 'duur', true );
 	}
 
-	$avg_load_ms = turf_get_avg_load_time_ms( $days );
-	if ( null !== $avg_load_ms ) {
-		turf_render_stat_box( __( 'Avg. load time', 'turf-stats' ), turf_format_load_time( $avg_load_ms ), false, '', 'laadtijd', true );
-	}
+	// Rendered even without data ('—') so the box exists in the DOM for the
+	// AJAX refresh to fill in once measurements arrive - see the matching
+	// note in turf_ajax_overview_stats().
+	turf_render_stat_box( __( 'Avg. load time', 'turf-stats' ), turf_format_load_time( turf_get_avg_load_time_ms( $days ) ), false, '', 'laadtijd', true );
 }
 
 /**
@@ -654,16 +667,23 @@ function turf_render_daily_chart( $daily ) {
 	$max   = max( 1, max( array_column( $daily, 'views' ) ) );
 	$count = count( $daily );
 
-	// Value labels always show (30/90-day charts want them too, not just the
-	// default 7-day view) - but a 90-column chart has far less width per bar
-	// than a 7-column one, so the label shrinks in steps as columns get
-	// denser, to stay legible without a JS-measured fit.
+	// Value labels also show on the 30/90-day charts, not just the default
+	// 7-day view - but a 90-column chart has far less width per bar than a
+	// 7-column one, so two things adapt as columns get denser: the label
+	// shrinks in steps, and only every Nth bar gets one at all (a 3+ digit
+	// label is wider than a 90-day column, so labelling every bar would just
+	// smear neighbours into each other). $label_every is anchored to the
+	// NEWEST bar so the most recent day is always labelled, counting back
+	// from there (weekly steps on the 90-day chart).
 	if ( $count <= 14 ) {
 		$density_class = '';
+		$label_every   = 1;
 	} elseif ( $count <= 45 ) {
 		$density_class = ' bk-stats-chart--dense';
+		$label_every   = 2;
 	} else {
 		$density_class = ' bk-stats-chart--very-dense';
+		$label_every   = 7;
 	}
 
 	// Bars are scaled to 88% of the plot height instead of 100%, reserving a
@@ -677,10 +697,11 @@ function turf_render_daily_chart( $daily ) {
 	</div>
 
 	<div class="bk-stats-chart<?php echo esc_attr( $density_class ); ?>">
-		<?php foreach ( $daily as $day ) : ?>
+		<?php foreach ( array_values( $daily ) as $i => $day ) : ?>
 			<?php
 			$views_pct    = round( ( $day['views'] / $max ) * $plot_max_pct );
 			$visitors_pct = round( ( $day['visitors'] / $max ) * $plot_max_pct );
+			$show_value   = 0 === ( $count - 1 - $i ) % $label_every;
 			$title        = sprintf(
 				/* translators: 1: date, 2: number of views, 3: number of visitors */
 				__( '%1$s — %2$s views, %3$s visitors', 'turf-stats' ),
@@ -693,7 +714,9 @@ function turf_render_daily_chart( $daily ) {
 				<div class="bk-stats-chart__bars">
 					<div class="bk-stats-chart__bar bk-stats-chart__bar--views" style="height:<?php echo (int) $views_pct; ?>%"></div>
 					<div class="bk-stats-chart__bar bk-stats-chart__bar--visitors" style="height:<?php echo (int) $visitors_pct; ?>%"></div>
-					<span class="bk-stats-chart__value" style="bottom:<?php echo (int) $views_pct; ?>%"><?php echo esc_html( number_format_i18n( $day['views'] ) ); ?></span>
+					<?php if ( $show_value ) : ?>
+						<span class="bk-stats-chart__value" style="bottom:<?php echo (int) $views_pct; ?>%"><?php echo esc_html( number_format_i18n( $day['views'] ) ); ?></span>
+					<?php endif; ?>
 				</div>
 				<span class="bk-stats-chart__label"><?php echo esc_html( date_i18n( 'd M', strtotime( $day['date'] ) ) ); ?></span>
 			</div>
@@ -720,7 +743,18 @@ function turf_get_hourly_visitors_for_offset( $offset_days ) {
 	$table = turf_table();
 	list( $join, $where, $params ) = turf_site_join_and_where();
 
-	$offset_seconds = (int) round( ( (float) get_option( 'gmt_offset' ) ) * HOUR_IN_SECONDS );
+	// The UTC->local offset is taken at the TARGET day's noon, not "now":
+	// around a DST transition the current offset would bucket yesterday's
+	// hours one off. Noon rather than midnight so the reference moment sits
+	// safely inside the day regardless of when (2-3am) the clocks shift.
+	$tz  = wp_timezone();
+	$ref = new DateTimeImmutable( 'now', $tz );
+
+	if ( $offset_days > 0 ) {
+		$ref = $ref->modify( sprintf( '-%d days noon', $offset_days ) );
+	}
+
+	$offset_seconds = (int) $tz->getOffset( $ref );
 	$local_expr     = "DATE_ADD(v.viewed_at, INTERVAL $offset_seconds SECOND)";
 
 	$start = turf_local_midnight_utc( $offset_days );
@@ -815,8 +849,14 @@ function turf_render_hourly_visitors_chart() {
 		return trim( $path );
 	};
 
+	// A yesterday with zero visitors all day (fresh install, first day after
+	// an upgrade) draws nothing rather than a flat dashed line of 24 zero
+	// dots along the baseline - that line is pure noise, and today alone was
+	// this chart's original form anyway.
+	$has_yesterday = array_sum( array_column( $yesterday, 'visitors' ) ) > 0;
+
 	$today_points     = $build_points( $today );
-	$yesterday_points = $build_points( $yesterday );
+	$yesterday_points = $has_yesterday ? $build_points( $yesterday ) : array();
 	$today_line       = $to_line_path( $today_points );
 	$yesterday_line   = $to_line_path( $yesterday_points );
 	$baseline         = $pad_top + $plot_h;
@@ -830,7 +870,9 @@ function turf_render_hourly_visitors_chart() {
 	<div class="bk-stats-hourly">
 		<div class="bk-stats-overview__legend">
 			<span class="bk-stats-legend bk-stats-legend--visitors"><?php esc_html_e( 'Today', 'turf-stats' ); ?></span>
-			<span class="bk-stats-legend bk-stats-legend--yesterday"><?php esc_html_e( 'Yesterday', 'turf-stats' ); ?></span>
+			<?php if ( $has_yesterday ) : ?>
+				<span class="bk-stats-legend bk-stats-legend--yesterday"><?php esc_html_e( 'Yesterday', 'turf-stats' ); ?></span>
+			<?php endif; ?>
 		</div>
 		<svg class="bk-stats-hourly__svg" viewBox="0 0 <?php echo (int) $w; ?> <?php echo (int) $h; ?>" preserveAspectRatio="none" role="img" aria-label="<?php esc_attr_e( 'Visitors per hour, today vs. yesterday', 'turf-stats' ); ?>">
 			<line class="bk-stats-hourly__grid" x1="0" y1="<?php echo esc_attr( $baseline ); ?>" x2="<?php echo (int) $w; ?>" y2="<?php echo esc_attr( $baseline ); ?>" vector-effect="non-scaling-stroke" />
@@ -945,7 +987,10 @@ function turf_render_caching( $days ) {
 		<?php esc_html_e( 'Combined across all caches in front of the site - a cache hit never reaches WordPress, so it can\'t be split per layer. Approximate: visitors who block the tracker are counted as origin renders.', 'turf-stats' ); ?>
 	</p>
 
-	<?php if ( $offload <= 1 && $env ) : ?>
+	<?php // The >= 50 raw-hits floor keeps the hint from firing on a handful
+	// of day-one pageviews, where 0% offload is statistical noise rather
+	// than evidence of a misconfigured cache layer. ?>
+	<?php if ( $offload <= 1 && $env && $raw >= 50 ) : ?>
 		<p class="description bk-stats-cache-hint">
 			<?php esc_html_e( "A caching layer is detected in front of the site, but almost nothing is actually being served from cache for this period - that combination usually means the layer is caching static files (images/CSS/JS) but not the HTML pages themselves, which is the default for most CDNs/edge caches (e.g. Cloudflare's standard cache level only caches by file extension unless a \"Cache Everything\" rule or something like Automatic Platform Optimization is turned on).", 'turf-stats' ); ?>
 			<?php esc_html_e( 'To verify directly: open a page on the site and check the response headers in your browser\'s network tab - Cloudflare adds a "cf-cache-status" header that reads "HIT" once a page is actually served from its edge cache, "DYNAMIC"/"MISS" otherwise.', 'turf-stats' ); ?>
@@ -1077,16 +1122,19 @@ function turf_get_breakdown( $column, $days, $exclude_empty = false ) {
 }
 
 /**
- * Site-wide breakdown by screen resolution (physical pixels - see
- * js/views.js), for the selected period. Grouped by the width×height pair
- * rather than a single column, so it needs its own query instead of
- * turf_get_breakdown(). Rows from before this feature (or where the browser
+ * Site-wide breakdown by screen resolution (CSS pixels - see js/views.js),
+ * for the selected period. Grouped by the width×height pair rather than a
+ * single column, so it needs its own query instead of turf_get_breakdown() -
+ * but deliberately NO row limit, matching every other breakdown: the shared
+ * renderer already collapses past 5 rows behind "Show more", and a hard cap
+ * would let the '' unknown bucket (all pre-feature rows) permanently crowd
+ * out real screens. Rows from before this feature (or where the browser
  * didn't report a screen size) have NULL width/height - bucketed into '' so
  * turf_breakdown_label() falls through to the same "Unknown (from before
  * this feature)" text every other breakdown already uses for pre-feature
  * data.
  */
-function turf_get_screen_breakdown( $days, $limit = 10 ) {
+function turf_get_screen_breakdown( $days ) {
 	global $wpdb;
 
 	$table = turf_table();
@@ -1099,8 +1147,6 @@ function turf_get_screen_breakdown( $days, $limit = 10 ) {
 		$params[]   = turf_period_start_sql_date( $days );
 	}
 
-	$params[] = $limit;
-
 	return $wpdb->get_results( $wpdb->prepare(
 		"SELECT
 			CASE WHEN v.screen_width IS NULL OR v.screen_height IS NULL THEN ''
@@ -1110,8 +1156,7 @@ function turf_get_screen_breakdown( $days, $limit = 10 ) {
 		$join
 		WHERE $where $where_date
 		GROUP BY label
-		ORDER BY views DESC
-		LIMIT %d", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- join/where are internal literals from turf_site_join_and_where(); no user input.
+		ORDER BY views DESC", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- join/where are internal literals from turf_site_join_and_where(); no user input.
 		$params
 	) );
 }
@@ -1579,9 +1624,13 @@ function turf_admin_inline_css() {
 		.bk-stats-chart__bar { position: absolute; bottom: 0; left: 0; width: 100%; border-radius: 2px 2px 0 0; }
 		.bk-stats-chart__bar--views { background: color-mix(in srgb, var(--wp-admin-theme-color, #2271b1) 35%, #fff); }
 		.bk-stats-chart__bar--visitors { background: var(--wp-admin-theme-color, #2271b1); }
+		/* bottom: <bar height>% already places the label's bottom edge exactly
+		   at the bar's top (no transform - translateY(-100%) on top of that
+		   would double the offset and push the tallest bar's label out of the
+		   12% headroom the chart reserves for it). */
 		.bk-stats-chart__value {
 			position: absolute; left: 0; right: 0; text-align: center;
-			transform: translateY(-100%); padding-bottom: 4px;
+			padding-bottom: 4px;
 			font-size: 11px; font-variant-numeric: tabular-nums; color: #646970; white-space: nowrap;
 		}
 		/* 30-day chart: same column count roughly halves the width per bar
@@ -1657,8 +1706,13 @@ function turf_admin_inline_css() {
 			70% { box-shadow: 0 0 0 6px color-mix(in srgb, currentColor 0%, transparent); }
 			100% { box-shadow: 0 0 0 0 color-mix(in srgb, currentColor 0%, transparent); }
 		}
-		.bk-stats-online-pages { margin: 0; padding-left: 20px; }
-		.bk-stats-online-pages li { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 6px; font-size: 13px; }
+		/* display: flex on the <li> drops display: list-item, which is what
+		   renders (and increments) the native <ol> marker - so the ranking
+		   numbers come from an explicit counter in ::before instead. */
+		.bk-stats-online-pages { margin: 0; padding-left: 0; list-style: none; counter-reset: turf-online-page; }
+		.bk-stats-online-pages li { display: flex; gap: 8px; margin-bottom: 6px; font-size: 13px; counter-increment: turf-online-page; }
+		.bk-stats-online-pages li::before { content: counter(turf-online-page) "."; flex-shrink: 0; min-width: 16px; color: #646970; }
+		.bk-stats-online-pages__label { flex: 1; min-width: 0; }
 		.bk-stats-online-pages__count { flex-shrink: 0; color: #646970; }
 		.bk-stats-heatmap { border-collapse: collapse; width: 100%; }
 		.bk-stats-heatmap th { font-size: 10px; color: #646970; font-weight: 400; text-align: center; padding: 2px; }
@@ -1753,8 +1807,8 @@ function turf_format_scroll( $pct ) {
  * API, sent on the same beacon as scroll depth/duration). A simple AVG over
  * every row that has one, not session-based like turf_get_avg_session_seconds() -
  * load time is a per-pageview measurement, not a per-visit one. Returns null
- * when there's no data yet for the period, so the caller can hide the stat
- * box instead of showing a misleading 0.
+ * when there's no data yet for the period; turf_format_load_time() renders
+ * that as '—' rather than a misleading 0.
  */
 function turf_get_avg_load_time_ms( $days ) {
 	global $wpdb;
@@ -1770,7 +1824,7 @@ function turf_get_avg_load_time_ms( $days ) {
 	}
 
 	$avg = $wpdb->get_var( $wpdb->prepare(
-		"SELECT AVG(v.load_time_ms) FROM $table v $join WHERE $where $where_date AND v.load_time_ms IS NOT NULL",
+		"SELECT AVG(v.load_time_ms) FROM $table v $join WHERE $where $where_date AND v.load_time_ms IS NOT NULL", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- table is own-prefix; join/where are internal literals from turf_site_join_and_where(); no user input.
 		$params
 	) );
 

@@ -44,17 +44,22 @@ function turf_get_online_now_count() {
  * few minutes would show up as "4 people online" spread across 4 rows,
  * even though turf_get_online_now_count() (rightly) counts them once. This
  * keeps the sum of `viewers` here consistent with that total: the page
- * they're on now, not everywhere they've been.
+ * they're on now, not everywhere they've been. To that end the subquery
+ * mirrors the outer query exactly: the same trackability conditions (so a
+ * newer view of a since-unpublished post can't suppress a visitor the count
+ * still includes), the same window bound (which also lets it use the
+ * visitor_lookup index instead of scanning the visitor's whole history),
+ * and an id tie-break for two views landing in the same second.
  */
 function turf_get_online_now_pages( $limit = 10 ) {
 	global $wpdb;
 
 	$table = turf_table();
-	list( $join, $where, $params ) = turf_site_join_and_where();
+	list( $join, $where, $params )             = turf_site_join_and_where();
+	list( $later_join, $later_where, $later_params ) = turf_site_join_and_where( 'later' );
 
-	$since      = gmdate( 'Y-m-d H:i:s', time() - turf_online_now_window() );
-	$params[]   = $since;
-	$params[]   = $limit;
+	$since  = gmdate( 'Y-m-d H:i:s', time() - turf_online_now_window() );
+	$params = array_merge( $params, array( $since ), $later_params, array( $since, $limit ) );
 
 	return $wpdb->get_results( $wpdb->prepare(
 		"SELECT v.post_id, v.term_id, v.page_type, COUNT(*) AS viewers
@@ -63,12 +68,15 @@ function turf_get_online_now_pages( $limit = 10 ) {
 		WHERE $where AND v.viewed_at >= %s
 		AND NOT EXISTS (
 			SELECT 1 FROM $table later
-			WHERE later.visitor_hash = v.visitor_hash
-			AND later.viewed_at > v.viewed_at
+			$later_join
+			WHERE $later_where
+			AND later.visitor_hash = v.visitor_hash
+			AND (later.viewed_at > v.viewed_at OR (later.viewed_at = v.viewed_at AND later.id > v.id))
+			AND later.viewed_at >= %s
 		)
 		GROUP BY v.post_id, v.term_id, v.page_type
 		ORDER BY viewers DESC
-		LIMIT %d",
+		LIMIT %d", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- table is own-prefix; join/where are internal literals from turf_site_join_and_where(); no user input.
 		$params
 	) );
 }
@@ -127,11 +135,13 @@ function turf_render_online_now_pages_list() {
 		$viewers_text = sprintf( _n( '%s viewer', '%s viewers', $viewers, 'turf-stats' ), number_format_i18n( $viewers ) );
 		?>
 		<li>
-			<?php if ( $info['edit_link'] ) : ?>
-				<a href="<?php echo esc_url( $info['edit_link'] ); ?>"><?php echo esc_html( $info['label'] ); ?></a>
-			<?php else : ?>
-				<?php echo esc_html( $info['label'] ); ?>
-			<?php endif; ?>
+			<span class="bk-stats-online-pages__label">
+				<?php if ( $info['edit_link'] ) : ?>
+					<a href="<?php echo esc_url( $info['edit_link'] ); ?>"><?php echo esc_html( $info['label'] ); ?></a>
+				<?php else : ?>
+					<?php echo esc_html( $info['label'] ); ?>
+				<?php endif; ?>
+			</span>
 			<span class="bk-stats-online-pages__count"><?php echo esc_html( $viewers_text ); ?></span>
 		</li>
 		<?php

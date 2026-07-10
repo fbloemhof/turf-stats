@@ -28,10 +28,13 @@
 	// How many batches of a source run at once. entry-views is already
 	// near-instant serially, so there's nothing to gain from parallelizing
 	// it. jetpack's batches are each slow (per-post Jetpack API calls) but
-	// independent - running a few at once cuts wall-clock time roughly by
-	// this factor, bounded by the site's own PHP worker capacity rather than
-	// hammering Jetpack any harder than a few concurrent site visitors would.
-	var CONCURRENCY = { jetpack: 4, 'entry-views': 1 };
+	// independent - running two at once roughly halves wall-clock time.
+	// Kept deliberately low: the server-side 200ms/post delay exists to stay
+	// under Jetpack's API rate limits, and a throttled stats_get_csv() call
+	// returns empty (indistinguishable from "post has no views"), so pushing
+	// the request rate higher risks silently importing nothing for whole
+	// batches rather than failing loudly.
+	var CONCURRENCY = { jetpack: 2, 'entry-views': 1 };
 
 	function chunk( list, size ) {
 		var out = [];
@@ -96,7 +99,11 @@
 		var totals  = {
 			imported: ( seedTotals && seedTotals.imported ) || 0,
 			skipped:  ( seedTotals && seedTotals.skipped )  || 0,
-			empty:    ( seedTotals && seedTotals.empty )    || 0
+			empty:    ( seedTotals && seedTotals.empty )    || 0,
+			// Posts whose batch request errored (network failure, non-success
+			// response) - tallied and reported instead of silently dropped, so
+			// the user knows to re-run the import for them.
+			failed:   0
 		};
 		var done      = seedDone || 0;
 		var cursor    = 0;
@@ -112,19 +119,26 @@
 
 			var i = cursor++;
 
-			return runBatch( source, batches[ i ], force, dryRun ).then( function ( response ) {
-				if ( response && response.success ) {
-					totals.imported += response.data.imported;
-					totals.skipped  += response.data.skipped;
-					totals.empty    += response.data.empty;
-				}
+			// A failed batch must not abort the whole pool (the other posts
+			// are still importable) - convert any rejection into a null
+			// response and count the batch under `failed` below.
+			return runBatch( source, batches[ i ], force, dryRun )
+				.catch( function () { return null; } )
+				.then( function ( response ) {
+					if ( response && response.success ) {
+						totals.imported += response.data.imported;
+						totals.skipped  += response.data.skipped;
+						totals.empty    += response.data.empty;
+					} else {
+						totals.failed += batches[ i ].length;
+					}
 
-				done += batches[ i ].length;
-				progressBar.value = done;
-				progressText.textContent = format( turfImportLegacy.i18n.progress, [ source, done, turfImportLegacy.postIds.length ] );
+					done += batches[ i ].length;
+					progressBar.value = done;
+					progressText.textContent = format( turfImportLegacy.i18n.progress, [ source, done, turfImportLegacy.postIds.length ] );
 
-				return runNext();
-			} );
+					return runNext();
+				} );
 		}
 
 		if ( ! batches.length ) {
@@ -152,7 +166,10 @@
 			var source = sources[ i ];
 
 			if ( 'jetpack' === source ) {
-				return runBulkPrepass( force, dryRun ).then( function ( response ) {
+				// A failed prepass isn't fatal - fall through with an empty
+				// handled list and let the normal per-post batches cover
+				// everything (the prepass is purely a speed optimization).
+				return runBulkPrepass( force, dryRun ).catch( function () { return null; } ).then( function ( response ) {
 					var seedTotals = { imported: 0, skipped: 0, empty: 0 };
 					var handledIds = [];
 
@@ -216,7 +233,8 @@
 				var li     = document.createElement( 'li' );
 
 				li.textContent = format( turfImportLegacy.i18n.result, [ s, totals.imported, totals.skipped, totals.empty ] ) +
-					( dryRun ? turfImportLegacy.i18n.dryRun : '' );
+					( dryRun ? turfImportLegacy.i18n.dryRun : '' ) +
+					( totals.failed ? ' ' + format( turfImportLegacy.i18n.failed, [ totals.failed ] ) : '' );
 
 				list.appendChild( li );
 			} );
