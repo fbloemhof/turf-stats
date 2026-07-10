@@ -5,9 +5,10 @@
 		return;
 	}
 
-	var el = document.getElementById( 'turf-online-now-value' );
+	var el       = document.getElementById( 'turf-online-now-value' );
+	var pagesEl  = document.getElementById( 'turf-online-now-pages' );
 
-	if ( ! el ) {
+	if ( ! el && ! pagesEl ) {
 		return;
 	}
 
@@ -19,8 +20,16 @@
 		fetch( turfOnlineNow.ajaxUrl, { method: 'POST', body: body } )
 			.then( function ( r ) { return r.json(); } )
 			.then( function ( data ) {
-				if ( data.success ) {
+				if ( ! data.success ) {
+					return;
+				}
+
+				if ( el ) {
 					el.textContent = data.data.count.toLocaleString( turfOnlineNow.locale || undefined );
+				}
+
+				if ( pagesEl && 'string' === typeof data.data.pages_html ) {
+					pagesEl.innerHTML = data.data.pages_html;
 				}
 			} )
 			.catch( function () {} );

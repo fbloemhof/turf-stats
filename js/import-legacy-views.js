@@ -25,6 +25,14 @@
 	// through much larger batches.
 	var BATCH_SIZE = { jetpack: 10, 'entry-views': 100 };
 
+	// How many batches of a source run at once. entry-views is already
+	// near-instant serially, so there's nothing to gain from parallelizing
+	// it. jetpack's batches are each slow (per-post Jetpack API calls) but
+	// independent - running a few at once cuts wall-clock time roughly by
+	// this factor, bounded by the site's own PHP worker capacity rather than
+	// hammering Jetpack any harder than a few concurrent site visitors would.
+	var CONCURRENCY = { jetpack: 4, 'entry-views': 1 };
+
 	function chunk( list, size ) {
 		var out = [];
 		for ( var i = 0; i < list.length; i += size ) {
@@ -53,20 +61,56 @@
 	}
 
 	/**
-	 * Runs one source's batches strictly one at a time (not in parallel -
-	 * that would defeat the point of the deliberate Jetpack rate-limit
-	 * delay), updating the progress bar after each, and resolves with the
-	 * summed totals for that source.
+	 * One-shot "top posts" pre-pass for the jetpack source - see
+	 * turf_legacy_import_jetpack_top_posts() (includes/legacy-import.php).
+	 * Covers up to ~100 posts in a single request, before the per-post
+	 * batches below run for the rest.
 	 */
-	function runSource( source, force, dryRun ) {
-		var batches = chunk( turfImportLegacy.postIds, BATCH_SIZE[ source ] || 20 );
-		var totals  = { imported: 0, skipped: 0, empty: 0 };
-		var done    = 0;
+	function runBulkPrepass( force, dryRun ) {
+		var body = new URLSearchParams();
+		body.set( 'action', 'turf_import_legacy_bulk_prepass' );
+		body.set( 'nonce', turfImportLegacy.nonce );
+		body.set( 'force', force ? '1' : '' );
+		body.set( 'dry_run', dryRun ? '1' : '' );
 
-		function next( i ) {
-			if ( i >= batches.length ) {
-				return Promise.resolve( totals );
+		return fetch( turfImportLegacy.ajaxUrl, { method: 'POST', body: body } )
+			.then( function ( r ) { return r.json(); } );
+	}
+
+	/**
+	 * Runs one source's batches through a small worker pool (see
+	 * CONCURRENCY above) instead of strictly one at a time, updating the
+	 * progress bar as each batch completes (order doesn't matter for a
+	 * running total), and resolves with the summed totals for that source.
+	 *
+	 * @param ids        The post IDs to process for this source (may be
+	 *                   fewer than the site's full eligible list - see the
+	 *                   jetpack bulk-prepass exclusion in runSources()).
+	 * @param seedTotals Counts already tallied before this call (e.g. by the
+	 *                   bulk prepass) - added to, not replaced.
+	 * @param seedDone   Posts already accounted for before this call, so the
+	 *                   progress bar reflects them immediately.
+	 */
+	function runSource( source, ids, force, dryRun, seedTotals, seedDone ) {
+		var batches = chunk( ids, BATCH_SIZE[ source ] || 20 );
+		var totals  = {
+			imported: ( seedTotals && seedTotals.imported ) || 0,
+			skipped:  ( seedTotals && seedTotals.skipped )  || 0,
+			empty:    ( seedTotals && seedTotals.empty )    || 0
+		};
+		var done      = seedDone || 0;
+		var cursor    = 0;
+		var poolSize  = Math.max( 1, Math.min( CONCURRENCY[ source ] || 1, batches.length ) );
+
+		progressBar.value = done;
+		progressText.textContent = format( turfImportLegacy.i18n.progress, [ source, done, turfImportLegacy.postIds.length ] );
+
+		function runNext() {
+			if ( cursor >= batches.length ) {
+				return Promise.resolve();
 			}
+
+			var i = cursor++;
 
 			return runBatch( source, batches[ i ], force, dryRun ).then( function ( response ) {
 				if ( response && response.success ) {
@@ -79,11 +123,22 @@
 				progressBar.value = done;
 				progressText.textContent = format( turfImportLegacy.i18n.progress, [ source, done, turfImportLegacy.postIds.length ] );
 
-				return next( i + 1 );
+				return runNext();
 			} );
 		}
 
-		return next( 0 );
+		if ( ! batches.length ) {
+			return Promise.resolve( totals );
+		}
+
+		var workers = [];
+		for ( var w = 0; w < poolSize; w++ ) {
+			workers.push( runNext() );
+		}
+
+		return Promise.all( workers ).then( function () {
+			return totals;
+		} );
 	}
 
 	function runSources( sources, force, dryRun ) {
@@ -94,8 +149,32 @@
 				return Promise.resolve( results );
 			}
 
-			return runSource( sources[ i ], force, dryRun ).then( function ( totals ) {
-				results[ sources[ i ] ] = totals;
+			var source = sources[ i ];
+
+			if ( 'jetpack' === source ) {
+				return runBulkPrepass( force, dryRun ).then( function ( response ) {
+					var seedTotals = { imported: 0, skipped: 0, empty: 0 };
+					var handledIds = [];
+
+					if ( response && response.success ) {
+						seedTotals = response.data.counts;
+						handledIds = response.data.handledPostIds || [];
+					}
+
+					var handled = new Set( handledIds );
+					var remainingIds = turfImportLegacy.postIds.filter( function ( id ) {
+						return ! handled.has( id );
+					} );
+
+					return runSource( source, remainingIds, force, dryRun, seedTotals, handledIds.length ).then( function ( totals ) {
+						results[ source ] = totals;
+						return next( i + 1 );
+					} );
+				} );
+			}
+
+			return runSource( source, turfImportLegacy.postIds, force, dryRun ).then( function ( totals ) {
+				results[ source ] = totals;
 				return next( i + 1 );
 			} );
 		}

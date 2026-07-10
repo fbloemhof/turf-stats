@@ -7,6 +7,14 @@
  *   wp turf-stats import-legacy-views --source=jetpack
  *   wp turf-stats import-legacy-views --source=entry-views
  *   wp turf-stats import-legacy-views --source=all [--force] [--dry-run]
+ *
+ * --offset/--limit slice the post list, so a large --source=jetpack import
+ * (one remote call per post beyond the top-posts pre-pass - see
+ * turf_legacy_import_jetpack_top_posts()) can be manually sharded across
+ * several parallel terminal invocations for extra throughput, e.g.:
+ *   wp turf-stats import-legacy-views --source=jetpack --offset=0    --limit=5000 &
+ *   wp turf-stats import-legacy-views --source=jetpack --offset=5000 --limit=5000 &
+ *   wp turf-stats import-legacy-views --source=jetpack --offset=10000               &
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -38,15 +46,30 @@ class Turf_CLI_Command {
 	 * [--dry-run]
 	 * : Report what would happen without writing anything.
 	 *
+	 * [--offset=<offset>]
+	 * : Skip this many posts from the start of the eligible list - for
+	 * manually sharding a large import across several parallel invocations.
+	 * ---
+	 * default: 0
+	 * ---
+	 *
+	 * [--limit=<limit>]
+	 * : Only process this many posts (after --offset). Omit for "the rest".
+	 *
 	 * @when after_wp_load
 	 */
 	public function import_legacy_views( $args, $assoc_args ) {
 		$source  = WP_CLI\Utils\get_flag_value( $assoc_args, 'source', 'all' );
 		$force   = WP_CLI\Utils\get_flag_value( $assoc_args, 'force', false );
 		$dry_run = WP_CLI\Utils\get_flag_value( $assoc_args, 'dry-run', false );
+		$offset  = (int) WP_CLI\Utils\get_flag_value( $assoc_args, 'offset', 0 );
+		$limit   = WP_CLI\Utils\get_flag_value( $assoc_args, 'limit', null );
 
-		$sources = 'all' === $source ? turf_legacy_import_sources() : array( $source );
+		$sources  = 'all' === $source ? turf_legacy_import_sources() : array( $source );
 		$post_ids = turf_legacy_import_post_ids();
+		$post_ids = ( $offset > 0 || null !== $limit )
+			? array_slice( $post_ids, $offset, null === $limit ? null : (int) $limit )
+			: $post_ids;
 
 		foreach ( $sources as $one_source ) {
 			if ( 'jetpack' === $one_source && ! function_exists( 'stats_get_csv' ) ) {
@@ -54,7 +77,25 @@ class Turf_CLI_Command {
 				continue;
 			}
 
-			$counts = turf_legacy_import_batch( $post_ids, $one_source, $force, $dry_run );
+			$remaining = $post_ids;
+			$counts    = array( 'imported' => 0, 'skipped' => 0, 'empty' => 0 );
+
+			// One bulk request covers Jetpack's top ~100 posts before the slow
+			// per-post loop runs for the rest - see turf_legacy_import_jetpack_top_posts().
+			if ( 'jetpack' === $one_source ) {
+				$prepass   = turf_legacy_import_jetpack_top_posts( $remaining, $force, $dry_run );
+				$counts    = $prepass['counts'];
+				$remaining = array_values( array_diff( $remaining, $prepass['handled_post_ids'] ) );
+
+				if ( $prepass['handled_post_ids'] ) {
+					WP_CLI::log( sprintf( '[jetpack] top-posts pre-pass covered %d post(s) in a single request.', count( $prepass['handled_post_ids'] ) ) );
+				}
+			}
+
+			$batch_counts = turf_legacy_import_batch( $remaining, $one_source, $force, $dry_run );
+			foreach ( $batch_counts as $key => $value ) {
+				$counts[ $key ] += $value;
+			}
 
 			WP_CLI::log( sprintf(
 				'[%s] imported: %d, skipped (already had a value): %d, no/zero legacy views: %d%s',

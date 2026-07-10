@@ -21,7 +21,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 define( 'TURF_META_KEY', '_turf_views' );
-define( 'TURF_DB_VERSION', '1.5' );
+define( 'TURF_DB_VERSION', '1.6' );
 
 /**
  * Sentinel referrer_host value for views recorded via the REST API (e.g. a
@@ -102,6 +102,9 @@ function turf_install() {
 		utm_campaign VARCHAR(100) NOT NULL DEFAULT '',
 		scroll_depth TINYINT UNSIGNED NULL DEFAULT NULL,
 		duration_seconds SMALLINT UNSIGNED NULL DEFAULT NULL,
+		screen_width SMALLINT UNSIGNED NULL DEFAULT NULL,
+		screen_height SMALLINT UNSIGNED NULL DEFAULT NULL,
+		load_time_ms SMALLINT UNSIGNED NULL DEFAULT NULL,
 		PRIMARY KEY  (id),
 		KEY post_lookup (post_id, viewed_at),
 		KEY term_lookup (term_id, viewed_at),
@@ -428,6 +431,18 @@ function turf_sanitize_utm( $value ) {
 }
 
 /**
+ * Clamps a client-supplied screen width/height (in physical pixels, i.e.
+ * already multiplied by devicePixelRatio - see js/views.js) to a sane range.
+ * 10000px comfortably covers even large multi-monitor/8K setups; anything
+ * outside that range is bogus input, not a real screen.
+ */
+function turf_sanitize_screen_dimension( $value ) {
+	$value = absint( $value );
+
+	return ( $value > 0 && $value <= 10000 ) ? $value : null;
+}
+
+/**
  * Hostname -> traffic-source bucket, for the admin "Herkomst" breakdown.
  */
 function turf_classify_referrer( $host ) {
@@ -629,8 +644,10 @@ function turf_track_view( $object_id, $object_type = 'post', $extra = array() ) 
 				'utm_source'     => $extra['utm_source'] ?? '',
 				'utm_medium'     => $extra['utm_medium'] ?? '',
 				'utm_campaign'   => $extra['utm_campaign'] ?? '',
+				'screen_width'   => $extra['screen_width'] ?? null,
+				'screen_height'  => $extra['screen_height'] ?? null,
 			),
-			array( '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s' )
+			array( '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%d' )
 		);
 
 		$event_id = $wpdb->insert_id;
@@ -713,8 +730,10 @@ function turf_track_other_view( $page_type, $extra = array() ) {
 			'utm_source'    => $extra['utm_source'] ?? '',
 			'utm_medium'    => $extra['utm_medium'] ?? '',
 			'utm_campaign'  => $extra['utm_campaign'] ?? '',
+			'screen_width'  => $extra['screen_width'] ?? null,
+			'screen_height' => $extra['screen_height'] ?? null,
 		),
-		array( '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s' )
+		array( '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%d' )
 	);
 
 	return array( 'event_id' => $wpdb->insert_id );
@@ -739,6 +758,8 @@ function turf_ajax_track_view() {
 		'utm_source'    => isset( $_POST['utm_source'] ) ? turf_sanitize_utm( wp_unslash( $_POST['utm_source'] ) ) : '',
 		'utm_medium'    => isset( $_POST['utm_medium'] ) ? turf_sanitize_utm( wp_unslash( $_POST['utm_medium'] ) ) : '',
 		'utm_campaign'  => isset( $_POST['utm_campaign'] ) ? turf_sanitize_utm( wp_unslash( $_POST['utm_campaign'] ) ) : '',
+		'screen_width'  => isset( $_POST['screen_width'] ) ? turf_sanitize_screen_dimension( $_POST['screen_width'] ) : null,
+		'screen_height' => isset( $_POST['screen_height'] ) ? turf_sanitize_screen_dimension( $_POST['screen_height'] ) : null,
 		// Flags this as a real browser pageview, so the raw hit counter fires
 		// here but not for REST/app or redirect-time server-side tracking.
 		'is_pageview'   => true,
@@ -767,22 +788,34 @@ add_action( 'wp_ajax_nopriv_turf_track_view', 'turf_ajax_track_view' );
  * same visitor_hash to match the row being updated, so this can't be used to
  * overwrite arbitrary rows by guessing event IDs. Capped to sane ranges:
  * scroll 0-100%, duration up to 30 minutes (beyond that it's an idle tab, not
- * reading time).
+ * reading time). $load_time_ms rides along on this same beacon (captured
+ * earlier, on the browser's `load` event - see js/views.js) rather than its
+ * own request; null when the browser didn't report one (unsupported
+ * Performance API, or the beacon fired before `load`), in which case the
+ * column is left untouched instead of being overwritten with a false 0.
  */
-function turf_track_engagement( $event_id, $scroll_depth, $duration_seconds ) {
+function turf_track_engagement( $event_id, $scroll_depth, $duration_seconds, $load_time_ms = null ) {
 	global $wpdb;
 
 	$user_agent   = isset( $_SERVER['HTTP_USER_AGENT'] ) ? sanitize_text_field( wp_unslash( $_SERVER['HTTP_USER_AGENT'] ) ) : '';
 	$visitor_hash = turf_visitor_hash( $user_agent );
 
+	$data    = array(
+		'scroll_depth'     => max( 0, min( 100, (int) $scroll_depth ) ),
+		'duration_seconds' => max( 0, min( 1800, (int) $duration_seconds ) ),
+	);
+	$formats = array( '%d', '%d' );
+
+	if ( null !== $load_time_ms ) {
+		$data['load_time_ms'] = max( 0, min( 60000, (int) $load_time_ms ) );
+		$formats[]            = '%d';
+	}
+
 	$wpdb->update(
 		turf_table(),
-		array(
-			'scroll_depth'     => max( 0, min( 100, (int) $scroll_depth ) ),
-			'duration_seconds' => max( 0, min( 1800, (int) $duration_seconds ) ),
-		),
+		$data,
 		array( 'id' => $event_id, 'visitor_hash' => $visitor_hash ),
-		array( '%d', '%d' ),
+		$formats,
 		array( '%d', '%s' )
 	);
 }
@@ -802,7 +835,8 @@ function turf_ajax_track_engagement() {
 	turf_track_engagement(
 		$event_id,
 		isset( $_POST['scroll_depth'] ) ? absint( $_POST['scroll_depth'] ) : 0,
-		isset( $_POST['duration'] ) ? absint( $_POST['duration'] ) : 0
+		isset( $_POST['duration'] ) ? absint( $_POST['duration'] ) : 0,
+		isset( $_POST['load_time_ms'] ) ? absint( $_POST['load_time_ms'] ) : null
 	);
 
 	wp_send_json_success();

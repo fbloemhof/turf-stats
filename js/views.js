@@ -18,6 +18,13 @@
 
 		var urlParams = new URLSearchParams( window.location.search );
 
+		// Physical pixels (CSS pixels * devicePixelRatio), so a Retina/HiDPI
+		// display reports its actual panel resolution rather than the smaller
+		// CSS-pixel viewport - matches what "screen resolution" conventionally means.
+		var dpr          = window.devicePixelRatio || 1;
+		var screenWidth  = window.screen ? Math.round( screen.width * dpr ) : 0;
+		var screenHeight = window.screen ? Math.round( screen.height * dpr ) : 0;
+
 		var body = new URLSearchParams();
 		body.set( 'action', 'turf_track_view' );
 		body.set( 'post_id', turfViews.postId );
@@ -27,6 +34,8 @@
 		body.set( 'utm_source', urlParams.get( 'utm_source' ) || '' );
 		body.set( 'utm_medium', urlParams.get( 'utm_medium' ) || '' );
 		body.set( 'utm_campaign', urlParams.get( 'utm_campaign' ) || '' );
+		body.set( 'screen_width', screenWidth );
+		body.set( 'screen_height', screenHeight );
 
 		function updateLabel( text ) {
 			var el = document.getElementById( 'post-views' );
@@ -55,6 +64,28 @@
 				return Math.max( 0, Math.min( 100, Math.round( ( window.scrollY / scrollable ) * 100 ) ) );
 			}
 
+			// Read lazily (at send() time, not here) - the load event has almost
+			// always already fired by the time a visitor leaves the page, and
+			// PerformanceNavigationTiming stays queryable indefinitely afterwards,
+			// so there's no need for a separate 'load' listener.
+			function getLoadTimeMs() {
+				try {
+					var nav = performance.getEntriesByType && performance.getEntriesByType( 'navigation' )[ 0 ];
+
+					if ( nav && nav.loadEventEnd > 0 ) {
+						return Math.round( nav.loadEventEnd );
+					}
+
+					if ( performance.timing && performance.timing.loadEventEnd > 0 ) {
+						return performance.timing.loadEventEnd - performance.timing.navigationStart;
+					}
+				} catch ( e ) {
+					// Performance API unsupported - just omit the field.
+				}
+
+				return null;
+			}
+
 			window.addEventListener( 'scroll', function () {
 				maxScroll = Math.max( maxScroll, currentScrollPct() );
 			}, { passive: true } );
@@ -70,6 +101,11 @@
 				engagementBody.set( 'event_id', eventId );
 				engagementBody.set( 'scroll_depth', maxScroll );
 				engagementBody.set( 'duration', Math.round( ( Date.now() - startTime ) / 1000 ) );
+
+				var loadTimeMs = getLoadTimeMs();
+				if ( null !== loadTimeMs ) {
+					engagementBody.set( 'load_time_ms', loadTimeMs );
+				}
 
 				if ( navigator.sendBeacon ) {
 					var blob = new Blob( [ engagementBody.toString() ], { type: 'application/x-www-form-urlencoded' } );

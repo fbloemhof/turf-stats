@@ -48,6 +48,8 @@ function turf_views_register_metaboxes() {
 		turf_render_overview( $days );
 	}, $hook, 'turf_overview' );
 
+	add_meta_box( 'turf_online_now_pages', __( 'Currently viewed', 'turf-stats' ), 'turf_render_online_now_pages', $hook, 'turf_overview' );
+
 	turf_maybe_add_meta_box( 'turf_content_activity', __( 'Content activity', 'turf-stats' ), function () use ( $days ) {
 		turf_render_content_activity( $days );
 	}, $hook, 'turf_overview' );
@@ -61,6 +63,9 @@ function turf_views_register_metaboxes() {
 		} ),
 		array( 'turf_os', __( 'Operating system', 'turf-stats' ), function () use ( $days ) {
 			turf_render_breakdown( 'os', $days );
+		} ),
+		array( 'turf_screen', __( 'Screen resolution', 'turf-stats' ), function () use ( $days ) {
+			turf_render_screen_breakdown( $days );
 		} ),
 		array( 'turf_language', __( 'Language', 'turf-stats' ), function () use ( $days ) {
 			turf_render_breakdown( 'language', $days );
@@ -525,6 +530,12 @@ function turf_ajax_overview_stats() {
 		if ( null !== $avg_seconds ) {
 			$boxes['duur'] = turf_capture_stat_box_inner( __( 'Avg. time/visit', 'turf-stats' ), turf_format_duration( $avg_seconds ), false, '', true );
 		}
+
+		$avg_load_ms = turf_get_avg_load_time_ms( $days );
+
+		if ( null !== $avg_load_ms ) {
+			$boxes['laadtijd'] = turf_capture_stat_box_inner( __( 'Avg. load time', 'turf-stats' ), turf_format_load_time( $avg_load_ms ), false, '', true );
+		}
 	}
 
 	wp_send_json_success( array( 'boxes' => $boxes ) );
@@ -626,6 +637,11 @@ function turf_render_overview_stat_boxes( $days, $current, $previous, $current_c
 	if ( null !== $avg_seconds ) {
 		turf_render_stat_box( __( 'Avg. time/visit', 'turf-stats' ), turf_format_duration( $avg_seconds ), false, '', 'duur', true );
 	}
+
+	$avg_load_ms = turf_get_avg_load_time_ms( $days );
+	if ( null !== $avg_load_ms ) {
+		turf_render_stat_box( __( 'Avg. load time', 'turf-stats' ), turf_format_load_time( $avg_load_ms ), false, '', 'laadtijd', true );
+	}
 }
 
 /**
@@ -635,18 +651,36 @@ function turf_render_overview_stat_boxes( $days, $current, $previous, $current_c
  * N-day overview (which shows exactly the selected period).
  */
 function turf_render_daily_chart( $daily ) {
-	$max = max( 1, max( array_column( $daily, 'views' ) ) );
+	$max   = max( 1, max( array_column( $daily, 'views' ) ) );
+	$count = count( $daily );
+
+	// Value labels always show (30/90-day charts want them too, not just the
+	// default 7-day view) - but a 90-column chart has far less width per bar
+	// than a 7-column one, so the label shrinks in steps as columns get
+	// denser, to stay legible without a JS-measured fit.
+	if ( $count <= 14 ) {
+		$density_class = '';
+	} elseif ( $count <= 45 ) {
+		$density_class = ' bk-stats-chart--dense';
+	} else {
+		$density_class = ' bk-stats-chart--very-dense';
+	}
+
+	// Bars are scaled to 88% of the plot height instead of 100%, reserving a
+	// consistent strip above the tallest possible bar for its value label -
+	// so the label is never clipped, at any period length.
+	$plot_max_pct = 88;
 	?>
 	<div class="bk-stats-overview__legend">
 		<span class="bk-stats-legend bk-stats-legend--views"><?php esc_html_e( 'Views', 'turf-stats' ); ?></span>
 		<span class="bk-stats-legend bk-stats-legend--visitors"><?php esc_html_e( 'Visitors', 'turf-stats' ); ?></span>
 	</div>
 
-	<div class="bk-stats-chart">
+	<div class="bk-stats-chart<?php echo esc_attr( $density_class ); ?>">
 		<?php foreach ( $daily as $day ) : ?>
 			<?php
-			$views_pct    = round( ( $day['views'] / $max ) * 100 );
-			$visitors_pct = round( ( $day['visitors'] / $max ) * 100 );
+			$views_pct    = round( ( $day['views'] / $max ) * $plot_max_pct );
+			$visitors_pct = round( ( $day['visitors'] / $max ) * $plot_max_pct );
 			$title        = sprintf(
 				/* translators: 1: date, 2: number of views, 3: number of visitors */
 				__( '%1$s — %2$s views, %3$s visitors', 'turf-stats' ),
@@ -659,6 +693,7 @@ function turf_render_daily_chart( $daily ) {
 				<div class="bk-stats-chart__bars">
 					<div class="bk-stats-chart__bar bk-stats-chart__bar--views" style="height:<?php echo (int) $views_pct; ?>%"></div>
 					<div class="bk-stats-chart__bar bk-stats-chart__bar--visitors" style="height:<?php echo (int) $visitors_pct; ?>%"></div>
+					<span class="bk-stats-chart__value" style="bottom:<?php echo (int) $views_pct; ?>%"><?php echo esc_html( number_format_i18n( $day['views'] ) ); ?></span>
 				</div>
 				<span class="bk-stats-chart__label"><?php echo esc_html( date_i18n( 'd M', strtotime( $day['date'] ) ) ); ?></span>
 			</div>
@@ -668,13 +703,18 @@ function turf_render_daily_chart( $daily ) {
 }
 
 /**
- * Distinct visitors per hour so far today, in the site's own local time,
- * zero-filled from midnight up to the current hour (no empty trailing hours
- * for a day that isn't over yet). Powers the "Vandaag" line chart - a finer
- * view than the 7-day bars above it, since a single day of daily bars is just
- * one bar.
+ * Distinct visitors per hour for a single local-time day, always zero-filled
+ * across the full 0-23 hour range (unlike the old today-only version, which
+ * shortened as the day went on) - a fixed 24-hour axis lets today's (partial)
+ * line and yesterday's (complete) line share the same x-scale for a direct
+ * overlay. $offset_days = 0 is today, 1 is yesterday.
+ *
+ * Hours later than "now" on today (0 === $offset_days) haven't happened yet -
+ * those get `visitors => null` rather than a fabricated 0, so the renderer
+ * can stop the line at the current hour instead of drawing a false drop to
+ * zero for the rest of the day.
  */
-function turf_get_hourly_visitors_today() {
+function turf_get_hourly_visitors_for_offset( $offset_days ) {
 	global $wpdb;
 
 	$table = turf_table();
@@ -683,24 +723,28 @@ function turf_get_hourly_visitors_today() {
 	$offset_seconds = (int) round( ( (float) get_option( 'gmt_offset' ) ) * HOUR_IN_SECONDS );
 	$local_expr     = "DATE_ADD(v.viewed_at, INTERVAL $offset_seconds SECOND)";
 
-	$params[] = turf_local_midnight_utc( 0 );
+	$start = turf_local_midnight_utc( $offset_days );
+	$end   = ( 0 === $offset_days ) ? current_time( 'mysql', true ) : turf_local_midnight_utc( $offset_days - 1 );
+
+	$params[] = $start;
+	$params[] = $end;
 
 	$results = $wpdb->get_results( $wpdb->prepare(
 		"SELECT HOUR($local_expr) AS hour, COUNT(DISTINCT v.visitor_hash) AS visitors
 		FROM $table v
 		$join
-		WHERE $where AND v.viewed_at >= %s
+		WHERE $where AND v.viewed_at >= %s AND v.viewed_at < %s
 		GROUP BY hour",
 		$params
 	), OBJECT_K );
 
-	$current_hour = (int) current_time( 'H' );
-	$hourly       = array();
+	$last_hour = ( 0 === $offset_days ) ? (int) current_time( 'H' ) : 23;
+	$hourly    = array();
 
-	for ( $h = 0; $h <= $current_hour; $h++ ) {
+	for ( $h = 0; $h <= 23; $h++ ) {
 		$hourly[] = array(
 			'hour'     => $h,
-			'visitors' => isset( $results[ $h ] ) ? (int) $results[ $h ]->visitors : 0,
+			'visitors' => ( $h > $last_hour ) ? null : ( isset( $results[ $h ] ) ? (int) $results[ $h ]->visitors : 0 ),
 		);
 	}
 
@@ -708,21 +752,27 @@ function turf_get_hourly_visitors_today() {
 }
 
 /**
- * Inline SVG line chart of today's distinct-visitors-per-hour. Pure markup,
- * no chart library and no JS - the SVG scales to the box width via its
- * viewBox, and non-scaling strokes keep the line crisp at any width. Bails
- * out early in the day (fewer than two hours of data), when a "line" would
- * just be a single point.
+ * Inline SVG line chart of distinct-visitors-per-hour: today's (partial)
+ * line plus yesterday's (complete) line overlaid for direct comparison, both
+ * on the same fixed 0-23 hour axis. Pure markup, no chart library and no JS -
+ * the SVG scales to the box width via its viewBox, and non-scaling strokes
+ * keep the lines crisp at any width. Bails out only when there's truly
+ * nothing to plot (zero visitors across both days so far).
  */
 function turf_render_hourly_visitors_chart() {
-	$hourly = turf_get_hourly_visitors_today();
+	$today     = turf_get_hourly_visitors_for_offset( 0 );
+	$yesterday = turf_get_hourly_visitors_for_offset( 1 );
 
-	if ( count( $hourly ) < 2 ) {
+	$known_visitors = array_filter(
+		array_merge( array_column( $today, 'visitors' ), array_column( $yesterday, 'visitors' ) ),
+		function ( $v ) { return null !== $v; }
+	);
+
+	if ( ! $known_visitors || 0 === array_sum( $known_visitors ) ) {
 		return;
 	}
 
-	$max   = max( 1, max( array_column( $hourly, 'visitors' ) ) );
-	$count = count( $hourly );
+	$max = max( 1, max( $known_visitors ) );
 
 	// viewBox coordinate space; CSS scales it to 100% width.
 	$w       = 720;
@@ -731,31 +781,85 @@ function turf_render_hourly_visitors_chart() {
 	$pad_bot = 18;
 	$plot_h  = $h - $pad_top - $pad_bot;
 
-	$points = array();
-	for ( $i = 0; $i < $count; $i++ ) {
-		$x         = ( $count > 1 ) ? ( $i / ( $count - 1 ) ) * $w : 0;
-		$y         = $pad_top + ( 1 - $hourly[ $i ]['visitors'] / $max ) * $plot_h;
-		$points[]  = array( 'x' => round( $x, 1 ), 'y' => round( $y, 1 ), 'hour' => $hourly[ $i ]['hour'], 'visitors' => $hourly[ $i ]['visitors'] );
+	// Hour 0-23 always maps to the same x position on both lines, regardless
+	// of where either line's real data stops - that shared, fixed scale is
+	// what makes the overlay comparable at a glance.
+	$to_point = function ( $entry ) use ( $w, $pad_top, $plot_h, $max ) {
+		return array(
+			'x'        => round( ( $entry['hour'] / 23 ) * $w, 1 ),
+			'y'        => round( $pad_top + ( 1 - $entry['visitors'] / $max ) * $plot_h, 1 ),
+			'hour'     => $entry['hour'],
+			'visitors' => $entry['visitors'],
+		);
+	};
+
+	$build_points = function ( $hourly ) use ( $to_point ) {
+		$points = array();
+
+		foreach ( $hourly as $entry ) {
+			if ( null === $entry['visitors'] ) {
+				break; // Today only - stop at "now", don't draw hours that haven't happened yet.
+			}
+
+			$points[] = $to_point( $entry );
+		}
+
+		return $points;
+	};
+
+	$to_line_path = function ( $points ) {
+		$path = '';
+		foreach ( $points as $i => $p ) {
+			$path .= ( 0 === $i ? 'M' : 'L' ) . $p['x'] . ' ' . $p['y'] . ' ';
+		}
+		return trim( $path );
+	};
+
+	$today_points     = $build_points( $today );
+	$yesterday_points = $build_points( $yesterday );
+	$today_line       = $to_line_path( $today_points );
+	$yesterday_line   = $to_line_path( $yesterday_points );
+	$baseline         = $pad_top + $plot_h;
+
+	$area_path = '';
+	if ( $today_points ) {
+		$last      = $today_points[ count( $today_points ) - 1 ];
+		$area_path = $today_line . ' L' . $last['x'] . ' ' . $baseline . ' L' . $today_points[0]['x'] . ' ' . $baseline . ' Z';
 	}
-
-	$line_path = '';
-	foreach ( $points as $i => $p ) {
-		$line_path .= ( 0 === $i ? 'M' : 'L' ) . $p['x'] . ' ' . $p['y'] . ' ';
-	}
-
-	$area_path = $line_path . 'L' . $points[ $count - 1 ]['x'] . ' ' . ( $pad_top + $plot_h ) . ' L' . $points[0]['x'] . ' ' . ( $pad_top + $plot_h ) . ' Z';
-
-	$baseline = $pad_top + $plot_h;
 	?>
 	<div class="bk-stats-hourly">
 		<div class="bk-stats-overview__legend">
-			<span class="bk-stats-legend bk-stats-legend--visitors"><?php esc_html_e( 'Visitors per hour (today)', 'turf-stats' ); ?></span>
+			<span class="bk-stats-legend bk-stats-legend--visitors"><?php esc_html_e( 'Today', 'turf-stats' ); ?></span>
+			<span class="bk-stats-legend bk-stats-legend--yesterday"><?php esc_html_e( 'Yesterday', 'turf-stats' ); ?></span>
 		</div>
-		<svg class="bk-stats-hourly__svg" viewBox="0 0 <?php echo (int) $w; ?> <?php echo (int) $h; ?>" preserveAspectRatio="none" role="img" aria-label="<?php esc_attr_e( 'Visitors per hour today', 'turf-stats' ); ?>">
+		<svg class="bk-stats-hourly__svg" viewBox="0 0 <?php echo (int) $w; ?> <?php echo (int) $h; ?>" preserveAspectRatio="none" role="img" aria-label="<?php esc_attr_e( 'Visitors per hour, today vs. yesterday', 'turf-stats' ); ?>">
 			<line class="bk-stats-hourly__grid" x1="0" y1="<?php echo esc_attr( $baseline ); ?>" x2="<?php echo (int) $w; ?>" y2="<?php echo esc_attr( $baseline ); ?>" vector-effect="non-scaling-stroke" />
-			<path class="bk-stats-hourly__area" d="<?php echo esc_attr( trim( $area_path ) ); ?>" />
-			<path class="bk-stats-hourly__line" d="<?php echo esc_attr( trim( $line_path ) ); ?>" vector-effect="non-scaling-stroke" />
-			<?php foreach ( $points as $p ) : ?>
+
+			<?php if ( $yesterday_line ) : ?>
+				<path class="bk-stats-hourly__line bk-stats-hourly__line--yesterday" d="<?php echo esc_attr( $yesterday_line ); ?>" vector-effect="non-scaling-stroke" />
+				<?php foreach ( $yesterday_points as $p ) : ?>
+					<circle class="bk-stats-hourly__dot bk-stats-hourly__dot--yesterday" cx="<?php echo esc_attr( $p['x'] ); ?>" cy="<?php echo esc_attr( $p['y'] ); ?>" r="2" vector-effect="non-scaling-stroke">
+						<title>
+					<?php
+					printf(
+						/* translators: 1: hour of day (0-23), 2: number of visitors */
+						esc_html__( '%1$02d:00 yesterday — %2$s visitors', 'turf-stats' ),
+						(int) $p['hour'],
+						esc_html( number_format_i18n( $p['visitors'] ) )
+					);
+					?>
+					</title>
+					</circle>
+				<?php endforeach; ?>
+			<?php endif; ?>
+
+			<?php if ( $area_path ) : ?>
+				<path class="bk-stats-hourly__area" d="<?php echo esc_attr( $area_path ); ?>" />
+			<?php endif; ?>
+			<?php if ( $today_line ) : ?>
+				<path class="bk-stats-hourly__line" d="<?php echo esc_attr( $today_line ); ?>" vector-effect="non-scaling-stroke" />
+			<?php endif; ?>
+			<?php foreach ( $today_points as $p ) : ?>
 				<circle class="bk-stats-hourly__dot" cx="<?php echo esc_attr( $p['x'] ); ?>" cy="<?php echo esc_attr( $p['y'] ); ?>" r="2.5" vector-effect="non-scaling-stroke">
 					<title>
 				<?php
@@ -770,16 +874,18 @@ function turf_render_hourly_visitors_chart() {
 				</circle>
 			<?php endforeach; ?>
 			<?php
-			// Sparse hour axis labels (every 3rd hour + the last point) so
-			// they don't collide on a narrow box.
-			foreach ( $points as $i => $p ) :
-				if ( 0 !== $p['hour'] % 3 && $i !== $count - 1 ) {
+			// Sparse hour axis labels (every 3rd hour + hour 23) so they don't
+			// collide on a narrow box - fixed to the 0-23 scale regardless of
+			// how far either line's real data currently reaches.
+			for ( $hour = 0; $hour <= 23; $hour++ ) :
+				if ( 0 !== $hour % 3 && 23 !== $hour ) {
 					continue;
 				}
-				$anchor = ( 0 === $i ) ? 'start' : ( ( $i === $count - 1 ) ? 'end' : 'middle' );
+				$x      = round( ( $hour / 23 ) * $w, 1 );
+				$anchor = ( 0 === $hour ) ? 'start' : ( ( 23 === $hour ) ? 'end' : 'middle' );
 				?>
-				<text class="bk-stats-hourly__axis" x="<?php echo esc_attr( $p['x'] ); ?>" y="<?php echo (int) $h; ?>" text-anchor="<?php echo esc_attr( $anchor ); ?>"><?php echo esc_html( sprintf( '%02d', $p['hour'] ) ); ?></text>
-			<?php endforeach; ?>
+				<text class="bk-stats-hourly__axis" x="<?php echo esc_attr( $x ); ?>" y="<?php echo (int) $h; ?>" text-anchor="<?php echo esc_attr( $anchor ); ?>"><?php echo esc_html( sprintf( '%02d', $hour ) ); ?></text>
+			<?php endfor; ?>
 		</svg>
 	</div>
 	<?php
@@ -838,6 +944,13 @@ function turf_render_caching( $days ) {
 	<p class="description">
 		<?php esc_html_e( 'Combined across all caches in front of the site - a cache hit never reaches WordPress, so it can\'t be split per layer. Approximate: visitors who block the tracker are counted as origin renders.', 'turf-stats' ); ?>
 	</p>
+
+	<?php if ( $offload <= 1 && $env ) : ?>
+		<p class="description bk-stats-cache-hint">
+			<?php esc_html_e( "A caching layer is detected in front of the site, but almost nothing is actually being served from cache for this period - that combination usually means the layer is caching static files (images/CSS/JS) but not the HTML pages themselves, which is the default for most CDNs/edge caches (e.g. Cloudflare's standard cache level only caches by file extension unless a \"Cache Everything\" rule or something like Automatic Platform Optimization is turned on).", 'turf-stats' ); ?>
+			<?php esc_html_e( 'To verify directly: open a page on the site and check the response headers in your browser\'s network tab - Cloudflare adds a "cf-cache-status" header that reads "HIT" once a page is actually served from its edge cache, "DYNAMIC"/"MISS" otherwise.', 'turf-stats' ); ?>
+		</p>
+	<?php endif; ?>
 	<?php
 }
 
@@ -961,6 +1074,54 @@ function turf_get_breakdown( $column, $days, $exclude_empty = false ) {
 		ORDER BY views DESC", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- $column is checked against the fixed $allowed whitelist above; table/join/where are internal literals.
 		$params
 	) );
+}
+
+/**
+ * Site-wide breakdown by screen resolution (physical pixels - see
+ * js/views.js), for the selected period. Grouped by the width×height pair
+ * rather than a single column, so it needs its own query instead of
+ * turf_get_breakdown(). Rows from before this feature (or where the browser
+ * didn't report a screen size) have NULL width/height - bucketed into '' so
+ * turf_breakdown_label() falls through to the same "Unknown (from before
+ * this feature)" text every other breakdown already uses for pre-feature
+ * data.
+ */
+function turf_get_screen_breakdown( $days, $limit = 10 ) {
+	global $wpdb;
+
+	$table = turf_table();
+	list( $join, $where, $params ) = turf_site_join_and_where();
+
+	$where_date = '';
+
+	if ( 0 !== $days ) {
+		$where_date = 'AND v.viewed_at >= %s';
+		$params[]   = turf_period_start_sql_date( $days );
+	}
+
+	$params[] = $limit;
+
+	return $wpdb->get_results( $wpdb->prepare(
+		"SELECT
+			CASE WHEN v.screen_width IS NULL OR v.screen_height IS NULL THEN ''
+				ELSE CONCAT(v.screen_width, '×', v.screen_height) END AS label,
+			COUNT(*) AS views, COUNT(DISTINCT v.visitor_hash) AS visitors
+		FROM $table v
+		$join
+		WHERE $where $where_date
+		GROUP BY label
+		ORDER BY views DESC
+		LIMIT %d", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- join/where are internal literals from turf_site_join_and_where(); no user input.
+		$params
+	) );
+}
+
+function turf_render_screen_breakdown( $days ) {
+	$rows = turf_get_screen_breakdown( $days );
+
+	turf_render_breakdown_rows( $rows, function ( $raw ) {
+		return turf_breakdown_label( 'screen', $raw );
+	} );
 }
 
 function turf_breakdown_label( $column, $raw ) {
@@ -1418,12 +1579,27 @@ function turf_admin_inline_css() {
 		.bk-stats-chart__bar { position: absolute; bottom: 0; left: 0; width: 100%; border-radius: 2px 2px 0 0; }
 		.bk-stats-chart__bar--views { background: color-mix(in srgb, var(--wp-admin-theme-color, #2271b1) 35%, #fff); }
 		.bk-stats-chart__bar--visitors { background: var(--wp-admin-theme-color, #2271b1); }
+		.bk-stats-chart__value {
+			position: absolute; left: 0; right: 0; text-align: center;
+			transform: translateY(-100%); padding-bottom: 4px;
+			font-size: 11px; font-variant-numeric: tabular-nums; color: #646970; white-space: nowrap;
+		}
+		/* 30-day chart: same column count roughly halves the width per bar
+		   versus the default 7-day view, so the label needs to shrink to
+		   still fit without touching its neighbors. */
+		.bk-stats-chart--dense .bk-stats-chart__value { font-size: 9px; padding-bottom: 3px; }
+		/* 90-day chart: narrower still - drop the thousands separator's
+		   width by tightening tracking a touch further. */
+		.bk-stats-chart--very-dense .bk-stats-chart__value { font-size: 8px; padding-bottom: 2px; letter-spacing: -0.2px; }
 		.bk-stats-chart__label { margin-top: 6px; font-size: 11px; color: #646970; }
 		.bk-stats-hourly { margin-bottom: 18px; }
 		.bk-stats-hourly__svg { display: block; width: 100%; height: auto; overflow: visible; }
 		.bk-stats-hourly__area { fill: color-mix(in srgb, var(--wp-admin-theme-color, #2271b1) 12%, transparent); }
 		.bk-stats-hourly__line { fill: none; stroke: var(--wp-admin-theme-color, #2271b1); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
 		.bk-stats-hourly__dot { fill: var(--wp-admin-theme-color, #2271b1); }
+		.bk-stats-legend--yesterday::before { background: #646970; }
+		.bk-stats-hourly__line--yesterday { fill: none; stroke: #646970; stroke-width: 1.5; stroke-dasharray: 4 3; stroke-linejoin: round; stroke-linecap: round; opacity: 0.45; }
+		.bk-stats-hourly__dot--yesterday { fill: #646970; opacity: 0.45; }
 		.bk-stats-hourly__axis { fill: #646970; font-size: 10px; }
 		.bk-stats-hourly__grid { stroke: #dcdcde; stroke-width: 1; }
 		.bk-stats-cache-env { margin-top: 12px; }
@@ -1481,6 +1657,9 @@ function turf_admin_inline_css() {
 			70% { box-shadow: 0 0 0 6px color-mix(in srgb, currentColor 0%, transparent); }
 			100% { box-shadow: 0 0 0 0 color-mix(in srgb, currentColor 0%, transparent); }
 		}
+		.bk-stats-online-pages { margin: 0; padding-left: 20px; }
+		.bk-stats-online-pages li { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 6px; font-size: 13px; }
+		.bk-stats-online-pages__count { flex-shrink: 0; color: #646970; }
 		.bk-stats-heatmap { border-collapse: collapse; width: 100%; }
 		.bk-stats-heatmap th { font-size: 10px; color: #646970; font-weight: 400; text-align: center; padding: 2px; }
 		.bk-stats-heatmap td { height: 18px; border: 1px solid #fff; }
@@ -1566,6 +1745,44 @@ function turf_format_duration( $seconds ) {
 
 function turf_format_scroll( $pct ) {
 	return null === $pct ? '—' : $pct . '%';
+}
+
+/**
+ * Site-wide average page load time (ms) for the period - see
+ * getLoadTimeMs() in js/views.js for how it's captured (Navigation Timing
+ * API, sent on the same beacon as scroll depth/duration). A simple AVG over
+ * every row that has one, not session-based like turf_get_avg_session_seconds() -
+ * load time is a per-pageview measurement, not a per-visit one. Returns null
+ * when there's no data yet for the period, so the caller can hide the stat
+ * box instead of showing a misleading 0.
+ */
+function turf_get_avg_load_time_ms( $days ) {
+	global $wpdb;
+
+	$table = turf_table();
+	list( $join, $where, $params ) = turf_site_join_and_where();
+
+	$where_date = '';
+
+	if ( 0 !== $days ) {
+		$where_date = 'AND v.viewed_at >= %s';
+		$params[]   = turf_period_start_sql_date( $days );
+	}
+
+	$avg = $wpdb->get_var( $wpdb->prepare(
+		"SELECT AVG(v.load_time_ms) FROM $table v $join WHERE $where $where_date AND v.load_time_ms IS NOT NULL",
+		$params
+	) );
+
+	return ( null === $avg ) ? null : (int) round( $avg );
+}
+
+function turf_format_load_time( $ms ) {
+	if ( null === $ms ) {
+		return '—';
+	}
+
+	return ( $ms < 1000 ) ? $ms . 'ms' : number_format_i18n( $ms / 1000, 1 ) . 's';
 }
 
 function turf_get_top_posts_for_period( $post_type, $days ) {

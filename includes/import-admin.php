@@ -86,6 +86,36 @@ function turf_ajax_import_legacy_batch() {
 }
 add_action( 'wp_ajax_turf_import_legacy_batch', 'turf_ajax_import_legacy_batch' );
 
+/**
+ * One-shot "top posts" pre-pass for --source=jetpack - see
+ * turf_legacy_import_jetpack_top_posts() (includes/legacy-import.php). Runs
+ * once before the JS starts its normal per-post batches, over the whole
+ * eligible post list (not a client-supplied chunk - there's only ever one of
+ * these per import run), so it returns both the tally and which post IDs it
+ * already handled, letting the JS exclude them from the slower batches that
+ * follow instead of fetching them twice.
+ */
+function turf_ajax_import_legacy_bulk_prepass() {
+	if ( ! current_user_can( 'manage_options' ) || ! check_ajax_referer( 'turf_import_legacy', 'nonce', false ) ) {
+		wp_send_json_error( 'forbidden', 403 );
+	}
+
+	$force   = ! empty( $_POST['force'] );
+	$dry_run = ! empty( $_POST['dry_run'] );
+
+	if ( ! function_exists( 'stats_get_csv' ) ) {
+		wp_send_json_error( 'jetpack stats not active', 400 );
+	}
+
+	$result = turf_legacy_import_jetpack_top_posts( turf_legacy_import_post_ids(), $force, $dry_run );
+
+	wp_send_json_success( array(
+		'counts'          => $result['counts'],
+		'handledPostIds'  => $result['handled_post_ids'],
+	) );
+}
+add_action( 'wp_ajax_turf_import_legacy_bulk_prepass', 'turf_ajax_import_legacy_bulk_prepass' );
+
 function turf_import_render_admin_page() {
 	$jetpack_active = function_exists( 'stats_get_csv' );
 	$post_count     = count( turf_legacy_import_post_ids() );

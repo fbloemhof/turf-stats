@@ -85,6 +85,70 @@ function turf_legacy_get_views( $post_id, $source ) {
 }
 
 /**
+ * One-shot "top posts" pre-pass for the Jetpack source: Jetpack's own
+ * stats_get_csv() ('postviews' table, called with no post_id - see its
+ * "top posts" usage in Jetpack's own modules/stats.php) returns up to its
+ * own hard cap of 100 posts' all-time views in a SINGLE remote call, instead
+ * of the one-remote-call-per-post cost turf_legacy_get_views() otherwise
+ * pays. Traffic is Pareto-distributed on most sites (a handful of posts
+ * account for most views), so this alone typically covers the bulk of total
+ * legacy views almost instantly, before the slow per-post loop below runs
+ * for the long tail. Only touches posts that are actually in $post_ids -
+ * Jetpack's top-posts list can include posts outside our trackable set
+ * (wrong type/status) or ones since deleted.
+ *
+ * @return array{counts: array{imported:int, skipped:int, empty:int}, handled_post_ids: int[]}
+ */
+function turf_legacy_import_jetpack_top_posts( array $post_ids, $force, $dry_run ) {
+	$counts  = array( 'imported' => 0, 'skipped' => 0, 'empty' => 0 );
+	$handled = array();
+
+	if ( ! function_exists( 'stats_get_csv' ) ) {
+		return array( 'counts' => $counts, 'handled_post_ids' => $handled );
+	}
+
+	$top = stats_get_csv( 'postviews', array( 'days' => -1, 'limit' => 100 ) );
+
+	if ( empty( $top ) ) {
+		return array( 'counts' => $counts, 'handled_post_ids' => $handled );
+	}
+
+	$post_ids_lookup = array_flip( $post_ids );
+
+	foreach ( $top as $row ) {
+		$post_id = isset( $row['post_id'] ) ? (int) $row['post_id'] : 0;
+
+		if ( ! $post_id || ! isset( $post_ids_lookup[ $post_id ] ) ) {
+			continue;
+		}
+
+		$handled[] = $post_id;
+
+		$has_existing = '' !== get_post_meta( $post_id, TURF_META_KEY, true );
+
+		if ( $has_existing && ! $force ) {
+			$counts['skipped']++;
+			continue;
+		}
+
+		$views = isset( $row['views'] ) ? (int) $row['views'] : 0;
+
+		if ( $views <= 0 ) {
+			$counts['empty']++;
+			continue;
+		}
+
+		if ( ! $dry_run ) {
+			update_post_meta( $post_id, TURF_META_KEY, $views );
+		}
+
+		$counts['imported']++;
+	}
+
+	return array( 'counts' => $counts, 'handled_post_ids' => $handled );
+}
+
+/**
  * Imports one post from one source, returning which bucket it landed in
  * so the caller (CLI or AJAX batch handler) can tally totals the same way.
  *

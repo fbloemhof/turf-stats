@@ -10,6 +10,9 @@ msgstr ""
 msgid "%1$02d:00 — %2$s visitors"
 msgstr "%1$02d:00 — %2$s bezoekers"
 
+msgid "%1$02d:00 yesterday — %2$s visitors"
+msgstr "%1$02d:00 gisteren — %2$s bezoekers"
+
 msgid "%1$s %2$d:00 — %3$s views"
 msgstr "%1$s %2$d:00 — %3$s weergaven"
 
@@ -37,6 +40,11 @@ msgstr "%d%% van vorige stap"
 msgid "%s times viewed"
 msgstr "%s keer bekeken"
 
+msgid "%s viewer"
+msgid_plural "%s viewers"
+msgstr[0] "%s kijker"
+msgstr[1] "%s kijkers"
+
 msgid "30 days"
 msgstr "30 dagen"
 
@@ -48,6 +56,9 @@ msgstr "7 dagen"
 
 msgid "90 days"
 msgstr "90 dagen"
+
+msgid "A caching layer is detected in front of the site, but almost nothing is actually being served from cache for this period - that combination usually means the layer is caching static files (images/CSS/JS) but not the HTML pages themselves, which is the default for most CDNs/edge caches (e.g. Cloudflare's standard cache level only caches by file extension unless a \"Cache Everything\" rule or something like Automatic Platform Optimization is turned on)."
+msgstr "Er is een cachelaag gedetecteerd vóór de site, maar er wordt voor deze periode vrijwel niets uit cache geserveerd - die combinatie betekent meestal dat de laag wel statische bestanden (afbeeldingen/CSS/JS) cachet, maar niet de HTML-pagina's zelf. Dat is het standaardgedrag bij de meeste CDN's/edge caches (Cloudflare's standaard cache-niveau cachet bijvoorbeeld alleen op bestandsextensie, tenzij een \"Cache Everything\"-regel of iets als Automatic Platform Optimization is ingeschakeld)."
 
 msgid "Added"
 msgstr "Toegevoegd"
@@ -69,6 +80,9 @@ msgstr "Auteur"
 
 msgid "Author archive"
 msgstr "Auteur-archief"
+
+msgid "Avg. load time"
+msgstr "Gem. laadtijd"
 
 msgid "Avg. reading time"
 msgstr "Gem. leestijd"
@@ -141,6 +155,9 @@ msgstr "Land van herkomst"
 
 msgid "Crawlers and AI bots usually don't run JavaScript, so this is counted separately, server-side - apart from the regular visitor stats (which deliberately exclude bots)."
 msgstr "Crawlers en AI-bots draaien meestal geen JavaScript, dus dit telt apart, server-side - los van de gewone bezoekersstatistieken (die bots juist bewust uitsluiten)."
+
+msgid "Currently viewed"
+msgstr "Nu bekeken"
 
 msgid "Date archive"
 msgstr "Datum-archief"
@@ -310,6 +327,9 @@ msgstr "Nog geen formulierinzendingen voor deze periode (of geen Contact Form 7/
 msgid "No outbound link clicks recorded yet for this period."
 msgstr "Nog geen klikken op uitgaande links geregistreerd voor deze periode."
 
+msgid "No pages currently being viewed."
+msgstr "Nu geen pagina's die bekeken worden."
+
 msgid "No searches yet for this period."
 msgstr "Nog geen zoekopdrachten voor deze periode."
 
@@ -388,6 +408,9 @@ msgstr "Terugkerende bezoekers"
 msgid "Sat"
 msgstr "Za"
 
+msgid "Screen resolution"
+msgstr "Schermresolutie"
+
 msgid "Search engines"
 msgstr "Zoekmachines"
 
@@ -463,6 +486,9 @@ msgstr "Titel"
 msgid "To"
 msgstr "Naar"
 
+msgid "To verify directly: open a page on the site and check the response headers in your browser's network tab - Cloudflare adds a \"cf-cache-status\" header that reads \"HIT\" once a page is actually served from its edge cache, \"DYNAMIC\"/\"MISS\" otherwise."
+msgstr "Direct verifiëren: open een pagina op de site en bekijk de response-headers in het netwerktabblad van je browser - Cloudflare voegt een \"cf-cache-status\"-header toe die \"HIT\" toont zodra een pagina daadwerkelijk uit de edge-cache wordt geserveerd, en anders \"DYNAMIC\"/\"MISS\"."
+
 msgid "Today"
 msgstr "Vandaag"
 
@@ -505,6 +531,9 @@ msgstr "Bezoekers"
 msgid "Visitors per hour (today)"
 msgstr "Bezoekers per uur (vandaag)"
 
+msgid "Visitors per hour, today vs. yesterday"
+msgstr "Bezoekers per uur, vandaag versus gisteren"
+
 msgid "Visitors per hour today"
 msgstr "Bezoekers per uur vandaag"
 
@@ -522,6 +551,9 @@ msgstr "Van welke pagina bezoekers naar welke andere pagina doorklikken binnen �
 
 msgid "WooCommerce funnel"
 msgstr "WooCommerce-funnel"
+
+msgid "Yesterday"
+msgstr "Gisteren"
 
 msgid "Zero-result searches"
 msgstr "Zoekopdrachten zonder resultaat"
