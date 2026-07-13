@@ -4,7 +4,7 @@ Tags: analytics, statistics, privacy, page views, cookieless
 Requires at least: 6.0
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 1.18.1
+Stable tag: 1.19.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -120,6 +120,25 @@ On the plugin's GitHub repository: https://github.com/fbloemhof/turf-stats/issue
    tracked separately from human visitors, with the pages they crawl most.
 
 == Changelog ==
+
+= 1.19.0 =
+* New "Screen resolution" breakdown box: visitor screen sizes (in CSS
+  pixels) are recorded with each view. The new database columns are added
+  automatically on update.
+* New "Avg. load time" stat box: page load times are measured in the
+  visitor's browser via the Navigation Timing API and averaged per period.
+* The "Online now" box gains a live "Currently viewed" list of the pages
+  current visitors are on, refreshed on the same 20-second poll.
+* Hourly visitors chart reworked: a fixed 24-hour axis with a dashed
+  "yesterday" line for direct comparison against the previous day.
+* Daily views/visitors bars now show their values on the chart, with
+  density-based label sizing on the 30- and 90-day views.
+* The Caching box now explains itself when a cache layer is detected but
+  is serving (almost) none of the tracked page views.
+* Much faster legacy view-count import: a Jetpack top-posts pre-pass
+  covers the most-viewed posts in one request, admin-page batches run
+  concurrently, and the WP-CLI command gains --offset/--limit flags.
+* Dutch (nl_NL) translation updated for all new strings.
 
 = 1.18.1 =
 * Added wordpress.org listing screenshots (Statistics overview, Analysis,
