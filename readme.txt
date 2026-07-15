@@ -4,7 +4,7 @@ Tags: analytics, statistics, privacy, page views, cookieless
 Requires at least: 6.0
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 1.19.0
+Stable tag: 1.20.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -120,6 +120,15 @@ On the plugin's GitHub repository: https://github.com/fbloemhof/turf-stats/issue
    tracked separately from human visitors, with the pages they crawl most.
 
 == Changelog ==
+
+= 1.20.0 =
+* Added date navigation (native date picker, Yesterday tab) with fixed-date sentinel fix.
+* Added top-referrers 'Toon meer' toggle (shows 10, reveals up to 50).
+* Added dashboard widget (online now, today's views/visitors with % vs yesterday), reusing overview card styling.
+* Added review-nudge snooze (random 30-90 days, max 3x then permanent).
+* Added device-class label (Phone/Tablet/Desktop) at screen resolution.
+* Fixed 90-day chart overflow (gap + horizontal scroll).
+* Dutch translations for new strings.
 
 = 1.19.0 =
 * New "Screen resolution" breakdown box: visitor screen sizes (in CSS
