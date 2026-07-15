@@ -31,13 +31,7 @@ function turf_get_comment_totals( $days, $offset_days = 0 ) {
 		) );
 	}
 
-	if ( TURF_PERIOD_TODAY === $days ) {
-		$end   = ( 0 === $offset_days ) ? current_time( 'mysql', true ) : turf_local_midnight_utc( 0 );
-		$start = turf_local_midnight_utc( $offset_days );
-	} else {
-		$end   = gmdate( 'Y-m-d H:i:s', strtotime( "-{$offset_days} days" ) );
-		$start = gmdate( 'Y-m-d H:i:s', strtotime( '-' . ( $offset_days + $days ) . ' days' ) );
-	}
+	list( $start, $end ) = turf_period_window( $days, $offset_days );
 
 	return (int) $wpdb->get_var( $wpdb->prepare(
 		"SELECT COUNT(*) FROM $wpdb->comments c
@@ -57,8 +51,9 @@ function turf_get_top_commented_posts( $days ) {
 	$params     = $post_types;
 
 	if ( 0 !== $days ) {
-		$where_date = 'AND c.comment_date_gmt >= %s';
-		$params[]   = turf_period_start_sql_date( $days );
+		list( $where_date, $date_params ) = turf_period_where_sql( $days, 'c.comment_date_gmt' );
+		$where_date = ltrim( $where_date, 'AND ' );
+		$params     = array_merge( $params, $date_params );
 	}
 
 	$params[] = turf_list_max();

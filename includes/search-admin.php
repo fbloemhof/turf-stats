@@ -17,8 +17,9 @@ function turf_search_get_top_terms( $days, $limit = 15 ) {
 	$params     = array();
 
 	if ( 0 !== $days ) {
-		$where_date = 'WHERE searched_at >= %s';
-		$params[]   = turf_period_start_sql_date( $days );
+		list( $where_date, $date_params ) = turf_period_where_sql( $days, 'searched_at' );
+		$where_date = ltrim( $where_date, 'AND ' );
+		$params     = array_merge( $date_params, $params );
 	}
 
 	$params[] = $limit;
@@ -41,8 +42,8 @@ function turf_search_get_zero_result_terms( $days, $limit = 15 ) {
 	$params     = array();
 
 	if ( 0 !== $days ) {
-		$where_date = 'AND searched_at >= %s';
-		$params[]   = turf_period_start_sql_date( $days );
+		list( $where_date, $date_params ) = turf_period_where_sql( $days, 'searched_at' );
+		$params     = array_merge( $date_params, $params );
 	}
 
 	$params[] = $limit;

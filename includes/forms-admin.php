@@ -18,8 +18,9 @@ function turf_forms_get_top_forms( $days, $limit = 10 ) {
 	$params     = array();
 
 	if ( 0 !== $days ) {
-		$where_date = 'WHERE submitted_at >= %s';
-		$params[]   = turf_period_start_sql_date( $days );
+		list( $where_date, $date_params ) = turf_period_where_sql( $days, 'submitted_at' );
+		$where_date = ltrim( $where_date, 'AND ' );
+		$params     = array_merge( $date_params, $params );
 	}
 
 	$params[] = $limit;
@@ -71,10 +72,10 @@ function turf_forms_render_top_forms( $days ) {
 
 					if ( 0 !== $days ) {
 						$views_table = turf_table();
+						list( $where_sql, $date_params ) = turf_period_where_sql( $days, 'viewed_at' );
 						$page_views  = (int) $wpdb->get_var( $wpdb->prepare(
-							"SELECT COUNT(*) FROM {$views_table} WHERE post_id = %d AND viewed_at >= %s", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- own-prefix table name.
-							$post_id,
-							turf_period_start_sql_date( $days )
+							"SELECT COUNT(*) FROM {$views_table} WHERE post_id = %d $where_sql", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- own-prefix table name.
+							array_merge( array( $post_id ), $date_params )
 						) );
 					} else {
 						$page_views = turf_get_views( $post_id );

@@ -105,7 +105,7 @@ function turf_views_register_metaboxes() {
 	add_meta_box( 'turf_peak_hours', __( 'Peak hours', 'turf-stats' ), function () use ( $days ) {
 		// A single day is too sparse for a meaningful 7x24 heatmap - shows
 		// the last 7 days for context instead, same as the Vandaag chart.
-		turf_render_peak_hours( TURF_PERIOD_TODAY === $days ? 7 : $days );
+		turf_render_peak_hours( turf_is_single_day( $days ) ? 7 : $days );
 	}, $hook, 'turf_wide' );
 
 	$post_types = turf_trackable_post_types();
@@ -219,12 +219,12 @@ function turf_get_range_site_totals( $days, $offset_days = 0 ) {
 	$table = turf_table();
 	list( $join, $where, $params ) = turf_site_join_and_where();
 
-	if ( TURF_PERIOD_TODAY === $days ) {
-		$end   = ( 0 === $offset_days ) ? current_time( 'mysql', true ) : turf_local_midnight_utc( 0 );
-		$start = turf_local_midnight_utc( $offset_days );
-	} else {
-		$end   = gmdate( 'Y-m-d H:i:s', strtotime( "-{$offset_days} days" ) );
-		$start = gmdate( 'Y-m-d H:i:s', strtotime( '-' . ( $offset_days + $days ) . ' days' ) );
+	list( $start, $end ) = turf_period_window( $days, $offset_days );
+
+	$bounds = '';
+	if ( null !== $start ) {
+		$bounds = 'AND v.viewed_at >= %s AND v.viewed_at < %s';
+		$params = array_merge( $params, array( $start, $end ) );
 	}
 
 	$row = $wpdb->get_row( $wpdb->prepare(
@@ -232,8 +232,8 @@ function turf_get_range_site_totals( $days, $offset_days = 0 ) {
 		FROM $table v
 		$join
 		WHERE $where
-		AND v.viewed_at >= %s AND v.viewed_at < %s",
-		array_merge( $params, array( $start, $end ) )
+		$bounds",
+		$params
 	) );
 
 	return array( 'views' => (int) $row->views, 'visitors' => (int) $row->visitors );
@@ -252,19 +252,18 @@ function turf_get_range_raw_views( $days, $offset_days = 0 ) {
 
 	$table = turf_raw_hits_table();
 
-	if ( TURF_PERIOD_TODAY === $days ) {
-		$end   = ( 0 === $offset_days ) ? current_time( 'mysql', true ) : turf_local_midnight_utc( 0 );
-		$start = turf_local_midnight_utc( $offset_days );
+	if ( 0 === $days ) {
+		// "All" - whole table, no date bounds (the offset math below collapses
+		// to an empty range at days = 0).
+		$sum = $wpdb->get_var( "SELECT SUM(hits) FROM $table" );
 	} else {
-		$end   = gmdate( 'Y-m-d H:i:s', strtotime( "-{$offset_days} days" ) );
-		$start = gmdate( 'Y-m-d H:i:s', strtotime( '-' . ( $offset_days + $days ) . ' days' ) );
+		list( $start, $end ) = turf_period_window( $days, $offset_days );
+		$sum = $wpdb->get_var( $wpdb->prepare(
+			"SELECT SUM(hits) FROM $table WHERE hit_hour >= %s AND hit_hour < %s",
+			$start,
+			$end
+		) );
 	}
-
-	$sum = $wpdb->get_var( $wpdb->prepare(
-		"SELECT SUM(hits) FROM $table WHERE hit_hour >= %s AND hit_hour < %s",
-		$start,
-		$end
-	) );
 
 	return ( null === $sum ) ? null : (int) $sum;
 }
@@ -288,13 +287,7 @@ function turf_get_range_cache_totals( $days, $offset_days = 0 ) {
 		// to an empty range at days = 0).
 		$row = $wpdb->get_row( "SELECT SUM(hits) AS raw, SUM(origin_hits) AS origin FROM $table" );
 	} else {
-		if ( TURF_PERIOD_TODAY === $days ) {
-			$end   = ( 0 === $offset_days ) ? current_time( 'mysql', true ) : turf_local_midnight_utc( 0 );
-			$start = turf_local_midnight_utc( $offset_days );
-		} else {
-			$end   = gmdate( 'Y-m-d H:i:s', strtotime( "-{$offset_days} days" ) );
-			$start = gmdate( 'Y-m-d H:i:s', strtotime( '-' . ( $offset_days + $days ) . ' days' ) );
-		}
+		list( $start, $end ) = turf_period_window( $days, $offset_days );
 
 		$row = $wpdb->get_row( $wpdb->prepare(
 			"SELECT SUM(hits) AS raw, SUM(origin_hits) AS origin
@@ -319,6 +312,14 @@ function turf_get_daily_site_totals( $days ) {
 
 	$table = turf_table();
 	list( $join, $where, $params ) = turf_site_join_and_where();
+
+	// Single-day periods (Today/Yesterday/fixed date) show the 7 days *ending
+	// on* the anchor day as their context chart - same role as the old
+	// hard-coded 7 for Today, but anchored so the rightmost bar is the
+	// selected day rather than always "today".
+	if ( turf_is_single_day( $days ) ) {
+		return turf_get_daily_site_totals_ending_on( $days );
+	}
 
 	$start = turf_period_start_sql_date( $days );
 
@@ -505,6 +506,13 @@ function turf_ajax_overview_stats() {
 	$days  = isset( $_POST['days'] ) ? (int) $_POST['days'] : 7;
 	$boxes = array();
 
+	// A fixed date arriving from the refresh polling must reach the day
+	// helpers (they read $_GET['date']), so surface it there for the
+	// lifetime of this request.
+	if ( ! empty( $_POST['date'] ) && preg_match( '/^\d{4}-\d{2}-\d{2}$/', sanitize_text_field( wp_unslash( $_POST['date'] ) ) ) ) {
+		$_GET['date'] = sanitize_text_field( wp_unslash( $_POST['date'] ) );
+	}
+
 	if ( 0 === $days ) {
 		$totals   = turf_get_alltime_site_totals();
 		$comments = turf_get_comment_totals( 0 );
@@ -578,19 +586,19 @@ function turf_render_overview( $days ) {
 		return;
 	}
 
-	if ( TURF_PERIOD_TODAY === $days ) {
+	if ( turf_is_single_day( $days ) ) {
 		$current           = turf_get_range_site_totals( $days, 0 );
 		$previous          = turf_get_range_site_totals( $days, 1 );
 		$current_comments  = turf_get_comment_totals( $days, 0 );
 		$previous_comments = turf_get_comment_totals( $days, 1 );
 		?>
 		<div class="bk-stats-overview">
-			<div class="bk-stats-overview__totals" id="turf-overview-totals" data-days="<?php echo esc_attr( $days ); ?>">
+			<div class="bk-stats-overview__totals" id="turf-overview-totals" data-days="<?php echo esc_attr( $days ); ?>" data-date="<?php echo esc_attr( turf_single_day_anchor( $days ) ); ?>">
 				<?php turf_render_online_now(); ?>
 				<?php turf_render_overview_stat_boxes( $days, $current, $previous, $current_comments, $previous_comments, 1 ); ?>
 			</div>
-			<?php turf_render_hourly_visitors_chart(); ?>
-			<?php turf_render_daily_chart( turf_get_daily_site_totals( 7 ) ); ?>
+			<?php turf_render_hourly_visitors_chart( $days ); ?>
+			<?php turf_render_daily_chart( turf_get_daily_site_totals( $days ) ); ?>
 		</div>
 		<?php
 		return;
@@ -793,9 +801,15 @@ function turf_get_hourly_visitors_for_offset( $offset_days ) {
  * keep the lines crisp at any width. Bails out only when there's truly
  * nothing to plot (zero visitors across both days so far).
  */
-function turf_render_hourly_visitors_chart() {
-	$today     = turf_get_hourly_visitors_for_offset( 0 );
-	$yesterday = turf_get_hourly_visitors_for_offset( 1 );
+function turf_render_hourly_visitors_chart( $days = TURF_PERIOD_TODAY ) {
+	// The primary line is the selected day (today by default, or the anchor
+	// day for Yesterday / a fixed date); the comparison line is the day
+	// immediately before it. Offsets are expressed relative to the anchor so
+	// the overlay stays a same-scale "this day vs. the day before" comparison
+	// regardless of which day is selected.
+	$anchor_offset = turf_single_day_anchor_offset( $days );
+	$today     = turf_get_hourly_visitors_for_offset( $anchor_offset );
+	$yesterday = turf_get_hourly_visitors_for_offset( $anchor_offset + 1 );
 
 	$known_visitors = array_filter(
 		array_merge( array_column( $today, 'visitors' ), array_column( $yesterday, 'visitors' ) ),
@@ -869,12 +883,12 @@ function turf_render_hourly_visitors_chart() {
 	?>
 	<div class="bk-stats-hourly">
 		<div class="bk-stats-overview__legend">
-			<span class="bk-stats-legend bk-stats-legend--visitors"><?php esc_html_e( 'Today', 'turf-stats' ); ?></span>
+			<span class="bk-stats-legend bk-stats-legend--visitors"><?php echo esc_html( date_i18n( 'j M', strtotime( turf_single_day_anchor( $days ) ) ) ); ?></span>
 			<?php if ( $has_yesterday ) : ?>
-				<span class="bk-stats-legend bk-stats-legend--yesterday"><?php esc_html_e( 'Yesterday', 'turf-stats' ); ?></span>
+				<span class="bk-stats-legend bk-stats-legend--yesterday"><?php echo esc_html( date_i18n( 'j M', strtotime( turf_single_day_anchor( $days ) . ' -1 day' ) ) ); ?></span>
 			<?php endif; ?>
 		</div>
-		<svg class="bk-stats-hourly__svg" viewBox="0 0 <?php echo (int) $w; ?> <?php echo (int) $h; ?>" preserveAspectRatio="none" role="img" aria-label="<?php esc_attr_e( 'Visitors per hour, today vs. yesterday', 'turf-stats' ); ?>">
+		<svg class="bk-stats-hourly__svg" viewBox="0 0 <?php echo (int) $w; ?> <?php echo (int) $h; ?>" preserveAspectRatio="none" role="img" aria-label="<?php esc_attr_e( 'Visitors per hour', 'turf-stats' ); ?>">
 			<line class="bk-stats-hourly__grid" x1="0" y1="<?php echo esc_attr( $baseline ); ?>" x2="<?php echo (int) $w; ?>" y2="<?php echo esc_attr( $baseline ); ?>" vector-effect="non-scaling-stroke" />
 
 			<?php if ( $yesterday_line ) : ?>
@@ -884,9 +898,10 @@ function turf_render_hourly_visitors_chart() {
 						<title>
 					<?php
 					printf(
-						/* translators: 1: hour of day (0-23), 2: number of visitors */
-						esc_html__( '%1$02d:00 yesterday — %2$s visitors', 'turf-stats' ),
+						/* translators: 1: hour of day (0-23), 2: date, 3: number of visitors */
+						esc_html__( '%1$02d:00 %2$s — %3$s visitors', 'turf-stats' ),
 						(int) $p['hour'],
+						esc_html( date_i18n( 'j M', strtotime( turf_single_day_anchor( $days ) . ' -1 day' ) ) ),
 						esc_html( number_format_i18n( $p['visitors'] ) )
 					);
 					?>
@@ -1104,8 +1119,8 @@ function turf_get_breakdown( $column, $days, $exclude_empty = false ) {
 	$where_date = '';
 
 	if ( 0 !== $days ) {
-		$where_date = 'AND v.viewed_at >= %s';
-		$params[]   = turf_period_start_sql_date( $days );
+		list( $where_date, $date_params ) = turf_period_where_sql( $days, 'v.viewed_at' );
+		$params = array_merge( $params, $date_params );
 	}
 
 	$where_empty = $exclude_empty ? "AND v.$column != ''" : '';
@@ -1143,14 +1158,15 @@ function turf_get_screen_breakdown( $days ) {
 	$where_date = '';
 
 	if ( 0 !== $days ) {
-		$where_date = 'AND v.viewed_at >= %s';
-		$params[]   = turf_period_start_sql_date( $days );
+		list( $where_date, $date_params ) = turf_period_where_sql( $days, 'v.viewed_at' );
+		$params = array_merge( $params, $date_params );
 	}
 
 	return $wpdb->get_results( $wpdb->prepare(
 		"SELECT
 			CASE WHEN v.screen_width IS NULL OR v.screen_height IS NULL THEN ''
 				ELSE CONCAT(v.screen_width, '×', v.screen_height) END AS label,
+			MAX(v.screen_width) AS screen_width,
 			COUNT(*) AS views, COUNT(DISTINCT v.visitor_hash) AS visitors
 		FROM $table v
 		$join
@@ -1165,8 +1181,33 @@ function turf_render_screen_breakdown( $days ) {
 	$rows = turf_get_screen_breakdown( $days );
 
 	turf_render_breakdown_rows( $rows, function ( $raw ) {
-		return turf_breakdown_label( 'screen', $raw );
+		$label = turf_breakdown_label( 'screen', $raw );
+		if ( '' === $raw ) {
+			return $label;
+		}
+		// Derive the device class from the width encoded in the "W×H" label,
+		// so each resolution row also shows whether it was phone/tablet/
+		// desktop-class - the viewport, not the user-agent string.
+		$width = (int) explode( '×', $raw )[0];
+		$class = turf_screen_device_class( $width );
+
+		return $class ? $label . ' · ' . turf_device_class_label( $class ) : $label;
 	} );
+}
+
+/**
+ * Display label for a viewport-derived device class.
+ *
+ * @param string $class 'phone' | 'tablet' | 'desktop'.
+ */
+function turf_device_class_label( $class ) {
+	$labels = array(
+		'phone'   => __( 'Phone', 'turf-stats' ),
+		'tablet'  => __( 'Tablet', 'turf-stats' ),
+		'desktop' => __( 'Desktop', 'turf-stats' ),
+	);
+
+	return $labels[ $class ] ?? $class;
 }
 
 function turf_breakdown_label( $column, $raw ) {
@@ -1329,8 +1370,8 @@ function turf_get_referrer_breakdown( $days ) {
 	$where_date = '';
 
 	if ( 0 !== $days ) {
-		$where_date = 'AND v.viewed_at >= %s';
-		$params[]   = turf_period_start_sql_date( $days );
+		list( $where_date, $date_params ) = turf_period_where_sql( $days, 'v.viewed_at' );
+		$params = array_merge( $params, $date_params );
 	}
 
 	return $wpdb->get_results( $wpdb->prepare(
@@ -1376,8 +1417,8 @@ function turf_get_top_referrer_hosts( $days, $limit = 10 ) {
 	$where_date = '';
 
 	if ( 0 !== $days ) {
-		$where_date = 'AND v.viewed_at >= %s';
-		$params[]   = turf_period_start_sql_date( $days );
+		list( $where_date, $date_params ) = turf_period_where_sql( $days, 'v.viewed_at' );
+		$params = array_merge( $params, $date_params );
 	}
 
 	$params[] = $site_host;
@@ -1406,8 +1447,13 @@ function turf_get_top_referrer_hosts( $days, $limit = 10 ) {
  *
  * @param object[] $rows           Each with ->label, ->views, ->visitors.
  * @param callable $label_callback Maps a raw $row->label to a display label.
+ * @param int      $visible        How many rows to show before the "Show more"
+ *                                  toggle collapses the rest. 0 (default) shows
+ *                                  every row; any positive N caps the initial
+ *                                  reveal at N (the existing postbox-more JS adds
+ *                                  the toggle when there are more rows than N).
  */
-function turf_render_breakdown_rows( $rows, $label_callback ) {
+function turf_render_breakdown_rows( $rows, $label_callback, $visible = 0 ) {
 	// No output at all when empty, so turf_maybe_add_meta_box() can drop the
 	// whole box instead of showing an empty "No data yet" placeholder.
 	if ( ! $rows ) {
@@ -1421,7 +1467,8 @@ function turf_render_breakdown_rows( $rows, $label_callback ) {
 	// Wrapper so the before-paint collapse CSS and the "Show more" toggle can
 	// target exactly these bar-rows (the .inside can also hold a description
 	// <p> or note as a sibling, which must not be counted as a row).
-	echo '<div class="bk-stats-bar-list">';
+	$visible_attr = $visible > 0 ? ' data-turf-visible="' . (int) $visible . '"' : '';
+	echo '<div class="bk-stats-bar-list"' . $visible_attr . '>';
 
 	foreach ( $rows as $row ) :
 		$views        = (int) $row->views;
@@ -1484,9 +1531,13 @@ function turf_render_referrer_breakdown( $days ) {
 }
 
 function turf_render_top_referrer_hosts( $days ) {
-	$rows = turf_get_top_referrer_hosts( $days );
+	// Fetch the full list (capped at turf_list_max()) but reveal only the top
+	// 10 by default - the shared postbox-more toggle then exposes "Toon alle
+	// verwijzende sites" for the rest, so a busy site isn't flooded by dozens
+	// of rows while the headline referrers stay one glance away.
+	$rows = turf_get_top_referrer_hosts( $days, turf_list_max() );
 
-	turf_render_breakdown_rows( $rows, 'turf_referrer_host_label' );
+	turf_render_breakdown_rows( $rows, 'turf_referrer_host_label', 10 );
 }
 
 /**
@@ -1618,8 +1669,14 @@ function turf_admin_inline_css() {
 		.bk-stats-legend::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: middle; }
 		.bk-stats-legend--views::before { background: color-mix(in srgb, var(--wp-admin-theme-color, #2271b1) 35%, #fff); }
 		.bk-stats-legend--visitors::before { background: var(--wp-admin-theme-color, #2271b1); }
-		.bk-stats-chart { display: flex; align-items: flex-end; gap: 8px; height: 200px; padding: 10px 0; border-bottom: 1px solid #dcdcde; }
-		.bk-stats-chart__col { flex: 1; display: flex; flex-direction: column; align-items: center; height: 100%; }
+		.turf-date-jump { display: inline-flex; align-items: center; gap: 6px; margin: 0 0 0 16px; vertical-align: middle; font-size: 13px; font-family: inherit; }
+		.turf-date-jump label { font-weight: 400; color: #50575e; }
+		.turf-date-jump input[type="date"] { font-family: inherit; font-size: 13px; vertical-align: middle; }
+		.turf-review-nudge p { max-width: 70ch; }
+		.turf-dash .bk-stats-overview__totals { margin-bottom: 12px; }
+		.turf-dash__more { margin-top: 10px; }
+		.bk-stats-chart { display: flex; align-items: flex-end; gap: 8px; height: 200px; padding: 10px 0; border-bottom: 1px solid #dcdcde; overflow-x: auto; }
+		.bk-stats-chart__col { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center; height: 100%; }
 		.bk-stats-chart__bars { position: relative; width: 100%; max-width: 36px; height: 160px; }
 		.bk-stats-chart__bar { position: absolute; bottom: 0; left: 0; width: 100%; border-radius: 2px 2px 0 0; }
 		.bk-stats-chart__bar--views { background: color-mix(in srgb, var(--wp-admin-theme-color, #2271b1) 35%, #fff); }
@@ -1638,8 +1695,12 @@ function turf_admin_inline_css() {
 		   still fit without touching its neighbors. */
 		.bk-stats-chart--dense .bk-stats-chart__value { font-size: 9px; padding-bottom: 3px; }
 		/* 90-day chart: narrower still - drop the thousands separator's
-		   width by tightening tracking a touch further. */
-		.bk-stats-chart--very-dense .bk-stats-chart__value { font-size: 8px; padding-bottom: 2px; letter-spacing: -0.2px; }
+		   width by tightening tracking a touch further. The bigger fix for
+		   the old "bars run off the right edge" bug: the 8px column gap
+		   alone exceeded the box width at 90 columns, so collapse it here
+		   and let the container scroll (overflow-x:auto) as a safety net. */
+		.bk-stats-chart--very-dense { gap: 2px; }
+		.bk-stats-chart--very-dense .bk-stats-chart__col { min-width: 2px; }
 		.bk-stats-chart__label { margin-top: 6px; font-size: 11px; color: #646970; }
 		.bk-stats-hourly { margin-bottom: 18px; }
 		.bk-stats-hourly__svg { display: block; width: 100%; height: auto; overflow: visible; }
@@ -1819,8 +1880,8 @@ function turf_get_avg_load_time_ms( $days ) {
 	$where_date = '';
 
 	if ( 0 !== $days ) {
-		$where_date = 'AND v.viewed_at >= %s';
-		$params[]   = turf_period_start_sql_date( $days );
+		list( $where_date, $date_params ) = turf_period_where_sql( $days, 'v.viewed_at' );
+		$params = array_merge( $params, $date_params );
 	}
 
 	$avg = $wpdb->get_var( $wpdb->prepare(

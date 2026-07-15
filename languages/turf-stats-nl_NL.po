@@ -558,6 +558,57 @@ msgstr "WooCommerce-funnel"
 msgid "Yesterday"
 msgstr "Gisteren"
 
+msgid "Go to date"
+msgstr "Ga naar datum"
+
+msgid "Clear date"
+msgstr "Datum wissen"
+
+msgid "Enjoying Turf Stats?"
+msgstr "Vind je Turf Stats handig?"
+
+msgid "A quick review on WordPress.org helps more site owners discover it - and takes less than a minute. No pressure if now isn't the moment."
+msgstr "Een korte review op WordPress.org helpt meer site-eigenaren de plugin te ontdekken - en kost minder dan een minuut. Geen probleem als het nu niet uitkomt."
+
+msgid "Leave a review"
+msgstr "Review schrijven"
+
+msgid "Not now"
+msgstr "Niet nu"
+
+msgid "Toon"
+msgstr "Toon"
+
+msgid "Top referrer"
+msgstr "Top verwijzer"
+
+msgid "Most viewed"
+msgstr "Meest bekeken"
+
+msgid "View all statistics"
+msgstr "Alle statistieken bekijken"
+
+msgid "Online now"
+msgstr "Nu online"
+
+msgid "Views today"
+msgstr "Weergaven vandaag"
+
+msgid "Visitors today"
+msgstr "Bezoekers vandaag"
+
+msgid "vs yesterday"
+msgstr "t.o.v. gisteren"
+
+msgid "Phone"
+msgstr "Telefoon"
+
+msgid "Tablet"
+msgstr "Tablet"
+
+msgid "Desktop"
+msgstr "Desktop"
+
 msgid "Zero-result searches"
 msgstr "Zoekopdrachten zonder resultaat"
 

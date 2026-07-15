@@ -73,13 +73,7 @@ function turf_bots_get_range_totals( $days, $offset_days = 0 ) {
 		return array( 'hits' => $hits, 'pages' => $pages );
 	}
 
-	if ( TURF_PERIOD_TODAY === $days ) {
-		$end   = ( 0 === $offset_days ) ? current_time( 'mysql', true ) : turf_local_midnight_utc( 0 );
-		$start = turf_local_midnight_utc( $offset_days );
-	} else {
-		$end   = gmdate( 'Y-m-d H:i:s', strtotime( "-{$offset_days} days" ) );
-		$start = gmdate( 'Y-m-d H:i:s', strtotime( '-' . ( $offset_days + $days ) . ' days' ) );
-	}
+	list( $start, $end ) = turf_period_window( $days, $offset_days );
 
 	$hits = (int) $wpdb->get_var( $wpdb->prepare(
 		"SELECT COUNT(*) FROM $table WHERE visited_at >= %s AND visited_at < %s",
@@ -130,9 +124,11 @@ function turf_bots_get_category_breakdown( $days ) {
 		return $wpdb->get_results( "SELECT bot_category AS label, COUNT(*) AS total FROM $table GROUP BY bot_category ORDER BY total DESC" );
 	}
 
+	list( $where_sql, $date_params ) = turf_period_where_sql( $days, 'visited_at' );
+
 	return $wpdb->get_results( $wpdb->prepare(
-		"SELECT bot_category AS label, COUNT(*) AS total FROM $table WHERE visited_at >= %s GROUP BY bot_category ORDER BY total DESC",
-		turf_period_start_sql_date( $days )
+		"SELECT bot_category AS label, COUNT(*) AS total FROM $table $where_sql GROUP BY bot_category ORDER BY total DESC",
+		$date_params
 	) );
 }
 
@@ -147,10 +143,11 @@ function turf_bots_get_top_bots( $days, $limit = 10 ) {
 		) );
 	}
 
+	list( $where_sql, $date_params ) = turf_period_where_sql( $days, 'visited_at' );
+
 	return $wpdb->get_results( $wpdb->prepare(
-		"SELECT bot_name AS label, COUNT(*) AS total FROM $table WHERE visited_at >= %s GROUP BY bot_name ORDER BY total DESC LIMIT %d",
-		turf_period_start_sql_date( $days ),
-		$limit
+		"SELECT bot_name AS label, COUNT(*) AS total FROM $table $where_sql GROUP BY bot_name ORDER BY total DESC LIMIT %d",
+		array_merge( $date_params, array( $limit ) )
 	) );
 }
 
@@ -197,7 +194,10 @@ function turf_bots_get_top_crawled_pages( $days ) {
 	global $wpdb;
 	$table = turf_bots_table();
 
-	$where_date = 0 !== $days ? $wpdb->prepare( 'AND visited_at >= %s', turf_period_start_sql_date( $days ) ) : '';
+	$where_date = '';
+	if ( 0 !== $days ) {
+		list( $where_date ) = turf_period_where_sql( $days, 'visited_at' );
+	}
 
 	return $wpdb->get_results( $wpdb->prepare(
 		"(SELECT 'post' AS kind, post_id AS object_id, COUNT(*) AS hits FROM $table WHERE post_id IS NOT NULL $where_date GROUP BY post_id)

@@ -58,6 +58,8 @@ require_once TURF_PATH . 'includes/forms-admin.php';
 require_once TURF_PATH . 'includes/social-share.php';
 require_once TURF_PATH . 'includes/retention.php';
 require_once TURF_PATH . 'includes/import-admin.php';
+require_once TURF_PATH . 'includes/dashboard.php';
+require_once TURF_PATH . 'includes/review-notice.php';
 
 if ( defined( 'WP_CLI' ) && WP_CLI ) {
 	require_once TURF_PATH . 'includes/cli.php';

@@ -39,8 +39,8 @@ function turf_get_session_rows( $days ) {
 	$where_date = '';
 
 	if ( 0 !== $days ) {
-		$where_date = 'AND v.viewed_at >= %s';
-		$params[]   = turf_period_start_sql_date( $days );
+		list( $where_date, $date_params ) = turf_period_where_sql( $days, 'v.viewed_at' );
+		$params = array_merge( $params, $date_params );
 	}
 
 	$params[] = turf_session_row_limit();
@@ -213,8 +213,8 @@ function turf_get_avg_session_seconds( $days ) {
 	$where_date = '';
 
 	if ( 0 !== $days ) {
-		$where_date = 'AND v.viewed_at >= %s';
-		$params[]   = turf_period_start_sql_date( $days );
+		list( $where_date, $date_params ) = turf_period_where_sql( $days, 'v.viewed_at' );
+		$params = array_merge( $params, $date_params );
 	}
 
 	$params[] = turf_session_row_limit();

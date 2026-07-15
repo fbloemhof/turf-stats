@@ -323,6 +323,32 @@ function turf_parse_device_type( $user_agent ) {
 }
 
 /**
+ * Device class inferred from a reported viewport width (CSS pixels). More
+ * honest than the UA-based device_type for the "what did visitors actually
+ * use" question: it reflects the rendering width, not the marketing string.
+ * Brackets follow common responsive breakpoints: phones < 600px, tablets
+ * 600-1024px, everything wider is desktop-class.
+ *
+ * @param int|null $width Viewport width in CSS pixels, or null if unknown.
+ * @return string         'phone' | 'tablet' | 'desktop' | '' (unknown).
+ */
+function turf_screen_device_class( $width ) {
+	if ( null === $width || $width <= 0 ) {
+		return '';
+	}
+
+	if ( $width < 600 ) {
+		return 'phone';
+	}
+
+	if ( $width <= 1024 ) {
+		return 'tablet';
+	}
+
+	return 'desktop';
+}
+
+/**
  * Coarse browser family from the user-agent. Order matters: browsers that
  * embed another engine's name in their UA string (Edge/Opera contain
  * "Chrome", Chrome contains "Safari") must be checked before that engine.
