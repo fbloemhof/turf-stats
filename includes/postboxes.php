@@ -325,21 +325,44 @@ function turf_period_start_sql_date( $days ) {
  * @param int $days Resolved single-day period value.
  * @return array{0: string, 1: string} [ $start_utc, $end_utc ].
  */
-function turf_single_day_window( $days ) {
+/**
+ * [ $start, $end ) UTC boundaries for a window of whole calendar days
+ * (site timezone) around a single-day period's anchor. $start_offset_days
+ * and $end_offset_days shift the window's start/end relative to the anchor
+ * day (both 0 = the anchor day itself, matching turf_single_day_window()).
+ * Used by every single-day range query so the boundary math lives in one
+ * place - the daily chart needs a 7-day window (start -6, end +1), while the
+ * headline stat boxes need exactly the anchor day (0, 0).
+ *
+ * @param int $days               Resolved single-day period value.
+ * @param int $start_offset_days  Days before the anchor the window starts (default 0).
+ * @param int $end_offset_days    Days after the anchor the window ends (default 0 = +1 day).
+ * @return array{0: string, 1: string} [ $start, $end ] as 'Y-m-d H:i:s' in UTC.
+ */
+function turf_day_window( $days, $start_offset_days = 0, $end_offset_days = 0 ) {
 	$anchor = turf_single_day_anchor( $days );
 
 	$tz = wp_timezone();
-	$dt = DateTime::createFromFormat( 'Y-m-d', $anchor, $tz );
-	$dt->setTime( 0, 0, 0 );
 
-	$start_dt = clone $dt;
-	$end_dt   = clone $dt;
-	$end_dt->modify( '+1 day' );
+	$start_dt = DateTime::createFromFormat( 'Y-m-d', $anchor, $tz );
+	$start_dt->setTime( 0, 0, 0 )->modify( sprintf( '%+d days', -$start_offset_days ) );
+
+	$end_dt = DateTime::createFromFormat( 'Y-m-d', $anchor, $tz );
+	$end_dt->setTime( 0, 0, 0 )->modify( sprintf( '%+d days', $end_offset_days + 1 ) );
 
 	$start_dt->setTimezone( new DateTimeZone( 'UTC' ) );
 	$end_dt->setTimezone( new DateTimeZone( 'UTC' ) );
 
 	return array( $start_dt->format( 'Y-m-d H:i:s' ), $end_dt->format( 'Y-m-d H:i:s' ) );
+}
+
+/**
+ * [ $start, $end ) UTC boundaries for a single calendar day (the anchor day
+ * of a single-day period). Thin wrapper over turf_day_window() kept for the
+ * many callers that want exactly one day.
+ */
+function turf_single_day_window( $days ) {
+	return turf_day_window( $days, 0, 0 );
 }
 
 /**
@@ -466,24 +489,11 @@ function turf_get_daily_site_totals_ending_on( $days ) {
 	list( $join, $where, $params ) = turf_site_join_and_where();
 
 	// The chart shows 7 bars (anchor day + the 6 before it), so the query
-	// window must span those 7 days - NOT just the anchor day. Reusing
+	// window must span those 7 days - not just the anchor day. Reusing
 	// turf_single_day_window() here would bound the query to a single day,
 	// leaving 6 of the 7 bars zero-filled (the chart would look like only
 	// "today, plus a sliver of yesterday" under a non-UTC site timezone).
-	$anchor = turf_single_day_anchor( $days );
-	$tz     = wp_timezone();
-
-	$start_dt = DateTime::createFromFormat( 'Y-m-d', $anchor, $tz );
-	$start_dt->setTime( 0, 0, 0 )->modify( '-6 days' );
-
-	$end_dt = DateTime::createFromFormat( 'Y-m-d', $anchor, $tz );
-	$end_dt->setTime( 0, 0, 0 )->modify( '+1 day' );
-
-	$start_dt->setTimezone( new DateTimeZone( 'UTC' ) );
-	$end_dt->setTimezone( new DateTimeZone( 'UTC' ) );
-
-	$start = $start_dt->format( 'Y-m-d H:i:s' );
-	$end   = $end_dt->format( 'Y-m-d H:i:s' );
+	list( $start, $end ) = turf_day_window( $days, 6, 0 );
 
 	$results = $wpdb->get_results( $wpdb->prepare(
 		"SELECT DATE(v.viewed_at) AS day, COUNT(*) AS views, COUNT(DISTINCT v.visitor_hash) AS visitors

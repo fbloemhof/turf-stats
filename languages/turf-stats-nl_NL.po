@@ -513,6 +513,12 @@ msgstr "Verenigde Staten"
 msgid "Unknown (from before this feature)"
 msgstr "Onbekend (van vóór deze functie)"
 
+msgid "Unknown (no screen size recorded)"
+msgstr "Onbekend (geen scherm-grootte)"
+
+msgid "App / REST API (no screen size)"
+msgstr "App / REST API (geen scherm-grootte)"
+
 msgid "Unknown (no Cloudflare country detection or own GeoIP integration)"
 msgstr "Onbekend (geen Cloudflare-landdetectie of eigen GeoIP-koppeling)"
 

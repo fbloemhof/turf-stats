@@ -1188,14 +1188,14 @@ function turf_render_screen_breakdown( $days ) {
 		// no screen size - bucket them separately instead of lumping them in
 		// with browsers that failed to report one.
 		if ( 'app' === $raw ) {
-			return __( 'App / REST API (geen scherm-grootte)', 'turf-stats' );
+			return __( 'App / REST API (no screen size)', 'turf-stats' );
 		}
 
-		// Real browser views where the client sent no usable screen size
-		// (in-app webview or fingerprinting-protected browser) - distinct
-		// from pre-feature rows, which this plugin never had screen data for.
+		// Views with no usable screen size: either a browser that failed to
+		// report one (in-app webview or fingerprinting-protected browser) or
+		// a row from before this feature existed (always NULL then).
 		if ( '' === $raw ) {
-			return __( 'Onbekend (browser meldde geen scherm-grootte)', 'turf-stats' );
+			return __( 'Unknown (no screen size recorded)', 'turf-stats' );
 		}
 
 		$label = turf_breakdown_label( 'screen', $raw );

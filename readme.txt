@@ -4,7 +4,7 @@ Tags: analytics, statistics, privacy, page views, cookieless
 Requires at least: 6.0
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 1.20.2
+Stable tag: 1.20.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -120,6 +120,12 @@ On the plugin's GitHub repository: https://github.com/fbloemhof/turf-stats/issue
    tracked separately from human visitors, with the pages they crawl most.
 
 == Changelog ==
+
+= 1.20.3 =
+* Screen resolution breakdown labels are now English source strings with
+  Dutch translations in the language file (was accidentally Dutch in code).
+* Daily chart window math extracted into a shared turf_day_window() helper
+  so the single-day and 7-day windows no longer duplicate the timezone logic.
 
 = 1.20.2 =
 * Fixed daily bar chart on the Today/Yesterday/fixed-date tabs: it showed
