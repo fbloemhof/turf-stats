@@ -465,7 +465,25 @@ function turf_get_daily_site_totals_ending_on( $days ) {
 	$table = turf_table();
 	list( $join, $where, $params ) = turf_site_join_and_where();
 
-	list( $start, $end ) = turf_single_day_window( $days );
+	// The chart shows 7 bars (anchor day + the 6 before it), so the query
+	// window must span those 7 days - NOT just the anchor day. Reusing
+	// turf_single_day_window() here would bound the query to a single day,
+	// leaving 6 of the 7 bars zero-filled (the chart would look like only
+	// "today, plus a sliver of yesterday" under a non-UTC site timezone).
+	$anchor = turf_single_day_anchor( $days );
+	$tz     = wp_timezone();
+
+	$start_dt = DateTime::createFromFormat( 'Y-m-d', $anchor, $tz );
+	$start_dt->setTime( 0, 0, 0 )->modify( '-6 days' );
+
+	$end_dt = DateTime::createFromFormat( 'Y-m-d', $anchor, $tz );
+	$end_dt->setTime( 0, 0, 0 )->modify( '+1 day' );
+
+	$start_dt->setTimezone( new DateTimeZone( 'UTC' ) );
+	$end_dt->setTimezone( new DateTimeZone( 'UTC' ) );
+
+	$start = $start_dt->format( 'Y-m-d H:i:s' );
+	$end   = $end_dt->format( 'Y-m-d H:i:s' );
 
 	$results = $wpdb->get_results( $wpdb->prepare(
 		"SELECT DATE(v.viewed_at) AS day, COUNT(*) AS views, COUNT(DISTINCT v.visitor_hash) AS visitors

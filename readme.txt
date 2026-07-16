@@ -4,7 +4,7 @@ Tags: analytics, statistics, privacy, page views, cookieless
 Requires at least: 6.0
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 1.20.1
+Stable tag: 1.20.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -120,6 +120,13 @@ On the plugin's GitHub repository: https://github.com/fbloemhof/turf-stats/issue
    tracked separately from human visitors, with the pages they crawl most.
 
 == Changelog ==
+
+= 1.20.2 =
+* Fixed daily bar chart on the Today/Yesterday/fixed-date tabs: it showed
+  only the anchor day (plus a sliver of the day before under a non-UTC site
+  timezone) instead of the intended 7-day context window. The chart query
+  now spans the 7 days ending on the selected day, matching the 7 bars it
+  renders. Regression from 1.20.0 (date navigation).
 
 = 1.20.1 =
 * Screen resolution: fall back to viewport innerWidth/innerHeight in the
