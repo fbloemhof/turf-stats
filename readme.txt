@@ -126,6 +126,9 @@ On the plugin's GitHub repository: https://github.com/fbloemhof/turf-stats/issue
   Dutch translations in the language file (was accidentally Dutch in code).
 * Daily chart window math extracted into a shared turf_day_window() helper
   so the single-day and 7-day windows no longer duplicate the timezone logic.
+* Fixed TURF_VERSION (the cache-busting version for all enqueued JS/CSS)
+  being stuck at 1.19.0 since the 1.20.0 release - every asset change since
+  then was shipped under an unchanged version string.
 
 = 1.20.2 =
 * Fixed daily bar chart on the Today/Yesterday/fixed-date tabs: it showed
