@@ -1164,15 +1164,18 @@ function turf_get_screen_breakdown( $days ) {
 
 	return $wpdb->get_results( $wpdb->prepare(
 		"SELECT
-			CASE WHEN v.screen_width IS NULL OR v.screen_height IS NULL THEN ''
-				ELSE CONCAT(v.screen_width, '×', v.screen_height) END AS label,
+			CASE
+				WHEN v.screen_width IS NULL OR v.screen_height IS NULL
+					THEN CASE WHEN v.referrer_host IN ('" . TURF_REST_SOURCE_MARKER . "','" . TURF_CONNECTOR_APP_SOURCE_MARKER . "') THEN 'app' ELSE '' END
+				ELSE CONCAT(v.screen_width, '×', v.screen_height)
+			END AS label,
 			MAX(v.screen_width) AS screen_width,
 			COUNT(*) AS views, COUNT(DISTINCT v.visitor_hash) AS visitors
 		FROM $table v
 		$join
 		WHERE $where $where_date
 		GROUP BY label
-		ORDER BY views DESC", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- join/where are internal literals from turf_site_join_and_where(); no user input.
+		ORDER BY views DESC", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- join/where are internal literals from turf_site_join_and_where(); the two referrer markers are internal constants, not user input.
 		$params
 	) );
 }
@@ -1181,10 +1184,22 @@ function turf_render_screen_breakdown( $days ) {
 	$rows = turf_get_screen_breakdown( $days );
 
 	turf_render_breakdown_rows( $rows, function ( $raw ) {
-		$label = turf_breakdown_label( 'screen', $raw );
-		if ( '' === $raw ) {
-			return $label;
+		// App/REST views never run the tracking JS, so they legitimately have
+		// no screen size - bucket them separately instead of lumping them in
+		// with browsers that failed to report one.
+		if ( 'app' === $raw ) {
+			return __( 'App / REST API (geen scherm-grootte)', 'turf-stats' );
 		}
+
+		// Real browser views where the client sent no usable screen size
+		// (in-app webview or fingerprinting-protected browser) - distinct
+		// from pre-feature rows, which this plugin never had screen data for.
+		if ( '' === $raw ) {
+			return __( 'Onbekend (browser meldde geen scherm-grootte)', 'turf-stats' );
+		}
+
+		$label = turf_breakdown_label( 'screen', $raw );
+
 		// Derive the device class from the width encoded in the "W×H" label,
 		// so each resolution row also shows whether it was phone/tablet/
 		// desktop-class - the viewport, not the user-agent string.

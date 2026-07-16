@@ -24,8 +24,16 @@
 		// screen into many near-duplicate "resolutions" (1920×1080 at 110%
 		// zoom would report 2112×1188). Raw screen.width/height is what most
 		// analytics tools report and keeps the breakdown buckets stable.
-		var screenWidth  = window.screen ? screen.width : 0;
-		var screenHeight = window.screen ? screen.height : 0;
+		//
+		// Some in-app webviews (links opened inside WhatsApp/Instagram/FB) and
+		// privacy browsers report screen.width as 0 or have no window.screen
+		// at all - the server then stores that as "unknown". Fall back to the
+		// layout viewport (innerWidth/innerHeight): a *different* metric
+		// (viewport, not device screen, and it moves with orientation/zoom) but
+		// far better than nothing, and only used when screen is missing/zero so
+		// the normal buckets stay untouched.
+		var screenWidth  = ( window.screen && window.screen.width )  ? window.screen.width  : ( window.innerWidth  || 0 );
+		var screenHeight = ( window.screen && window.screen.height ) ? window.screen.height : ( window.innerHeight || 0 );
 
 		var body = new URLSearchParams();
 		body.set( 'action', 'turf_track_view' );

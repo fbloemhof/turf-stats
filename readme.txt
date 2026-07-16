@@ -4,7 +4,7 @@ Tags: analytics, statistics, privacy, page views, cookieless
 Requires at least: 6.0
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 1.20.0
+Stable tag: 1.20.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -120,6 +120,15 @@ On the plugin's GitHub repository: https://github.com/fbloemhof/turf-stats/issue
    tracked separately from human visitors, with the pages they crawl most.
 
 == Changelog ==
+
+= 1.20.1 =
+* Screen resolution: fall back to viewport innerWidth/innerHeight in the
+  tracking JS when window.screen reports 0 or is missing (in-app webviews,
+  fingerprinting-protected browsers) so fewer views land in "unknown".
+* Screen resolution breakdown now separates App/REST API views (which never
+  run the tracking JS and legitimately have no screen size) from real browser
+  views that failed to report one, instead of lumping both into a single
+  "unknown" bucket.
 
 = 1.20.0 =
 * Added date navigation (native date picker, Yesterday tab) with fixed-date sentinel fix.
