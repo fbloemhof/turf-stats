@@ -4,7 +4,7 @@ Tags: analytics, statistics, privacy, page views, cookieless
 Requires at least: 6.0
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 1.20.3
+Stable tag: 1.21.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -120,6 +120,15 @@ On the plugin's GitHub repository: https://github.com/fbloemhof/turf-stats/issue
    tracked separately from human visitors, with the pages they crawl most.
 
 == Changelog ==
+
+= 1.21.0 =
+* New `[turf_stats]` shortcode: an at-a-glance table (online now, today,
+  yesterday, last 7 days, last 28 days) for a sidebar Text/HTML widget or
+  Shortcode block, with `metric` (views/visitors), `layout` (table/list)
+  and `items` attributes to customize which rows show.
+* Fixed a corrupted Dutch (nl_NL) .mo file (duplicate "Online now" source
+  string made it fail to compile, and the compiled file itself wasn't a
+  valid sorted .mo) - Dutch translations were silently not loading.
 
 = 1.20.3 =
 * Screen resolution breakdown labels are now English source strings with

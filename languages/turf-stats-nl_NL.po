@@ -594,9 +594,6 @@ msgstr "Meest bekeken"
 msgid "View all statistics"
 msgstr "Alle statistieken bekijken"
 
-msgid "Online now"
-msgstr "Nu online"
-
 msgid "Views today"
 msgstr "Weergaven vandaag"
 
@@ -617,4 +614,10 @@ msgstr "Desktop"
 
 msgid "Zero-result searches"
 msgstr "Zoekopdrachten zonder resultaat"
+
+msgid "Last 7 days"
+msgstr "Laatste 7 dagen"
+
+msgid "Last 28 days"
+msgstr "Laatste 28 dagen"
 
