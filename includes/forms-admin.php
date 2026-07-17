@@ -19,7 +19,6 @@ function turf_forms_get_top_forms( $days, $limit = 10 ) {
 
 	if ( 0 !== $days ) {
 		list( $where_date, $date_params ) = turf_period_where_sql( $days, 'submitted_at' );
-		$where_date = ltrim( $where_date, 'AND ' );
 		$params     = array_merge( $date_params, $params );
 	}
 
@@ -28,7 +27,8 @@ function turf_forms_get_top_forms( $days, $limit = 10 ) {
 	return $wpdb->get_results( $wpdb->prepare(
 		"SELECT plugin, form_id, form_title, COUNT(*) AS submissions,
 			SUBSTRING_INDEX(GROUP_CONCAT(page_path ORDER BY id DESC), ',', 1) AS last_page_path
-		FROM $table $where_date
+		FROM $table
+		WHERE 1=1 $where_date
 		GROUP BY plugin, form_id, form_title
 		ORDER BY submissions DESC
 		LIMIT %d",

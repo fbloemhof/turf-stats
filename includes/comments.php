@@ -52,7 +52,6 @@ function turf_get_top_commented_posts( $days ) {
 
 	if ( 0 !== $days ) {
 		list( $where_date, $date_params ) = turf_period_where_sql( $days, 'c.comment_date_gmt' );
-		$where_date = ltrim( $where_date, 'AND ' );
 		$params     = array_merge( $params, $date_params );
 	}
 

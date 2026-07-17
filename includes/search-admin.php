@@ -18,7 +18,6 @@ function turf_search_get_top_terms( $days, $limit = 15 ) {
 
 	if ( 0 !== $days ) {
 		list( $where_date, $date_params ) = turf_period_where_sql( $days, 'searched_at' );
-		$where_date = ltrim( $where_date, 'AND ' );
 		$params     = array_merge( $date_params, $params );
 	}
 
@@ -26,7 +25,8 @@ function turf_search_get_top_terms( $days, $limit = 15 ) {
 
 	return $wpdb->get_results( $wpdb->prepare(
 		"SELECT search_term, COUNT(*) AS searches, AVG(results_count) AS avg_results
-		FROM $table $where_date
+		FROM $table
+		WHERE 1=1 $where_date
 		GROUP BY search_term
 		ORDER BY searches DESC
 		LIMIT %d",
