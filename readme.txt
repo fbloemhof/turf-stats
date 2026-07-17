@@ -4,7 +4,7 @@ Tags: analytics, statistics, privacy, page views, cookieless
 Requires at least: 6.0
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 1.21.0
+Stable tag: 1.21.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -120,6 +120,12 @@ On the plugin's GitHub repository: https://github.com/fbloemhof/turf-stats/issue
    tracked separately from human visitors, with the pages they crawl most.
 
 == Changelog ==
+
+= 1.21.1 =
+* Fixed the "Formulieren" (Forms), "Top search terms" and "Most discussed"
+  boxes on the Analysis/Statistics pages silently disappearing for any
+  period other than "All time" - a broken date filter made the underlying
+  query invalid SQL, so it failed silently and the box was dropped.
 
 = 1.21.0 =
 * New `[turf_stats]` shortcode: an at-a-glance table (online now, today,
