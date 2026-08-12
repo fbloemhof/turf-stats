@@ -127,7 +127,7 @@ function turf_bots_get_category_breakdown( $days ) {
 	list( $where_sql, $date_params ) = turf_period_where_sql( $days, 'visited_at' );
 
 	return $wpdb->get_results( $wpdb->prepare(
-		"SELECT bot_category AS label, COUNT(*) AS total FROM $table $where_sql GROUP BY bot_category ORDER BY total DESC",
+		"SELECT bot_category AS label, COUNT(*) AS total FROM $table WHERE 1=1 $where_sql GROUP BY bot_category ORDER BY total DESC",
 		$date_params
 	) );
 }
@@ -146,7 +146,7 @@ function turf_bots_get_top_bots( $days, $limit = 10 ) {
 	list( $where_sql, $date_params ) = turf_period_where_sql( $days, 'visited_at' );
 
 	return $wpdb->get_results( $wpdb->prepare(
-		"SELECT bot_name AS label, COUNT(*) AS total FROM $table $where_sql GROUP BY bot_name ORDER BY total DESC LIMIT %d",
+		"SELECT bot_name AS label, COUNT(*) AS total FROM $table WHERE 1=1 $where_sql GROUP BY bot_name ORDER BY total DESC LIMIT %d",
 		array_merge( $date_params, array( $limit ) )
 	) );
 }
@@ -194,9 +194,10 @@ function turf_bots_get_top_crawled_pages( $days ) {
 	global $wpdb;
 	$table = turf_bots_table();
 
-	$where_date = '';
+	$where_date  = '';
+	$date_params = array();
 	if ( 0 !== $days ) {
-		list( $where_date ) = turf_period_where_sql( $days, 'visited_at' );
+		list( $where_date, $date_params ) = turf_period_where_sql( $days, 'visited_at' );
 	}
 
 	return $wpdb->get_results( $wpdb->prepare(
@@ -205,7 +206,7 @@ function turf_bots_get_top_crawled_pages( $days ) {
 		(SELECT 'term' AS kind, term_id AS object_id, COUNT(*) AS hits FROM $table WHERE term_id IS NOT NULL $where_date GROUP BY term_id)
 		ORDER BY hits DESC
 		LIMIT %d",
-		turf_list_max()
+		array_merge( $date_params, $date_params, array( turf_list_max() ) )
 	) );
 }
 
