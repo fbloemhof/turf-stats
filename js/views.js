@@ -44,6 +44,7 @@
 		body.set( 'utm_source', urlParams.get( 'utm_source' ) || '' );
 		body.set( 'utm_medium', urlParams.get( 'utm_medium' ) || '' );
 		body.set( 'utm_campaign', urlParams.get( 'utm_campaign' ) || '' );
+		body.set( 'utm_content', urlParams.get( 'utm_content' ) || '' );
 		body.set( 'screen_width', screenWidth );
 		body.set( 'screen_height', screenHeight );
 

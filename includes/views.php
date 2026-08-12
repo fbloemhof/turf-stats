@@ -21,7 +21,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 define( 'TURF_META_KEY', '_turf_views' );
-define( 'TURF_DB_VERSION', '1.6' );
+define( 'TURF_DB_VERSION', '1.7' );
 
 /**
  * Sentinel referrer_host value for views recorded via the REST API (e.g. a
@@ -100,6 +100,7 @@ function turf_install() {
 		utm_source VARCHAR(50) NOT NULL DEFAULT '',
 		utm_medium VARCHAR(50) NOT NULL DEFAULT '',
 		utm_campaign VARCHAR(100) NOT NULL DEFAULT '',
+		utm_content VARCHAR(100) NOT NULL DEFAULT '',
 		scroll_depth TINYINT UNSIGNED NULL DEFAULT NULL,
 		duration_seconds SMALLINT UNSIGNED NULL DEFAULT NULL,
 		screen_width SMALLINT UNSIGNED NULL DEFAULT NULL,
@@ -613,7 +614,7 @@ add_action( 'wp_enqueue_scripts', 'turf_enqueue' );
  * set) - call this directly from your theme/plugin's redirect code instead,
  * guarded by a `function_exists( 'turf_track_view' )` check.
  *
- * @param array $extra Optional: referrer_host, utm_source, utm_medium, utm_campaign.
+ * @param array $extra Optional: referrer_host, utm_source, utm_medium, utm_campaign, utm_content.
  */
 function turf_track_view( $object_id, $object_type = 'post', $extra = array() ) {
 	if ( 'term' === $object_type ) {
@@ -672,10 +673,11 @@ function turf_track_view( $object_id, $object_type = 'post', $extra = array() ) 
 				'utm_source'     => $extra['utm_source'] ?? '',
 				'utm_medium'     => $extra['utm_medium'] ?? '',
 				'utm_campaign'   => $extra['utm_campaign'] ?? '',
+				'utm_content'    => $extra['utm_content'] ?? '',
 				'screen_width'   => $extra['screen_width'] ?? null,
 				'screen_height'  => $extra['screen_height'] ?? null,
 			),
-			array( '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%d' )
+			array( '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%d' )
 		);
 
 		$event_id = $wpdb->insert_id;
@@ -758,10 +760,11 @@ function turf_track_other_view( $page_type, $extra = array() ) {
 			'utm_source'    => $extra['utm_source'] ?? '',
 			'utm_medium'    => $extra['utm_medium'] ?? '',
 			'utm_campaign'  => $extra['utm_campaign'] ?? '',
+			'utm_content'   => $extra['utm_content'] ?? '',
 			'screen_width'  => $extra['screen_width'] ?? null,
 			'screen_height' => $extra['screen_height'] ?? null,
 		),
-		array( '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%d' )
+		array( '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%d' )
 	);
 
 	return array( 'event_id' => $wpdb->insert_id );
@@ -786,6 +789,7 @@ function turf_ajax_track_view() {
 		'utm_source'    => isset( $_POST['utm_source'] ) ? turf_sanitize_utm( wp_unslash( $_POST['utm_source'] ) ) : '',
 		'utm_medium'    => isset( $_POST['utm_medium'] ) ? turf_sanitize_utm( wp_unslash( $_POST['utm_medium'] ) ) : '',
 		'utm_campaign'  => isset( $_POST['utm_campaign'] ) ? turf_sanitize_utm( wp_unslash( $_POST['utm_campaign'] ) ) : '',
+		'utm_content'   => isset( $_POST['utm_content'] ) ? turf_sanitize_utm( wp_unslash( $_POST['utm_content'] ) ) : '',
 		'screen_width'  => isset( $_POST['screen_width'] ) ? turf_sanitize_screen_dimension( $_POST['screen_width'] ) : null,
 		'screen_height' => isset( $_POST['screen_height'] ) ? turf_sanitize_screen_dimension( $_POST['screen_height'] ) : null,
 		// Flags this as a real browser pageview, so the raw hit counter fires

@@ -4,7 +4,7 @@ Tags: analytics, statistics, privacy, page views, cookieless
 Requires at least: 6.0
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 1.21.1
+Stable tag: 1.22.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -120,6 +120,11 @@ On the plugin's GitHub repository: https://github.com/fbloemhof/turf-stats/issue
    tracked separately from human visitors, with the pages they crawl most.
 
 == Changelog ==
+
+= 1.22.0 =
+* Track the `utm_content` campaign parameter (e.g. Instagram's
+  `link_in_bio`) alongside the existing `utm_source`/`utm_medium`/
+  `utm_campaign`, with a matching "Campaign content (UTM)" breakdown box.
 
 = 1.21.1 =
 * Fixed the "Formulieren" (Forms), "Top search terms" and "Most discussed"

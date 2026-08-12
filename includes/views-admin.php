@@ -88,6 +88,9 @@ function turf_views_register_metaboxes() {
 		array( 'turf_utm_medium', __( 'Campaign medium (UTM)', 'turf-stats' ), function () use ( $days ) {
 			turf_render_breakdown( 'utm_medium', $days, true );
 		} ),
+		array( 'turf_utm_content', __( 'Campaign content (UTM)', 'turf-stats' ), function () use ( $days ) {
+			turf_render_breakdown( 'utm_content', $days, true );
+		} ),
 		array( 'turf_other_pages', __( 'Other pages', 'turf-stats' ), function () use ( $days ) {
 			turf_render_other_pages_breakdown( $days );
 		} ),
@@ -1095,7 +1098,7 @@ function turf_get_content_activity( $post_type, $days ) {
 
 /**
  * Site-wide breakdown by a single simple string column (device_type, browser,
- * os, language, country, utm_source, utm_medium) for the selected period.
+ * os, language, country, utm_source, utm_medium, utm_content) for the selected period.
  * Includes both post views and taxonomy-archive views (a visitor's device/
  * language doesn't depend on what kind of page they're looking at).
  *
@@ -1107,7 +1110,7 @@ function turf_get_content_activity( $post_type, $days ) {
 function turf_get_breakdown( $column, $days, $exclude_empty = false ) {
 	global $wpdb;
 
-	$allowed = array( 'device_type', 'browser', 'os', 'language', 'country', 'utm_source', 'utm_medium' );
+	$allowed = array( 'device_type', 'browser', 'os', 'language', 'country', 'utm_source', 'utm_medium', 'utm_content' );
 
 	if ( ! in_array( $column, $allowed, true ) ) {
 		return array();
