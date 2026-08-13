@@ -30,16 +30,18 @@ function turf_get_author_breakdown( $days, $limit = 15 ) {
 			array_merge( array( TURF_META_KEY ), $post_types, array( $limit ) )
 		) );
 	} else {
+		list( $where_sql, $date_params ) = turf_period_where_sql( $days, 'v.viewed_at' );
+
 		$rows = $wpdb->get_results( $wpdb->prepare(
 			"SELECT p.post_author AS author_id, COUNT(*) AS views, COUNT(DISTINCT v.post_id) AS posts
 			FROM {$table} v
 			INNER JOIN $wpdb->posts p ON p.ID = v.post_id
 			WHERE p.post_type IN ($placeholders) AND p.post_status = 'publish'
-			AND v.viewed_at >= %s
+			$where_sql
 			GROUP BY p.post_author
 			ORDER BY views DESC
 			LIMIT %d", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- own-prefix table name; $placeholders is a generated %s list.
-			array_merge( $post_types, array( turf_period_start_sql_date( $days ), $limit ) )
+			array_merge( $post_types, $date_params, array( $limit ) )
 		) );
 	}
 

@@ -44,6 +44,18 @@ function turf_postboxes_enqueue( $hook ) {
 		'lessLabel' => __( 'Show less', 'turf-stats' ),
 	) );
 
+	// Reveals the custom-range form when its tab is clicked, without a page
+	// navigation - the form is functional without this (it's plain visible
+	// via the PHP `period === 'custom'` check once ?period=custom is
+	// actually in the URL), this just saves the extra round trip.
+	wp_enqueue_script( 'turf-period-tabs', TURF_URL . 'js/period-tabs.js', array(), TURF_VERSION, true );
+
+	wp_enqueue_script( 'turf-saved-ranges', TURF_URL . 'js/saved-ranges.js', array(), TURF_VERSION, true );
+	wp_localize_script( 'turf-saved-ranges', 'turfSavedRanges', array(
+		'ajaxUrl'    => admin_url( 'admin-ajax.php' ),
+		'namePrompt' => __( 'Name this range:', 'turf-stats' ),
+	) );
+
 	// The collapse is done in CSS that's in the <head> before the page paints,
 	// so the extra rows are never rendered-then-hidden (which caused a visible
 	// jump/reflow on load). JavaScript then only adds the "Show more" button and
@@ -64,7 +76,23 @@ function turf_postboxes_enqueue( $hook ) {
 		'.turf-date-jump{clear:none;display:inline-flex;align-items:center;gap:6px;margin:0 0 0 16px;vertical-align:middle;font-size:13px;font-family:inherit}' .
 		'.turf-date-jump label{font-weight:400;color:#50575e}' .
 		'.turf-date-jump input[type="date"]{font-family:inherit;font-size:13px;vertical-align:middle}' .
-		'.turf-date-jump .button{margin-left:0}'
+		'.turf-date-jump .button{margin-left:0}' .
+		/* Custom-range form: same inline treatment as the date-jump form, on its own row when visible. */
+		'.turf-range-form{clear:both;display:flex;align-items:center;gap:6px;margin:8px 0 0;font-size:13px;font-family:inherit}' .
+		'.turf-range-form label{font-weight:400;color:#50575e}' .
+		'.turf-range-form input[type="date"]{font-family:inherit;font-size:13px;vertical-align:middle}' .
+		/* Saved ranges: same row treatment, sits after the custom-range form. */
+		'.turf-saved-ranges{clear:both;display:flex;align-items:center;gap:8px;margin:8px 0 0;font-size:13px;font-family:inherit}' .
+		'.turf-saved-ranges select{font-family:inherit;font-size:13px}' .
+		'.turf-saved-ranges .turf-saved-range-delete{background:none;border:none;padding:0 0 0 4px;color:#b32d2e;cursor:pointer;font-size:13px}' .
+		'.turf-saved-ranges .turf-saved-range-manage{list-style:none;margin:4px 0 0;padding:0;display:flex;flex-wrap:wrap;gap:8px;font-size:12px;color:#50575e}' .
+		/* Bottom-right of the box, below whatever content it follows. text-align
+		 * (not a float/auto-margin on the link itself) because WP core's own
+		 * .wp-core-ui .button rule outranks a single-class selector on
+		 * specificity and forces display:inline-block, which auto-margins
+		 * can't right-align - text-align on the wrapper works regardless of
+		 * the link's own display value. */
+		'.turf-export-link-wrap{clear:both;text-align:right;margin:8px 0 0}'
 	);
 
 	wp_add_inline_style( 'turf-postbox-more', turf_admin_inline_css() );
@@ -192,6 +220,15 @@ define( 'TURF_PERIOD_TODAY', -1 );
 define( 'TURF_PERIOD_YESTERDAY', -2 );
 
 /**
+ * Sentinel for an arbitrary custom date range (`?period=custom&range_start=
+ * ..&range_end=..`), resolved by turf_custom_range_bounds(). Chosen far below
+ * any realistic fixed-date sentinel (those run to roughly -20000 for dates
+ * within a human lifetime of the Unix epoch) so the two encodings can never
+ * collide.
+ */
+define( 'TURF_PERIOD_CUSTOM', -1000000000 );
+
+/**
  * @return array<int|string,int> Map of URL `period` slug to its resolved
  *                               value. Positive ints are N-day ranges; 0 is
  *                               "Alles"; the two sentinels are single days.
@@ -209,13 +246,38 @@ function turf_period_days_map() {
 
 /**
  * Whether a resolved period is a single calendar day (Today / Yesterday / a
- * fixed date from `?date=`) rather than an N-day range or "Alles". Drives the
- * single-day rendering branch (`turf_render_overview()`) and the hourly chart.
+ * fixed date from `?date=`) rather than an N-day range, "Alles", or a custom
+ * range. Drives the single-day rendering branch (`turf_render_overview()`)
+ * and the hourly chart.
+ *
+ * TURF_PERIOD_CUSTOM must be excluded explicitly: it sits well below
+ * TURF_PERIOD_TODAY, so the `$days < TURF_PERIOD_TODAY` catch-all below would
+ * otherwise also match it and route a custom range through the single-day
+ * anchor machinery, producing garbage.
  *
  * @param int $days Resolved period value.
  */
 function turf_is_single_day( $days ) {
+	if ( TURF_PERIOD_CUSTOM === $days ) {
+		return false;
+	}
+
 	return TURF_PERIOD_TODAY === $days || TURF_PERIOD_YESTERDAY === $days || $days < TURF_PERIOD_TODAY;
+}
+
+/**
+ * Whether $str is a real `Y-m-d` calendar date (rejects malformed strings and
+ * non-existent dates like 2026-02-30). Shared by every URL param that carries
+ * a raw date string - `?date=`, `?range_start=`, `?range_end=`.
+ */
+function turf_is_valid_ymd( $str ) {
+	if ( ! is_string( $str ) || ! preg_match( '/^\d{4}-\d{2}-\d{2}$/', $str ) ) {
+		return false;
+	}
+
+	$parsed = date_parse( $str );
+
+	return checkdate( $parsed['month'], $parsed['day'], $parsed['year'] );
 }
 
 /**
@@ -231,23 +293,18 @@ function turf_is_single_day( $days ) {
 function turf_single_day_anchor( $days ) {
 	$date = isset( $_GET['date'] ) ? sanitize_text_field( wp_unslash( $_GET['date'] ) ) : '';
 
-	if ( preg_match( '/^\d{4}-\d{2}-\d{2}$/', $date ) ) {
-		// Validate the calendar date actually exists (rejects e.g. 2026-02-30).
-		$parsed = date_parse( $date );
-		if ( checkdate( $parsed['month'], $parsed['day'], $parsed['year'] ) ) {
-			return $date;
-		}
+	if ( turf_is_valid_ymd( $date ) ) {
+		return $date;
 	}
 
 	// No/invalid URL date: invert the fixed-date sentinel (days since epoch,
 	// negated) so a passed period value still resolves to the right day
 	// without the original request param - e.g. AJAX refreshes.
-	if ( is_int( $days ) && $days < TURF_PERIOD_YESTERDAY ) {
+	if ( is_int( $days ) && $days < TURF_PERIOD_YESTERDAY && $days > TURF_PERIOD_CUSTOM ) {
 		$epoch_days = TURF_PERIOD_TODAY - $days;
 		$ts         = $epoch_days * DAY_IN_SECONDS;
 		$guess      = gmdate( 'Y-m-d', $ts );
-		$parsed     = date_parse( $guess );
-		if ( checkdate( $parsed['month'], $parsed['day'], $parsed['year'] ) ) {
+		if ( turf_is_valid_ymd( $guess ) ) {
 			return $guess;
 		}
 	}
@@ -275,15 +332,74 @@ function turf_list_max() {
 }
 
 /**
+ * Longest span (in whole days, inclusive) a custom range is allowed to
+ * cover, to bound query cost and daily-chart bar count. Filterable for sites
+ * that want a longer/shorter cap.
+ */
+function turf_custom_range_max_days() {
+	return (int) apply_filters( 'turf_custom_range_max_days', 366 );
+}
+
+/**
+ * Validated `[ $start, $end ]` (`Y-m-d`, site timezone) for a custom range,
+ * read directly from `$_GET['range_start']`/`$_GET['range_end']` - the same
+ * "each layer re-reads the request itself" convention turf_single_day_anchor()
+ * already uses for `?date=`, kept so TURF_PERIOD_CUSTOM stays a plain opaque
+ * int and doesn't need threading through every function signature.
+ *
+ * Rejects (returns `[null, null]`) a missing/malformed date, or `end < start`
+ * - deliberately not silently swapping, since that would mean acting on a
+ * period the user never actually requested. A range longer than
+ * turf_custom_range_max_days() is clamped by pulling $start forward (keeping
+ * $end fixed), the same "most recent N days of what they asked for" spirit
+ * the existing N-day tabs already have.
+ *
+ * @return array{0: string|null, 1: string|null} [ $start, $end ].
+ */
+function turf_custom_range_bounds() {
+	$start = isset( $_GET['range_start'] ) ? sanitize_text_field( wp_unslash( $_GET['range_start'] ) ) : '';
+	$end   = isset( $_GET['range_end'] ) ? sanitize_text_field( wp_unslash( $_GET['range_end'] ) ) : '';
+
+	if ( ! turf_is_valid_ymd( $start ) || ! turf_is_valid_ymd( $end ) ) {
+		return array( null, null );
+	}
+
+	if ( strtotime( $end ) < strtotime( $start ) ) {
+		return array( null, null );
+	}
+
+	$max_days = turf_custom_range_max_days();
+	$span     = (int) round( ( strtotime( $end ) - strtotime( $start ) ) / DAY_IN_SECONDS ) + 1;
+
+	if ( $span > $max_days ) {
+		$start = gmdate( 'Y-m-d', strtotime( $end ) - ( $max_days - 1 ) * DAY_IN_SECONDS );
+	}
+
+	return array( $start, $end );
+}
+
+/**
  * @param string $default_period Which tab to use when no ?period= is in the
  *                                URL yet - most pages keep the historical
  *                                '7' default; Statistieken opts into 'today'.
- * @return int Resolved period: a positive N (days), 0 ("Alles"), or one of
- *            the single-day sentinels (TURF_PERIOD_TODAY /
- *            TURF_PERIOD_YESTERDAY). A fixed `?date=` always resolves to that
- *            date's negative sentinel, regardless of the `period` tab.
+ * @return int Resolved period: a positive N (days), 0 ("Alles"), one of the
+ *            single-day sentinels (TURF_PERIOD_TODAY / TURF_PERIOD_YESTERDAY),
+ *            or TURF_PERIOD_CUSTOM. A fixed `?date=` always resolves to that
+ *            date's negative sentinel, regardless of the `period` tab; a
+ *            valid `?period=custom&range_start=&range_end=` resolves to
+ *            TURF_PERIOD_CUSTOM (falling through to normal resolution below
+ *            if the range params are missing/invalid).
  */
 function turf_get_requested_days( $default_period = '7' ) {
+	$period = isset( $_GET['period'] ) ? sanitize_key( $_GET['period'] ) : $default_period;
+
+	if ( 'custom' === $period ) {
+		list( $range_start, ) = turf_custom_range_bounds();
+		if ( null !== $range_start ) {
+			return TURF_PERIOD_CUSTOM;
+		}
+	}
+
 	// A fixed date in the URL wins: it represents "that specific day", which
 	// is its own single-day period independent of whatever tab is also set.
 	$date = isset( $_GET['date'] ) ? sanitize_text_field( wp_unslash( $_GET['date'] ) ) : '';
@@ -295,8 +411,7 @@ function turf_get_requested_days( $default_period = '7' ) {
 		return TURF_PERIOD_TODAY - (int) ( strtotime( $date ) / DAY_IN_SECONDS );
 	}
 
-	$period = isset( $_GET['period'] ) ? sanitize_key( $_GET['period'] ) : $default_period;
-	$map    = turf_period_days_map();
+	$map = turf_period_days_map();
 
 	return isset( $map[ $period ] ) ? $map[ $period ] : 7;
 }
@@ -419,6 +534,31 @@ function turf_period_window( $days, $offset_days = 0 ) {
 		return array( null, null );
 	}
 
+	if ( TURF_PERIOD_CUSTOM === $days ) {
+		list( $range_start, $range_end ) = turf_custom_range_bounds();
+
+		if ( null === $range_start ) {
+			return array( null, null );
+		}
+
+		// Local-timezone-then-convert-to-UTC, same as turf_day_window() -
+		// not raw UTC strtotime() arithmetic, which would be off by the site's
+		// UTC offset for any timezone that isn't UTC itself (the same class of
+		// bug turf_local_midnight_utc()'s own docblock warns about).
+		$tz = wp_timezone();
+
+		$start_dt = DateTime::createFromFormat( 'Y-m-d', $range_start, $tz );
+		$start_dt->setTime( 0, 0, 0 )->modify( "-{$offset_days} days" );
+
+		$end_dt = DateTime::createFromFormat( 'Y-m-d', $range_end, $tz );
+		$end_dt->setTime( 0, 0, 0 )->modify( '+1 day' )->modify( "-{$offset_days} days" );
+
+		$start_dt->setTimezone( new DateTimeZone( 'UTC' ) );
+		$end_dt->setTimezone( new DateTimeZone( 'UTC' ) );
+
+		return array( $start_dt->format( 'Y-m-d H:i:s' ), $end_dt->format( 'Y-m-d H:i:s' ) );
+	}
+
 	if ( turf_is_single_day( $days ) ) {
 		$anchor_offset = turf_single_day_anchor_offset( $days );
 
@@ -460,8 +600,12 @@ function turf_period_where_sql( $days, $column = 'v.viewed_at' ) {
 		return array( '', array() );
 	}
 
-	if ( turf_is_single_day( $days ) ) {
+	if ( turf_is_single_day( $days ) || TURF_PERIOD_CUSTOM === $days ) {
 		list( $start, $end ) = turf_period_window( $days, 0 );
+
+		if ( null === $start ) {
+			return array( '', array() );
+		}
 
 		return array( "AND $column >= %s AND $column < %s", array( $start, $end ) );
 	}
@@ -557,6 +701,18 @@ function turf_previous_period_offset( $days ) {
 		return 1;
 	}
 
+	if ( TURF_PERIOD_CUSTOM === $days ) {
+		list( $range_start, $range_end ) = turf_custom_range_bounds();
+
+		if ( null === $range_start ) {
+			return 0;
+		}
+
+		// Same-length window immediately preceding the picked start - the
+		// custom-range equivalent of an N-day range shifting back by $days.
+		return (int) round( ( strtotime( $range_end ) - strtotime( $range_start ) ) / DAY_IN_SECONDS ) + 1;
+	}
+
 	return $days;
 }
 
@@ -575,18 +731,29 @@ function turf_render_period_tabs( $base_url, $default_period = '7' ) {
 		'30'        => __( '30 days', 'turf-stats' ),
 		'90'        => __( '90 days', 'turf-stats' ),
 		'all'       => __( 'All', 'turf-stats' ),
+		'custom'    => __( 'Custom', 'turf-stats' ),
 	);
 
 	$current_date = isset( $_GET['date'] ) ? sanitize_text_field( wp_unslash( $_GET['date'] ) ) : '';
 	if ( ! preg_match( '/^\d{4}-\d{2}-\d{2}$/', $current_date ) ) {
 		$current_date = '';
 	}
+
+	$range_start = isset( $_GET['range_start'] ) ? sanitize_text_field( wp_unslash( $_GET['range_start'] ) ) : '';
+	$range_end   = isset( $_GET['range_end'] ) ? sanitize_text_field( wp_unslash( $_GET['range_end'] ) ) : '';
+	if ( ! turf_is_valid_ymd( $range_start ) ) {
+		$range_start = '';
+	}
+	if ( ! turf_is_valid_ymd( $range_end ) ) {
+		$range_end = '';
+	}
+
 	// Preserve any other query args (e.g. order/post-type filters) across the
 	// date jump by re-emitting them as hidden inputs, then override period/
-	// date with the picker's submission.
+	// date/range with whichever form is submitted.
 	$hidden = '';
 	foreach ( $_GET as $k => $v ) {
-		if ( ! in_array( $k, array( 'date', 'period' ), true ) ) {
+		if ( ! in_array( $k, array( 'date', 'period', 'range_start', 'range_end' ), true ) ) {
 			$hidden .= '<input type="hidden" name="' . esc_attr( $k ) . '" value="' . esc_attr( (string) $v ) . '" />';
 		}
 	}
@@ -594,7 +761,8 @@ function turf_render_period_tabs( $base_url, $default_period = '7' ) {
 	<ul class="subsubsub">
 		<?php foreach ( $labels as $key => $label ) : ?>
 			<li>
-				<a href="<?php echo esc_url( add_query_arg( 'period', $key, $base_url ) ); ?>" <?php echo $period === (string) $key ? 'class="current"' : ''; ?>>
+				<a href="<?php echo esc_url( add_query_arg( 'period', $key, remove_query_arg( array( 'date', 'range_start', 'range_end' ), $base_url ) ) ); ?>"
+					<?php echo $period === (string) $key ? 'class="current"' : ( 'custom' === $key ? 'class="turf-custom-tab-toggle"' : '' ); ?>>
 					<?php echo esc_html( $label ); ?>
 				</a> |
 			</li>
@@ -610,6 +778,21 @@ function turf_render_period_tabs( $base_url, $default_period = '7' ) {
 			<a class="button" href="<?php echo esc_url( remove_query_arg( array( 'date', 'period' ), $base_url ) ); ?>"><?php echo esc_html__( 'Clear date', 'turf-stats' ); ?></a>
 		<?php endif; ?>
 	</form>
+
+	<form id="turf-custom-range-form" class="turf-range-form" method="get" action="<?php echo esc_url( admin_url( 'admin.php' ) ); ?>" <?php echo 'custom' !== $period ? 'style="display:none"' : ''; ?>>
+		<?php echo $hidden; ?>
+		<input type="hidden" name="period" value="custom" />
+		<label for="turf-range-start"><?php echo esc_html__( 'From', 'turf-stats' ); ?></label>
+		<input type="date" id="turf-range-start" name="range_start" value="<?php echo esc_attr( $range_start ); ?>" max="<?php echo esc_attr( wp_date( 'Y-m-d' ) ); ?>" />
+		<label for="turf-range-end"><?php echo esc_html__( 'To', 'turf-stats' ); ?></label>
+		<input type="date" id="turf-range-end" name="range_end" value="<?php echo esc_attr( $range_end ); ?>" max="<?php echo esc_attr( wp_date( 'Y-m-d' ) ); ?>" />
+		<?php submit_button( __( 'Apply', 'turf-stats' ), 'secondary', '', false ); ?>
+	</form>
+
+	<?php if ( function_exists( 'turf_render_saved_ranges_ui' ) ) : ?>
+		<?php turf_render_saved_ranges_ui( $base_url, $period, $range_start, $range_end ); ?>
+	<?php endif; ?>
+
 	<br class="clear" />
 	<?php
 }

@@ -4,7 +4,7 @@ Tags: analytics, statistics, privacy, page views, cookieless
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.22.0
+Stable tag: 1.23.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -120,6 +120,23 @@ On the plugin's GitHub repository: https://github.com/fbloemhof/turf-stats/issue
    tracked separately from human visitors, with the pages they crawl most.
 
 == Changelog ==
+
+= 1.23.0 =
+* Custom date ranges: pick any start/end date instead of just the fixed
+  presets, and save frequently-used ranges by name to jump back to them
+  later.
+* CSV export for the overview totals, top pages, top referrers,
+  device/browser/OS breakdown, search terms, and 404s boxes - respects
+  whatever period (including a custom range) is on screen.
+* Weekly/monthly email report: a summary of your stats sent to one or more
+  addresses on a recurring schedule, with a "Send test email now" button to
+  check formatting/delivery without waiting for the schedule.
+* Fixed several period-filtered boxes (404s, per-author stats, click and
+  outbound-link breakdowns, WooCommerce funnel, peak-hours heatmap) silently
+  including data all the way through "now" instead of stopping at the end
+  of "Yesterday" or a picked date - only affected those two period choices,
+  not the day/week/month tabs.
+* Dutch (nl_NL) translation updated for all new strings.
 
 = 1.22.0 =
 * Track the `utm_content` campaign parameter (e.g. Instagram's

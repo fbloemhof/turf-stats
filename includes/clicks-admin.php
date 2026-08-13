@@ -59,13 +59,13 @@ function turf_clicks_get_top_keys( $days ) {
 		) );
 	}
 
+	list( $where_sql, $date_params ) = turf_period_where_sql( $days, 'clicked_at' );
+
 	return $wpdb->get_results( $wpdb->prepare(
 		"SELECT click_key, COUNT(*) AS clicks FROM $table
-		WHERE click_key != %s AND clicked_at >= %s
+		WHERE click_key != %s $where_sql
 		GROUP BY click_key ORDER BY clicks DESC LIMIT %d",
-		TURF_OUTBOUND_CLICK_KEY,
-		turf_period_start_sql_date( $days ),
-		turf_list_max()
+		array_merge( array( TURF_OUTBOUND_CLICK_KEY ), $date_params, array( turf_list_max() ) )
 	) );
 }
 
@@ -89,13 +89,13 @@ function turf_clicks_get_top_outbound_links( $days ) {
 		) );
 	}
 
+	list( $where_sql, $date_params ) = turf_period_where_sql( $days, 'clicked_at' );
+
 	return $wpdb->get_results( $wpdb->prepare(
 		"SELECT target_url, context, COUNT(*) AS clicks FROM $table
-		WHERE click_key = %s AND clicked_at >= %s
+		WHERE click_key = %s $where_sql
 		GROUP BY target_url, context ORDER BY clicks DESC LIMIT %d",
-		TURF_OUTBOUND_CLICK_KEY,
-		turf_period_start_sql_date( $days ),
-		turf_list_max()
+		array_merge( array( TURF_OUTBOUND_CLICK_KEY ), $date_params, array( turf_list_max() ) )
 	) );
 }
 

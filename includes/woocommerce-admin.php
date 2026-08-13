@@ -22,23 +22,24 @@ function turf_woo_get_funnel( $days ) {
 		$add_to_cart = (int) $wpdb->get_var( "SELECT COUNT(*) FROM $woo_table WHERE event_type = 'add_to_cart'" );
 		$checkout    = (int) $wpdb->get_var( "SELECT COUNT(*) FROM $woo_table WHERE event_type = 'checkout'" );
 	} else {
-		$since       = turf_period_start_sql_date( $days );
-		$views_table = turf_table();
+		list( $views_where, $views_params )       = turf_period_where_sql( $days, 'v.viewed_at' );
+		list( $occurred_where, $occurred_params ) = turf_period_where_sql( $days, 'occurred_at' );
+		$views_table                              = turf_table();
 
 		$views = (int) $wpdb->get_var( $wpdb->prepare(
 			"SELECT COUNT(*) FROM {$views_table} v
 			INNER JOIN $wpdb->posts p ON p.ID = v.post_id
 			WHERE p.post_type = 'product' AND p.post_status = 'publish'
-			AND v.viewed_at >= %s", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- own-prefix table name.
-			$since
+			$views_where", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- own-prefix table name.
+			$views_params
 		) );
 		$add_to_cart = (int) $wpdb->get_var( $wpdb->prepare(
-			"SELECT COUNT(*) FROM $woo_table WHERE event_type = 'add_to_cart' AND occurred_at >= %s",
-			$since
+			"SELECT COUNT(*) FROM $woo_table WHERE event_type = 'add_to_cart' $occurred_where",
+			$occurred_params
 		) );
 		$checkout = (int) $wpdb->get_var( $wpdb->prepare(
-			"SELECT COUNT(*) FROM $woo_table WHERE event_type = 'checkout' AND occurred_at >= %s",
-			$since
+			"SELECT COUNT(*) FROM $woo_table WHERE event_type = 'checkout' $occurred_where",
+			$occurred_params
 		) );
 	}
 

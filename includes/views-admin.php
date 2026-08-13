@@ -107,7 +107,10 @@ function turf_views_register_metaboxes() {
 
 	add_meta_box( 'turf_peak_hours', __( 'Peak hours', 'turf-stats' ), function () use ( $days ) {
 		// A single day is too sparse for a meaningful 7x24 heatmap - shows
-		// the last 7 days for context instead, same as the Vandaag chart.
+		// the last 7 days for context instead, same as the Vandaag chart. A
+		// custom range (however long) aggregates across its own full span,
+		// same as any other multi-day period - turf_get_peak_hours() goes
+		// through turf_period_where_sql(), which already understands it.
 		turf_render_peak_hours( turf_is_single_day( $days ) ? 7 : $days );
 	}, $hook, 'turf_wide' );
 
@@ -316,6 +319,15 @@ function turf_get_daily_site_totals( $days ) {
 	$table = turf_table();
 	list( $join, $where, $params ) = turf_site_join_and_where();
 
+	// Custom range: zero-filled per-day totals across the explicit picked
+	// start/end, rather than "N days back from now" - see
+	// turf_get_daily_site_totals_for_range() below.
+	if ( TURF_PERIOD_CUSTOM === $days ) {
+		list( $range_start, $range_end ) = turf_custom_range_bounds();
+
+		return null === $range_start ? array() : turf_get_daily_site_totals_for_range( $range_start, $range_end );
+	}
+
 	// Single-day periods (Today/Yesterday/fixed date) show the 7 days *ending
 	// on* the anchor day as their context chart - same role as the old
 	// hard-coded 7 for Today, but anchored so the rightmost bar is the
@@ -346,6 +358,61 @@ function turf_get_daily_site_totals( $days ) {
 			'views'    => $row ? (int) $row->views : 0,
 			'visitors' => $row ? (int) $row->visitors : 0,
 		);
+	}
+
+	return $daily;
+}
+
+/**
+ * Per-day site totals for an explicit calendar-date range (site timezone) -
+ * the Custom-range equivalent of the N-day branch above, zero-filled from an
+ * explicit start/end instead of "N days back from now". WHERE bounds use the
+ * same local-timezone-then-UTC pattern as turf_period_window()'s custom
+ * branch, so the chart's totals can't silently disagree with the headline
+ * stat boxes at a DST/timezone edge.
+ *
+ * @param string $start_ymd Y-m-d, site timezone.
+ * @param string $end_ymd   Y-m-d, site timezone (inclusive).
+ * @return array[] Same shape as turf_get_daily_site_totals().
+ */
+function turf_get_daily_site_totals_for_range( $start_ymd, $end_ymd ) {
+	global $wpdb;
+
+	$table = turf_table();
+	list( $join, $where, $params ) = turf_site_join_and_where();
+
+	$tz = wp_timezone();
+
+	$start_dt = DateTime::createFromFormat( 'Y-m-d', $start_ymd, $tz )->setTime( 0, 0, 0 );
+	$end_dt   = DateTime::createFromFormat( 'Y-m-d', $end_ymd, $tz )->setTime( 0, 0, 0 )->modify( '+1 day' );
+
+	$start_utc = ( clone $start_dt )->setTimezone( new DateTimeZone( 'UTC' ) )->format( 'Y-m-d H:i:s' );
+	$end_utc   = ( clone $end_dt )->setTimezone( new DateTimeZone( 'UTC' ) )->format( 'Y-m-d H:i:s' );
+
+	$results = $wpdb->get_results( $wpdb->prepare(
+		"SELECT DATE(v.viewed_at) AS day, COUNT(*) AS views, COUNT(DISTINCT v.visitor_hash) AS visitors
+		FROM $table v
+		$join
+		WHERE $where
+		AND v.viewed_at >= %s AND v.viewed_at < %s
+		GROUP BY DATE(v.viewed_at)",
+		array_merge( $params, array( $start_utc, $end_utc ) )
+	), OBJECT_K );
+
+	$daily  = array();
+	$cursor = clone $start_dt;
+
+	while ( $cursor < $end_dt ) {
+		$date = $cursor->format( 'Y-m-d' );
+		$row  = isset( $results[ $date ] ) ? $results[ $date ] : null;
+
+		$daily[] = array(
+			'date'     => $date,
+			'views'    => $row ? (int) $row->views : 0,
+			'visitors' => $row ? (int) $row->visitors : 0,
+		);
+
+		$cursor->modify( '+1 day' );
 	}
 
 	return $daily;
@@ -511,9 +578,16 @@ function turf_ajax_overview_stats() {
 
 	// A fixed date arriving from the refresh polling must reach the day
 	// helpers (they read $_GET['date']), so surface it there for the
-	// lifetime of this request.
+	// lifetime of this request. A custom range does the same via
+	// range_start/range_end (turf_custom_range_bounds() re-reads $_GET too).
 	if ( ! empty( $_POST['date'] ) && preg_match( '/^\d{4}-\d{2}-\d{2}$/', sanitize_text_field( wp_unslash( $_POST['date'] ) ) ) ) {
 		$_GET['date'] = sanitize_text_field( wp_unslash( $_POST['date'] ) );
+	}
+	if ( ! empty( $_POST['range_start'] ) && preg_match( '/^\d{4}-\d{2}-\d{2}$/', sanitize_text_field( wp_unslash( $_POST['range_start'] ) ) ) ) {
+		$_GET['range_start'] = sanitize_text_field( wp_unslash( $_POST['range_start'] ) );
+	}
+	if ( ! empty( $_POST['range_end'] ) && preg_match( '/^\d{4}-\d{2}-\d{2}$/', sanitize_text_field( wp_unslash( $_POST['range_end'] ) ) ) ) {
+		$_GET['range_end'] = sanitize_text_field( wp_unslash( $_POST['range_end'] ) );
 	}
 
 	if ( 0 === $days ) {
@@ -584,6 +658,7 @@ function turf_render_overview( $days ) {
 				<?php turf_render_stat_box( __( 'Visitors', 'turf-stats' ), $totals['visitors'], false, '', 'bezoekers' ); ?>
 				<?php turf_render_stat_box( __( 'Comments', 'turf-stats' ), $comments, false, '', 'reacties' ); ?>
 			</div>
+			<?php turf_render_export_link( 'turf_export_overview' ); ?>
 		</div>
 		<?php
 		return;
@@ -602,6 +677,7 @@ function turf_render_overview( $days ) {
 			</div>
 			<?php turf_render_hourly_visitors_chart( $days ); ?>
 			<?php turf_render_daily_chart( turf_get_daily_site_totals( $days ) ); ?>
+			<?php turf_render_export_link( 'turf_export_overview' ); ?>
 		</div>
 		<?php
 		return;
@@ -613,14 +689,21 @@ function turf_render_overview( $days ) {
 	$previous          = turf_get_range_site_totals( $days, $offset );
 	$current_comments  = turf_get_comment_totals( $days, 0 );
 	$previous_comments = turf_get_comment_totals( $days, $offset );
+
+	$range_attrs = '';
+	if ( TURF_PERIOD_CUSTOM === $days ) {
+		list( $range_start, $range_end ) = turf_custom_range_bounds();
+		$range_attrs = ' data-range-start="' . esc_attr( $range_start ) . '" data-range-end="' . esc_attr( $range_end ) . '"';
+	}
 	?>
 	<div class="bk-stats-overview">
-		<div class="bk-stats-overview__totals" id="turf-overview-totals" data-days="<?php echo esc_attr( $days ); ?>">
+		<div class="bk-stats-overview__totals" id="turf-overview-totals" data-days="<?php echo esc_attr( $days ); ?>"<?php echo $range_attrs; // phpcs:ignore WordPress.Security.EscapeOutput -- already-escaped above. ?>>
 			<?php turf_render_online_now(); ?>
 			<?php turf_render_overview_stat_boxes( $days, $current, $previous, $current_comments, $previous_comments, $offset ); ?>
 		</div>
 
 		<?php turf_render_daily_chart( $daily ); ?>
+		<?php turf_render_export_link( 'turf_export_overview' ); ?>
 	</div>
 	<?php
 }
@@ -692,9 +775,18 @@ function turf_render_daily_chart( $daily ) {
 	} elseif ( $count <= 45 ) {
 		$density_class = ' bk-stats-chart--dense';
 		$label_every   = 2;
-	} else {
+	} elseif ( $count <= 120 ) {
 		$density_class = ' bk-stats-chart--very-dense';
 		$label_every   = 7;
+	} elseif ( $count <= 200 ) {
+		// Custom ranges can run up to a year (turf_custom_range_max_days()) -
+		// wider label steps past 120 bars keep "j M" labels from smearing
+		// into each other, while bars themselves stay one-per-day.
+		$density_class = ' bk-stats-chart--very-dense';
+		$label_every   = 14;
+	} else {
+		$density_class = ' bk-stats-chart--very-dense';
+		$label_every   = 30;
 	}
 
 	// Bars are scaled to 88% of the plot height instead of 100%, reserving a
@@ -1077,20 +1169,19 @@ function turf_render_content_activity( $days ) {
 function turf_get_content_activity( $post_type, $days ) {
 	global $wpdb;
 
-	$start = turf_period_start_sql_date( $days );
+	list( $added_where, $added_params )     = turf_period_where_sql( $days, 'post_date_gmt' );
+	list( $modified_where, $modified_params ) = turf_period_where_sql( $days, 'post_modified_gmt' );
 
 	$added = (int) $wpdb->get_var( $wpdb->prepare(
-		"SELECT COUNT(*) FROM $wpdb->posts WHERE post_type = %s AND post_status = 'publish' AND post_date_gmt >= %s",
-		$post_type,
-		$start
+		"SELECT COUNT(*) FROM $wpdb->posts WHERE post_type = %s AND post_status = 'publish' $added_where",
+		array_merge( array( $post_type ), $added_params )
 	) );
 
 	$modified = (int) $wpdb->get_var( $wpdb->prepare(
 		"SELECT COUNT(*) FROM $wpdb->posts
 		WHERE post_type = %s AND post_status = 'publish'
-		AND post_modified_gmt >= %s AND post_modified_gmt != post_date_gmt",
-		$post_type,
-		$start
+		$modified_where AND post_modified_gmt != post_date_gmt",
+		array_merge( array( $post_type ), $modified_params )
 	) );
 
 	return array( 'added' => $added, 'modified' => $modified );
@@ -1522,6 +1613,12 @@ function turf_render_breakdown( $column, $days, $exclude_empty = false ) {
 	turf_render_breakdown_rows( $rows, function ( $raw ) use ( $column ) {
 		return turf_breakdown_label( $column, $raw );
 	} );
+
+	// Export is scoped to device/browser/os only (not language/country/utm_*)
+	// - see turf_ajax_export_breakdown()'s own whitelist.
+	if ( $rows && in_array( $column, array( 'device_type', 'browser', 'os' ), true ) ) {
+		turf_render_export_link( 'turf_export_breakdown', array( 'column' => $column ) );
+	}
 }
 
 /**
@@ -1556,6 +1653,10 @@ function turf_render_top_referrer_hosts( $days ) {
 	$rows = turf_get_top_referrer_hosts( $days, turf_list_max() );
 
 	turf_render_breakdown_rows( $rows, 'turf_referrer_host_label', 10 );
+
+	if ( $rows ) {
+		turf_render_export_link( 'turf_export_referrers' );
+	}
 }
 
 /**
@@ -1578,13 +1679,15 @@ function turf_get_other_pages_breakdown( $days ) {
 		);
 	}
 
+	list( $where_sql, $params ) = turf_period_where_sql( $days, 'viewed_at' );
+
 	return $wpdb->get_results( $wpdb->prepare(
 		"SELECT page_type AS label, COUNT(*) AS views, COUNT(DISTINCT visitor_hash) AS visitors
 		FROM $table
-		WHERE page_type IS NOT NULL AND viewed_at >= %s
+		WHERE page_type IS NOT NULL $where_sql
 		GROUP BY page_type
 		ORDER BY views DESC",
-		turf_period_start_sql_date( $days )
+		$params
 	) );
 }
 
@@ -1617,10 +1720,9 @@ function turf_get_new_vs_returning( $days ) {
 	$table = turf_table();
 	list( $join, $where, $params ) = turf_site_join_and_where();
 
-	if ( 0 !== $days ) {
-		$start = turf_period_start_sql_date( $days );
-		$end   = current_time( 'mysql', true );
-	} else {
+	list( $start, $end ) = turf_period_window( $days, 0 );
+
+	if ( null === $start ) {
 		$start = '1970-01-01 00:00:00';
 		$end   = current_time( 'mysql', true );
 	}
@@ -1950,19 +2052,19 @@ function turf_get_top_posts_for_period( $post_type, $days ) {
 
 	$table = turf_table();
 
+	list( $where_sql, $date_params ) = turf_period_where_sql( $days, 'v.viewed_at' );
+
 	return $wpdb->get_results( $wpdb->prepare(
 		"SELECT v.post_id AS post_id, COUNT(*) AS views, COUNT(DISTINCT v.visitor_hash) AS visitors,
 			AVG(v.duration_seconds) AS avg_duration, AVG(v.scroll_depth) AS avg_scroll
 		FROM $table v
 		INNER JOIN $wpdb->posts p ON p.ID = v.post_id
 		WHERE p.post_type = %s AND p.post_status = 'publish'
-		AND v.viewed_at >= %s
+		$where_sql
 		GROUP BY v.post_id
 		ORDER BY views DESC
 		LIMIT %d",
-		$post_type,
-		turf_period_start_sql_date( $days ),
-		turf_list_max()
+		array_merge( array( $post_type ), $date_params, array( turf_list_max() ) )
 	) );
 }
 
@@ -2002,6 +2104,7 @@ function turf_render_admin_table( $post_type, $days ) {
 		</tbody>
 	</table>
 	<?php
+	turf_render_export_link( 'turf_export_top_pages', array( 'post_type' => $post_type ) );
 }
 
 /**
@@ -2048,19 +2151,19 @@ function turf_get_top_terms_for_period( $taxonomy, $days ) {
 
 	$table = turf_table();
 
+	list( $where_sql, $date_params ) = turf_period_where_sql( $days, 'v.viewed_at' );
+
 	return $wpdb->get_results( $wpdb->prepare(
 		"SELECT v.term_id AS term_id, COUNT(*) AS views, COUNT(DISTINCT v.visitor_hash) AS visitors,
 			AVG(v.duration_seconds) AS avg_duration, AVG(v.scroll_depth) AS avg_scroll
 		FROM $table v
 		INNER JOIN $wpdb->term_taxonomy tt ON tt.term_id = v.term_id
 		WHERE tt.taxonomy = %s
-		AND v.viewed_at >= %s
+		$where_sql
 		GROUP BY v.term_id
 		ORDER BY views DESC
 		LIMIT %d",
-		$taxonomy,
-		turf_period_start_sql_date( $days ),
-		turf_list_max()
+		array_merge( array( $taxonomy ), $date_params, array( turf_list_max() ) )
 	) );
 }
 

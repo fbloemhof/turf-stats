@@ -85,6 +85,7 @@ function turf_search_render_top_terms( $days ) {
 		</tbody>
 	</table>
 	<?php
+	turf_render_export_link( 'turf_export_search_terms' );
 }
 
 function turf_search_render_zero_results( $days ) {

@@ -1,623 +1,1255 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: Turf\n"
+"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/turf-stats\n"
+"POT-Creation-Date: 2026-08-13T10:19:54+00:00\n"
 "Language: nl_NL\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
+#: includes/import-admin.php:55
+msgid " (dry run, nothing written)"
+msgstr " (droogloop, niets weggeschreven)"
+
+#. translators: 1: hour of day (0-23), 2: date, 3: number of visitors
+#: includes/views-admin.php:997
+#, php-format
+msgid "%1$02d:00 %2$s — %3$s visitors"
+msgstr "%1$02d:00 %2$s — %3$s bezoekers"
+
+#. translators: 1: hour of day (0-23), 2: number of visitors
+#: includes/views-admin.php:1020
+#, php-format
 msgid "%1$02d:00 — %2$s visitors"
 msgstr "%1$02d:00 — %2$s bezoekers"
 
-msgid "%1$02d:00 yesterday — %2$s visitors"
-msgstr "%1$02d:00 gisteren — %2$s bezoekers"
+#. translators: %1$d: number of posts whose import request failed
+#: includes/import-admin.php:54
+#, php-format
+msgid ""
+"%1$d post(s) failed with a request error — run the import again (without "
+"overwrite) to retry them."
+msgstr ""
+"%1$d bericht(en) mislukt door een verzoekfout — voer de import opnieuw uit "
+"(zonder overschrijven) om ze alsnog te proberen."
 
-msgid "%1$d post(s) failed with a request error — run the import again (without overwrite) to retry them."
-msgstr "%1$d bericht(en) mislukt door een verzoekfout — voer de import opnieuw uit (zonder overschrijven) om ze alsnog te proberen."
-
+#. translators: 1: weekday, 2: hour, 3: number of views
+#: includes/analytics-admin.php:47
+#, php-format
 msgid "%1$s %2$d:00 — %3$s views"
 msgstr "%1$s %2$d:00 — %3$s weergaven"
 
+#. translators: 1: number of hits, 2: percentage share of total
+#: includes/bots-admin.php:176
+#, php-format
 msgid "%1$s times (%2$d%%)"
 msgstr "%1$s keer (%2$d%%)"
 
+#. translators: 1: number of views, 2: percentage share of total views, 3: number of unique visitors
+#: includes/views-admin.php:1590
+#, php-format
 msgid "%1$s views (%2$d%%) · %3$s visitors"
 msgstr "%1$s weergaven (%2$d%%) · %3$s bezoekers"
 
+#. translators: 1: date, 2: number of views, 3: number of visitors
+#: includes/views-admin.php:810
+#, php-format
 msgid "%1$s — %2$s views, %3$s visitors"
 msgstr "%1$s — %2$s weergaven, %3$s bezoekers"
 
-msgid "%1$s — imported: %2$d, skipped (already had a value): %3$d, no/zero legacy views: %4$d"
-msgstr "%1$s — geïmporteerd: %2$d, overgeslagen (had al een waarde): %3$d, geen/nul legacy-weergaven: %4$d"
+#. translators: 1: source label, 2: number imported, 3: number skipped, 4: number with no legacy views
+#: includes/import-admin.php:52
+#, php-format
+msgid ""
+"%1$s — imported: %2$d, skipped (already had a value): %3$d, no/zero legacy "
+"views: %4$d"
+msgstr ""
+"%1$s — geïmporteerd: %2$d, overgeslagen (had al een waarde): %3$d, geen/nul "
+"legacy-weergaven: %4$d"
 
+#. translators: 1: source label (e.g. "jetpack"), 2: number of posts processed so far, 3: total number of posts
+#: includes/import-admin.php:50
+#, php-format
 msgid "%1$s: %2$d / %3$d posts…"
 msgstr "%1$s: %2$d / %3$d berichten…"
 
+#. translators: %d: number of posts
+#: includes/import-admin.php:141
+#, php-format
 msgid "%d published post(s) are eligible for import."
 msgstr "%d bericht(en) komen in aanmerking voor import."
 
+#. translators: %d: percentage of the previous funnel step
+#: includes/woocommerce-admin.php:74
+#, php-format
 msgid "%d%% of previous step"
 msgstr "%d%% van vorige stap"
 
+#. translators: %s is the (already locale-formatted) view count.
+#: includes/views.php:600
+#, php-format
 msgid "%s times viewed"
 msgstr "%s keer bekeken"
 
+#. translators: %s: number of visitors currently viewing this page
+#: includes/online-now.php:135
+#, php-format
 msgid "%s viewer"
 msgid_plural "%s viewers"
 msgstr[0] "%s kijker"
 msgstr[1] "%s kijkers"
 
+#: includes/postboxes.php:731
 msgid "30 days"
 msgstr "30 dagen"
 
+#: includes/404s-admin.php:13 includes/404s-admin.php:14
+#: includes/404s-admin.php:97
 msgid "404s"
 msgstr "404's"
 
+#: includes/postboxes.php:730
 msgid "7 days"
 msgstr "7 dagen"
 
+#: includes/postboxes.php:732
 msgid "90 days"
 msgstr "90 dagen"
 
-msgid "A caching layer is detected in front of the site, but almost nothing is actually being served from cache for this period - that combination usually means the layer is caching static files (images/CSS/JS) but not the HTML pages themselves, which is the default for most CDNs/edge caches (e.g. Cloudflare's standard cache level only caches by file extension unless a \"Cache Everything\" rule or something like Automatic Platform Optimization is turned on)."
-msgstr "Er is een cachelaag gedetecteerd vóór de site, maar er wordt voor deze periode vrijwel niets uit cache geserveerd - die combinatie betekent meestal dat de laag wel statische bestanden (afbeeldingen/CSS/JS) cachet, maar niet de HTML-pagina's zelf. Dat is het standaardgedrag bij de meeste CDN's/edge caches (Cloudflare's standaard cache-niveau cachet bijvoorbeeld alleen op bestandsextensie, tenzij een \"Cache Everything\"-regel of iets als Automatic Platform Optimization is ingeschakeld)."
+#: includes/views-admin.php:1105
+msgid ""
+"A caching layer is detected in front of the site, but almost nothing is "
+"actually being served from cache for this period - that combination usually "
+"means the layer is caching static files (images/CSS/JS) but not the HTML "
+"pages themselves, which is the default for most CDNs/edge caches (e.g. "
+"Cloudflare's standard cache level only caches by file extension unless a "
+"\"Cache Everything\" rule or something like Automatic Platform Optimization "
+"is turned on)."
+msgstr ""
+"Er is een cachelaag gedetecteerd vóór de site, maar er wordt voor deze "
+"periode vrijwel niets uit cache geserveerd - die combinatie betekent meestal "
+"dat de laag wel statische bestanden (afbeeldingen/CSS/JS) cachet, maar niet "
+"de HTML-pagina's zelf. Dat is het standaardgedrag bij de meeste CDN's/edge "
+"caches (Cloudflare's standaard cache-niveau cachet bijvoorbeeld alleen op "
+"bestandsextensie, tenzij een \"Cache Everything\"-regel of iets als "
+"Automatic Platform Optimization is ingeschakeld)."
 
+#: includes/review-notice.php:114
+msgid ""
+"A quick review on WordPress.org helps more site owners discover it - and "
+"takes less than a minute. No pressure if now isn't the moment."
+msgstr ""
+"Een korte review op WordPress.org helpt meer site-eigenaren de plugin te "
+"ontdekken - en kost minder dan een minuut. Geen probleem als het nu niet "
+"uitkomt."
+
+#: includes/views-admin.php:1149
 msgid "Added"
 msgstr "Toegevoegd"
 
+#: includes/woocommerce-admin.php:53
 msgid "Added to cart"
 msgstr "Toegevoegd aan winkelwagen"
 
+#: includes/import-admin.php:153 includes/postboxes.php:733
 msgid "All"
 msgstr "Alles"
 
+#: includes/analyse-admin.php:18 includes/analyse-admin.php:19
+#: includes/analyse-admin.php:73
 msgid "Analysis"
 msgstr "Analyse"
 
-msgid "App / REST API (other)"
-msgstr "App / REST API (overig)"
-
-msgid "Author"
-msgstr "Auteur"
-
-msgid "Author archive"
-msgstr "Auteur-archief"
-
-msgid "Avg. load time"
-msgstr "Gem. laadtijd"
-
-msgid "Avg. reading time"
-msgstr "Gem. leestijd"
-
-msgid "Avg. results"
-msgstr "Gem. resultaten"
-
-msgid "Avg. scroll depth"
-msgstr "Gem. scrolldiepte"
-
-msgid "Avg. time/visit"
-msgstr "Gem. tijd/bezoek"
-
-msgid "Belgium"
-msgstr "België"
-
-msgid "Blog index"
-msgstr "Blogoverzicht"
-
-msgid "Bot visits"
-msgstr "Bot-bezoeken"
-
-msgid "Bots & LLMs"
-msgstr "Bots & LLM's"
-
-msgid "Bounce rate"
-msgstr "Bouncepercentage"
-
-msgid "By author"
-msgstr "Per auteur"
-
-msgid "Campaign medium (UTM)"
-msgstr "Campagnemedium (UTM)"
-
-msgid "Campaign source (UTM)"
-msgstr "Campagnebron (UTM)"
-
-msgid "Category"
-msgstr "Categorie"
-
-msgid "Change"
-msgstr "Verandering"
-
-msgid "Clicks"
-msgstr "Klikken"
-
-msgid "Clicks on links to other websites - detected automatically, no data-turf-click needed."
-msgstr "Klikken op links naar andere websites - automatisch herkend, geen data-turf-click nodig."
-
-msgid "Combined across all caches in front of the site - a cache hit never reaches WordPress, so it can't be split per layer. Approximate: visitors who block the tracker are counted as origin renders."
-msgstr "Gecombineerd over alle caches vóór de site - een cache-hit bereikt WordPress nooit, dus is niet per laag te splitsen. Benadering: bezoekers die de tracker blokkeren tellen als origin-renders."
-
-msgid "Comments"
-msgstr "Reacties"
-
-msgid "Completed at checkout"
-msgstr "Afgerond bij checkout"
-
-msgid "Connector app"
-msgstr "Connector-app"
-
-msgid "Content activity"
-msgstr "Content-activiteit"
-
-msgid "Conversion"
-msgstr "Conversie"
-
-msgid "Country of origin"
-msgstr "Land van herkomst"
-
-msgid "Crawlers and AI bots usually don't run JavaScript, so this is counted separately, server-side - apart from the regular visitor stats (which deliberately exclude bots)."
-msgstr "Crawlers en AI-bots draaien meestal geen JavaScript, dus dit telt apart, server-side - los van de gewone bezoekersstatistieken (die bots juist bewust uitsluiten)."
-
-msgid "Currently viewed"
-msgstr "Nu bekeken"
-
-msgid "Date archive"
-msgstr "Datum-archief"
-
-msgid "Deeper analysis alongside the headline numbers on Statistics: search behavior, navigation routes, trends and conversions."
-msgstr "Diepere analyse naast de hoofdcijfers op Statistieken: zoekgedrag, navigatieroutes, trends en conversies."
-
-msgid "Destination"
-msgstr "Doel"
-
-msgid "Detected in front of the site:"
-msgstr "Gedetecteerd vóór de site:"
-
-msgid "Device"
-msgstr "Apparaat"
-
-msgid "Done."
-msgstr "Klaar."
-
-msgid "Dry run - report what would happen without writing anything"
-msgstr "Droogloop - toon wat er zou gebeuren zonder iets weg te schrijven"
-
-msgid " (dry run, nothing written)"
-msgstr " (droogloop, niets weggeschreven)"
-
-msgid "Dutch"
-msgstr "Nederlands"
-
-msgid "Edited"
-msgstr "Gewijzigd"
-
-msgid "Email"
-msgstr "E-mail"
-
-msgid "English"
-msgstr "Engels"
-
-msgid "entry-views plugin"
-msgstr "entry-views-plugin"
-
-msgid "Form"
-msgstr "Formulier"
-
-msgid "Forms"
-msgstr "Formulieren"
-
-msgid "France"
-msgstr "Frankrijk"
-
-msgid "French"
-msgstr "Frans"
-
-msgid "Fri"
-msgstr "Vr"
-
-msgid "Frisian"
-msgstr "Frysk"
-
-msgid "From"
-msgstr "Van"
-
-msgid "From page"
-msgstr "Vanaf pagina"
-
-msgid "German"
-msgstr "Duits"
-
-msgid "Germany"
-msgstr "Duitsland"
-
-msgid "How often specific UI elements (e.g. view buttons, filters, social icons) are actually clicked - separate from page views."
-msgstr "Hoe vaak specifieke UI-elementen (bv. weergave-knoppen, filters, social-iconen) daadwerkelijk worden aangeklikt - los van paginaweergaven."
-
-msgid "Import"
-msgstr "Import"
-
-msgid "Import legacy views"
-msgstr "Legacy-weergaven importeren"
-
-msgid "Import source"
-msgstr "Importbron"
-
-msgid "Importing…"
-msgstr "Bezig met importeren…"
-
-msgid "Internal (own site)"
-msgstr "Intern (eigen site)"
-
-msgid "Italy"
-msgstr "Italië"
-
-msgid "Jetpack Stats"
-msgstr "Jetpack Stats"
-
-msgid "Jetpack Stats isn't active on this site, so the \"Jetpack\" source will be skipped if selected. It only works where Jetpack is actually connected - typically production, not a local/staging copy."
-msgstr "Jetpack Stats is niet actief op deze site, dus de bron \"Jetpack\" wordt overgeslagen indien geselecteerd. Dit werkt alleen op een omgeving waar Jetpack daadwerkelijk verbonden is - meestal productie, niet een lokale/staging-kopie."
-
-msgid "Landing page"
-msgstr "Landingspagina"
-
-msgid "Landing pages"
-msgstr "Landingspagina's"
-
-msgid "Language"
-msgstr "Taal"
-
-msgid "Last"
-msgstr "Laatst"
-
-msgid "LLMs / AI"
-msgstr "LLM's / AI"
-
-msgid "Mobile"
-msgstr "Mobiel"
-
-msgid "Mon"
-msgstr "Ma"
-
-msgid "Most discussed"
-msgstr "Meest besproken"
-
-msgid "Most-crawled pages"
-msgstr "Meest gecrawlde pagina's"
-
-msgid "Most-hit URLs"
-msgstr "Meest geraakte URL's"
-
-msgid "Name"
-msgstr "Naam"
-
-msgid "Netherlands"
-msgstr "Nederland"
-
-msgid "new"
-msgstr "nieuw"
-
-msgid "New visitors"
-msgstr "Nieuwe bezoekers"
-
-msgid "New vs. returning"
-msgstr "Nieuw vs. terugkerend"
-
-msgid "No 404s recorded for this period."
-msgstr "Geen 404's geregistreerd voor deze periode."
-
-msgid "No bot visits yet for this period."
-msgstr "Nog geen bot-bezoeken voor deze periode."
-
-msgid "no caching layer detected"
-msgstr "geen cachelaag gedetecteerd"
-
-msgid "No clicks recorded yet for this period."
-msgstr "Nog geen kliks geregistreerd voor deze periode."
-
-msgid "No comments yet for this period."
-msgstr "Nog geen reacties voor deze periode."
-
-msgid "No content activity for this period."
-msgstr "Geen content-activiteit voor deze periode."
-
-msgid "No data yet for this period."
-msgstr "Nog geen data voor deze periode."
-
-msgid "No form submissions yet for this period (or no Contact Form 7/Gravity Forms active)."
-msgstr "Nog geen formulierinzendingen voor deze periode (of geen Contact Form 7/Gravity Forms actief)."
-
-msgid "No outbound link clicks recorded yet for this period."
-msgstr "Nog geen klikken op uitgaande links geregistreerd voor deze periode."
-
-msgid "No pages currently being viewed."
-msgstr "Nu geen pagina's die bekeken worden."
-
-msgid "No searches yet for this period."
-msgstr "Nog geen zoekopdrachten voor deze periode."
-
-msgid "No sessions with more than one page view yet for this period."
-msgstr "Nog geen sessies met meer dan één paginaweergave voor deze periode."
-
-msgid "No zero-result searches for this period."
-msgstr "Geen zoekopdrachten zonder resultaat voor deze periode."
-
-msgid "Not enough recent views yet to determine trends."
-msgstr "Nog niet genoeg recente weergaven om trends te bepalen."
-
-msgid "One-time import of historical view counts from Jetpack Stats and/or the old entry-views plugin, so switching to Turf doesn't lose them. Imported numbers have no timestamp or visitor data, so they only ever show up in the \"Views\" total under \"All\" - never in the 7/30/90-day windows or in \"Visitors\"."
-msgstr "Eenmalige import van historische weergavecijfers uit Jetpack Stats en/of de oude entry-views-plugin, zodat overstappen naar Turf deze niet verloren laat gaan. Geïmporteerde aantallen hebben geen tijdstempel of bezoekersgegevens, dus ze verschijnen alleen in het \"Weergaven\"-totaal onder \"Alles\" - nooit in de 7/30/90-dagen-vensters of in \"Bezoekers\"."
-
-msgid "Online now"
-msgstr "Nu online"
-
-msgid "Operating system"
-msgstr "Besturingssysteem"
-
-msgid "Options"
-msgstr "Opties"
-
-msgid "Origin renders"
-msgstr "Origin-renders"
-
-msgid "Other"
-msgstr "Overig"
-
-msgid "Other bot"
-msgstr "Overige bot"
-
-msgid "Other bots"
-msgstr "Overige bots"
-
-msgid "Other pages"
-msgstr "Overige pagina's"
-
-msgid "Outbound links"
-msgstr "Uitgaande links"
-
-msgid "Overview"
-msgstr "Overzicht"
-
-msgid "Overwrite posts that already have a value for the new counter"
-msgstr "Overschrijf berichten die al een waarde hebben voor de nieuwe teller"
-
-msgid "Pages crawled"
-msgstr "Pagina's gecrawld"
-
-msgid "Path"
-msgstr "Pad"
-
-msgid "Peak hours"
-msgstr "Piekuren"
-
-msgid "Poland"
-msgstr "Polen"
-
-msgid "Posts"
-msgstr "Berichten"
-
-msgid "Product views"
-msgstr "Productweergaven"
-
-msgid "Raw pageviews"
-msgstr "Rauwe paginaweergaven"
-
-msgid "Raw views"
-msgstr "Rauwe weergaven"
-
-msgid "Returning visitors"
-msgstr "Terugkerende bezoekers"
-
-msgid "Sat"
-msgstr "Za"
-
-msgid "Screen resolution"
-msgstr "Schermresolutie"
-
-msgid "Search engines"
-msgstr "Zoekmachines"
-
-msgid "Search results"
-msgstr "Zoekresultaten"
-
-msgid "Search term"
-msgstr "Zoekterm"
-
-msgid "Search terms"
-msgstr "Zoekwoorden"
-
-msgid "SEO tools"
-msgstr "SEO-tools"
-
-msgid "Served from cache"
-msgstr "Uit cache geserveerd"
-
-msgid "Sessions"
-msgstr "Bezoeken"
-
-msgid "Show %d more"
-msgstr "Toon %d meer"
-
-msgid "Show less"
-msgstr "Toon minder"
-
-msgid "Something went wrong - check the browser console and try again."
-msgstr "Er ging iets mis - controleer de browserconsole en probeer het opnieuw."
-
-msgid "Source"
-msgstr "Herkomst"
-
-msgid "Spain"
-msgstr "Spanje"
-
-msgid "Specific bots"
-msgstr "Specifieke bots"
-
-msgid "Start import"
-msgstr "Import starten"
-
-msgid "Statistics"
-msgstr "Statistieken"
-
-msgid "Submissions"
-msgstr "Inzendingen"
-
-msgid "Sun"
-msgstr "Zo"
-
-msgid "The first page of each visit - where visitors arrive. Bounce % is the share of those visits that ended on this same page."
-msgstr "De eerste pagina van elk bezoek - waar bezoekers binnenkomen. Bouncepercentage is het aandeel van die bezoeken dat op deze pagina eindigde."
-
-msgid "These sources run through a backend server on the connector's side, not through individual visitors' devices - so \"Visitors\" isn't reliable for them. \"Views\" still is."
-msgstr "Deze bronnen lopen via een backend-server aan de kant van de connector, niet via de apparaten van losse bezoekers - \"Bezoekers\" is daardoor niet betrouwbaar voor die bronnen. \"Weergaven\" wel."
-
-msgid "Thu"
-msgstr "Do"
-
-msgid "Times"
-msgstr "Keer"
-
-msgid "Times hit"
-msgstr "Keer geraakt"
-
-msgid "Times searched"
-msgstr "Keer gezocht"
-
-msgid "Title"
-msgstr "Titel"
-
-msgid "To"
-msgstr "Naar"
-
-msgid "To verify directly: open a page on the site and check the response headers in your browser's network tab - Cloudflare adds a \"cf-cache-status\" header that reads \"HIT\" once a page is actually served from its edge cache, \"DYNAMIC\"/\"MISS\" otherwise."
-msgstr "Direct verifiëren: open een pagina op de site en bekijk de response-headers in het netwerktabblad van je browser - Cloudflare voegt een \"cf-cache-status\"-header toe die \"HIT\" toont zodra een pagina daadwerkelijk uit de edge-cache wordt geserveerd, en anders \"DYNAMIC\"/\"MISS\"."
-
-msgid "Today"
-msgstr "Vandaag"
-
-msgid "Top clicks"
-msgstr "Top kliks"
-
-msgid "Top referring sites"
-msgstr "Top verwijzende sites"
-
-msgid "Tue"
-msgstr "Di"
-
-msgid "United Kingdom"
-msgstr "Verenigd Koninkrijk"
-
-msgid "United States"
-msgstr "Verenigde Staten"
-
-msgid "Unknown (from before this feature)"
-msgstr "Onbekend (van vóór deze functie)"
-
-msgid "Unknown (no screen size recorded)"
-msgstr "Onbekend (geen scherm-grootte)"
-
+#: includes/views-admin.php:1285
 msgid "App / REST API (no screen size)"
 msgstr "App / REST API (geen scherm-grootte)"
 
-msgid "Unknown (no Cloudflare country detection or own GeoIP integration)"
-msgstr "Onbekend (geen Cloudflare-landdetectie of eigen GeoIP-koppeling)"
+#: includes/views-admin.php:1504
+msgid "App / REST API (other)"
+msgstr "App / REST API (overig)"
 
-msgid "Views"
-msgstr "Weergaven"
+#: includes/postboxes.php:789
+msgid "Apply"
+msgstr "Toepassen"
 
-msgid "Views (24h)"
-msgstr "Weergaven (24u)"
+#: includes/authors-admin.php:86
+msgid "Author"
+msgstr "Auteur"
 
-msgid "Views/visitor"
-msgstr "Weergaven/bezoeker"
+#: includes/views-admin.php:1696
+msgid "Author archive"
+msgstr "Auteur-archief"
 
-msgid "Visitor routes"
-msgstr "Bezoekersroutes"
+#: includes/views-admin.php:636 includes/views-admin.php:751
+msgid "Avg. load time"
+msgstr "Gem. laadtijd"
 
-msgid "Visitors"
-msgstr "Bezoekers"
+#: includes/csv-export.php:143
+msgid "Avg. load time (ms)"
+msgstr "Gem. laadtijd (ms)"
 
-msgid "Visitors per hour (today)"
-msgstr "Bezoekers per uur (vandaag)"
+#: includes/authors-admin.php:89 includes/views-admin.php:2084
+#: includes/views-admin.php:2183
+msgid "Avg. reading time"
+msgstr "Gem. leestijd"
 
-msgid "Visitors per hour, today vs. yesterday"
-msgstr "Bezoekers per uur, vandaag versus gisteren"
+#: includes/csv-export.php:184
+msgid "Avg. reading time (s)"
+msgstr "Gem. leestijd (s)"
 
-msgid "Visitors per hour today"
-msgstr "Bezoekers per uur vandaag"
+#: includes/csv-export.php:258 includes/search-admin.php:74
+msgid "Avg. results"
+msgstr "Gem. resultaten"
 
-msgid "Wed"
-msgstr "Wo"
+#: includes/authors-admin.php:90 includes/views-admin.php:2085
+#: includes/views-admin.php:2184
+msgid "Avg. scroll depth"
+msgstr "Gem. scrolldiepte"
 
-msgid "What visitors search for but don't find - candidates for new content or a redirect."
-msgstr "Wat bezoekers zoeken maar niet vinden - kandidaten voor nieuwe content of een redirect."
+#: includes/csv-export.php:187
+msgid "Avg. scroll depth (%)"
+msgstr "Gem. scrolldiepte (%)"
 
-msgid "Which non-existent URLs visitors hit - handy for finding and fixing broken links."
-msgstr "Welke niet-bestaande URL's bezoekers raken - handig om kapotte links te vinden en te fixen."
+#: includes/views-admin.php:628 includes/views-admin.php:745
+msgid "Avg. time/visit"
+msgstr "Gem. tijd/bezoek"
 
-msgid "Which page visitors click through to next within a single visit (sessions with max. 30 minutes between views)."
-msgstr "Van welke pagina bezoekers naar welke andere pagina doorklikken binnen één bezoek (sessies van max. 30 minuten tussen weergaven)."
+#: includes/csv-export.php:138
+msgid "Avg. time/visit (s)"
+msgstr "Gem. tijd/bezoek (s)"
 
-msgid "WooCommerce funnel"
-msgstr "WooCommerce-funnel"
+#: includes/views-admin.php:1360
+msgid "Belgium"
+msgstr "België"
 
-msgid "Yesterday"
-msgstr "Gisteren"
+#: includes/views-admin.php:1699
+msgid "Blog index"
+msgstr "Blogoverzicht"
 
-msgid "Go to date"
-msgstr "Ga naar datum"
+#: includes/bots-admin.php:102 includes/bots-admin.php:113
+#: includes/bots-admin.php:226
+msgid "Bot visits"
+msgstr "Bot-bezoeken"
 
+#: includes/bots-admin.php:16 includes/bots-admin.php:17
+#: includes/bots-admin.php:258
+msgid "Bots & LLMs"
+msgstr "Bots & LLM's"
+
+#: includes/sessions-admin.php:69
+msgid "Bounce %"
+msgstr "Bounce-%"
+
+#: includes/views-admin.php:622 includes/views-admin.php:740
+msgid "Bounce rate"
+msgstr "Bouncepercentage"
+
+#: includes/csv-export.php:133
+msgid "Bounce rate (%)"
+msgstr "Bouncepercentage (%)"
+
+#: includes/views-admin.php:61
+msgid "Browser"
+msgstr "Browser"
+
+#: includes/analyse-admin.php:55
+msgid "By author"
+msgstr "Per auteur"
+
+#: includes/views-admin.php:104
+msgid "Caching"
+msgstr "Caching"
+
+#: includes/views-admin.php:91
+msgid "Campaign content (UTM)"
+msgstr "Campagne-inhoud (UTM)"
+
+#: includes/views-admin.php:88
+msgid "Campaign medium (UTM)"
+msgstr "Campagnemedium (UTM)"
+
+#: includes/views-admin.php:85
+msgid "Campaign source (UTM)"
+msgstr "Campagnebron (UTM)"
+
+#: includes/views-admin.php:1368
+msgid "Canada"
+msgstr "Canada"
+
+#: includes/bots-admin.php:37
+msgid "Category"
+msgstr "Categorie"
+
+#: includes/analytics-admin.php:74
+msgid "Change"
+msgstr "Verandering"
+
+#: includes/postboxes.php:778
 msgid "Clear date"
 msgstr "Datum wissen"
 
-msgid "Enjoying Turf Stats?"
-msgstr "Vind je Turf Stats handig?"
+#: includes/clicks-admin.php:15 includes/clicks-admin.php:16
+#: includes/clicks-admin.php:114 includes/clicks-admin.php:145
+#: includes/clicks-admin.php:181
+msgid "Clicks"
+msgstr "Klikken"
 
-msgid "A quick review on WordPress.org helps more site owners discover it - and takes less than a minute. No pressure if now isn't the moment."
-msgstr "Een korte review op WordPress.org helpt meer site-eigenaren de plugin te ontdekken - en kost minder dan een minuut. Geen probleem als het nu niet uitkomt."
+#: includes/clicks-admin.php:138
+msgid ""
+"Clicks on links to other websites - detected automatically, no data-turf-"
+"click needed."
+msgstr ""
+"Klikken op links naar andere websites - automatisch herkend, geen data-turf-"
+"click nodig."
 
-msgid "Leave a review"
-msgstr "Review schrijven"
+#: includes/views-admin.php:1097
+msgid ""
+"Combined across all caches in front of the site - a cache hit never reaches "
+"WordPress, so it can't be split per layer. Approximate: visitors who block "
+"the tracker are counted as origin renders."
+msgstr ""
+"Gecombineerd over alle caches vóór de site - een cache-hit bereikt WordPress "
+"nooit, dus is niet per laag te splitsen. Benadering: bezoekers die de "
+"tracker blokkeren tellen als origin-renders."
 
-msgid "Not now"
-msgstr "Niet nu"
+#: includes/comments.php:84 includes/csv-export.php:148
+#: includes/views-admin.php:599 includes/views-admin.php:617
+#: includes/views-admin.php:659 includes/views-admin.php:736
+msgid "Comments"
+msgstr "Reacties"
 
-msgid "Toon"
-msgstr "Toon"
+#: includes/woocommerce-admin.php:54
+msgid "Completed at checkout"
+msgstr "Afgerond bij checkout"
 
-msgid "Top referrer"
-msgstr "Top verwijzer"
+#: includes/views-admin.php:1503
+msgid "Connector app"
+msgstr "Connector-app"
 
-msgid "Most viewed"
-msgstr "Meest bekeken"
+#: includes/forms-admin.php:41
+msgid "Contact Form 7"
+msgstr "Contact Form 7"
 
-msgid "View all statistics"
-msgstr "Alle statistieken bekijken"
+#: includes/views-admin.php:53
+msgid "Content activity"
+msgstr "Content-activiteit"
 
-msgid "Views today"
-msgstr "Weergaven vandaag"
+#: includes/forms-admin.php:60
+msgid "Conversion"
+msgstr "Conversie"
 
-msgid "Visitors today"
-msgstr "Bezoekers vandaag"
+#: includes/views-admin.php:73
+msgid "Country of origin"
+msgstr "Land van herkomst"
 
-msgid "vs yesterday"
-msgstr "t.o.v. gisteren"
+#: includes/bots-admin.php:260
+msgid ""
+"Crawlers and AI bots usually don't run JavaScript, so this is counted "
+"separately, server-side - apart from the regular visitor stats (which "
+"deliberately exclude bots)."
+msgstr ""
+"Crawlers en AI-bots draaien meestal geen JavaScript, dus dit telt apart, "
+"server-side - los van de gewone bezoekersstatistieken (die bots juist bewust "
+"uitsluiten)."
 
-msgid "Phone"
-msgstr "Telefoon"
+#: includes/views-admin.php:51
+msgid "Currently viewed"
+msgstr "Nu bekeken"
 
-msgid "Tablet"
-msgstr "Tablet"
+#: includes/postboxes.php:734
+msgid "Custom"
+msgstr "Aangepast"
 
+#: includes/views-admin.php:1697
+msgid "Date archive"
+msgstr "Datum-archief"
+
+#: includes/analyse-admin.php:75
+msgid ""
+"Deeper analysis alongside the headline numbers on Statistics: search "
+"behavior, navigation routes, trends and conversions."
+msgstr ""
+"Diepere analyse naast de hoofdcijfers op Statistieken: zoekgedrag, "
+"navigatieroutes, trends en conversies."
+
+#: includes/saved-ranges.php:190
+msgid "Delete"
+msgstr "Verwijderen"
+
+#: includes/views-admin.php:1316 includes/views-admin.php:1333
 msgid "Desktop"
 msgstr "Desktop"
 
-msgid "Zero-result searches"
-msgstr "Zoekopdrachten zonder resultaat"
+#: includes/clicks-admin.php:143
+msgid "Destination"
+msgstr "Doel"
 
-msgid "Last 7 days"
-msgstr "Laatste 7 dagen"
+#: includes/views-admin.php:1086
+msgid "Detected in front of the site:"
+msgstr "Gedetecteerd vóór de site:"
 
+#: includes/views-admin.php:58
+msgid "Device"
+msgstr "Apparaat"
+
+#: includes/views-admin.php:1499
+msgid "Direct"
+msgstr "Direct"
+
+#: includes/import-admin.php:56
+msgid "Done."
+msgstr "Klaar."
+
+#: includes/import-admin.php:169
+msgid "Dry run - report what would happen without writing anything"
+msgstr "Droogloop - toon wat er zou gebeuren zonder iets weg te schrijven"
+
+#: includes/views-admin.php:1376
+msgid "Dutch"
+msgstr "Nederlands"
+
+#: includes/views-admin.php:1150
+msgid "Edited"
+msgstr "Gewijzigd"
+
+#: includes/clicks-admin.php:113
+msgid "Element"
+msgstr "Element"
+
+#: includes/social-share.php:36
+msgid "Email"
+msgstr "E-mail"
+
+#: includes/email-report-admin.php:16 includes/email-report-admin.php:17
+#: includes/email-report-admin.php:122
+msgid "Email report"
+msgstr "E-mailrapport"
+
+#: includes/email-report-admin.php:131
+msgid "Enabled"
+msgstr "Ingeschakeld"
+
+#: includes/views-admin.php:1378
+msgid "English"
+msgstr "Engels"
+
+#: includes/review-notice.php:113
+msgid "Enjoying Turf Stats?"
+msgstr "Vind je Turf Stats handig?"
+
+#: includes/csv-export.php:99
+msgid "Export CSV"
+msgstr "Exporteren als CSV"
+
+#: includes/social-share.php:17
+msgid "Facebook"
+msgstr "Facebook"
+
+#: includes/email-report-admin.php:39
+msgid "Failed to send - check the recipient address and try again."
+msgstr "Verzenden mislukt - controleer het e-mailadres en probeer het opnieuw."
+
+#: includes/csv-export.php:110
+msgid "Forbidden"
+msgstr "Verboden"
+
+#: includes/forms-admin.php:58
+msgid "Form"
+msgstr "Formulier"
+
+#: includes/analyse-admin.php:59
+msgid "Forms"
+msgstr "Formulieren"
+
+#: includes/views-admin.php:1364
+msgid "France"
+msgstr "Frankrijk"
+
+#: includes/views-admin.php:1380
+msgid "French"
+msgstr "Frans"
+
+#: includes/email-report-admin.php:147
+msgid "Frequency"
+msgstr "Frequentie"
+
+#: includes/analytics-admin.php:24
+msgid "Fri"
+msgstr "Vr"
+
+#: includes/views-admin.php:1377
+msgid "Frisian"
+msgstr "Frysk"
+
+#: includes/postboxes.php:785 includes/sessions-admin.php:31
+msgid "From"
+msgstr "Van"
+
+#: includes/clicks-admin.php:144
+msgid "From page"
+msgstr "Vanaf pagina"
+
+#: includes/views-admin.php:1379
+msgid "German"
+msgstr "Duits"
+
+#: includes/views-admin.php:1361
+msgid "Germany"
+msgstr "Duitsland"
+
+#: includes/email-report-admin.php:124
+msgid "Get a summary of your site's stats by email on a recurring schedule."
+msgstr ""
+"Ontvang een samenvatting van de statistieken van je site via e-mail, op een "
+"terugkerend schema."
+
+#: includes/postboxes.php:774
+msgid "Go to date"
+msgstr "Ga naar datum"
+
+#: includes/forms-admin.php:42
+msgid "Gravity Forms"
+msgstr "Gravity Forms"
+
+#: includes/clicks-admin.php:183
+msgid ""
+"How often specific UI elements (e.g. view buttons, filters, social icons) "
+"are actually clicked - separate from page views."
+msgstr ""
+"Hoe vaak specifieke UI-elementen (bv. weergave-knoppen, filters, social-"
+"iconen) daadwerkelijk worden aangeklikt - los van paginaweergaven."
+
+#: includes/import-admin.php:19 includes/import-admin.php:20
+msgid "Import"
+msgstr "Import"
+
+#: includes/import-admin.php:126
+msgid "Import legacy views"
+msgstr "Legacy-weergaven importeren"
+
+#: includes/import-admin.php:150
+msgid "Import source"
+msgstr "Importbron"
+
+#: includes/import-admin.php:57
+msgid "Importing…"
+msgstr "Bezig met importeren…"
+
+#: includes/views-admin.php:1505
+msgid "Internal (own site)"
+msgstr "Intern (eigen site)"
+
+#: includes/csv-export.php:225
+msgid "Invalid column"
+msgstr "Ongeldige kolom"
+
+#: includes/csv-export.php:169
+msgid "Invalid post type"
+msgstr "Ongeldig berichttype"
+
+#: includes/views-admin.php:1366
+msgid "Italy"
+msgstr "Italië"
+
+#: includes/import-admin.php:154
+msgid "Jetpack Stats"
+msgstr "Jetpack Stats"
+
+#: includes/import-admin.php:133
+msgid ""
+"Jetpack Stats isn't active on this site, so the \"Jetpack\" source will be "
+"skipped if selected. It only works where Jetpack is actually connected - "
+"typically production, not a local/staging copy."
+msgstr ""
+"Jetpack Stats is niet actief op deze site, dus de bron \"Jetpack\" wordt "
+"overgeslagen indien geselecteerd. Dit werkt alleen op een omgeving waar "
+"Jetpack daadwerkelijk verbonden is - meestal productie, niet een lokale/"
+"staging-kopie."
+
+#: includes/bots-admin.php:54
+msgid "LLMs / AI"
+msgstr "LLM's / AI"
+
+#: includes/csv-export.php:232
+msgid "Label"
+msgstr "Label"
+
+#: includes/sessions-admin.php:67
+msgid "Landing page"
+msgstr "Landingspagina"
+
+#: includes/analyse-admin.php:35
+msgid "Landing pages"
+msgstr "Landingspagina's"
+
+#: includes/views-admin.php:70
+msgid "Language"
+msgstr "Taal"
+
+#: includes/404s-admin.php:77
+msgid "Last"
+msgstr "Laatst"
+
+#: includes/stats-widget.php:52
 msgid "Last 28 days"
 msgstr "Laatste 28 dagen"
 
+#: includes/stats-widget.php:48
+msgid "Last 7 days"
+msgstr "Laatste 7 dagen"
+
+#: includes/csv-export.php:278
+msgid "Last hit"
+msgstr "Laatst"
+
+#: includes/review-notice.php:117
+msgid "Leave a review"
+msgstr "Review schrijven"
+
+#: includes/social-share.php:32
+msgid "LinkedIn"
+msgstr "LinkedIn"
+
+#: includes/csv-export.php:151
+msgid "Metric"
+msgstr "Metriek"
+
+#: includes/views-admin.php:1334
+msgid "Mobile"
+msgstr "Mobiel"
+
+#: includes/analytics-admin.php:20
+msgid "Mon"
+msgstr "Ma"
+
+#: includes/email-report-admin.php:151
+msgid "Monthly"
+msgstr "Maandelijks"
+
+#: includes/views-admin.php:134
+msgid "Most discussed"
+msgstr "Meest besproken"
+
+#: includes/bots-admin.php:47
+msgid "Most-crawled pages"
+msgstr "Meest gecrawlde pagina's"
+
+#: includes/404s-admin.php:30
+msgid "Most-hit URLs"
+msgstr "Meest geraakte URL's"
+
+#: includes/views-admin.php:2180
+msgid "Name"
+msgstr "Naam"
+
+#: includes/postboxes.php:56
+msgid "Name this range:"
+msgstr "Geef deze periode een naam:"
+
+#: includes/views-admin.php:1359
+msgid "Netherlands"
+msgstr "Nederland"
+
+#: includes/views-admin.php:1760
+msgid "New visitors"
+msgstr "Nieuwe bezoekers"
+
+#: includes/views-admin.php:76
+msgid "New vs. returning"
+msgstr "Nieuw vs. terugkerend"
+
+#: includes/404s-admin.php:68
+msgid "No 404s recorded for this period."
+msgstr "Geen 404's geregistreerd voor deze periode."
+
+#: includes/bots-admin.php:217
+msgid "No bot visits yet for this period."
+msgstr "Nog geen bot-bezoeken voor deze periode."
+
+#: includes/clicks-admin.php:106
+msgid "No clicks recorded yet for this period."
+msgstr "Nog geen kliks geregistreerd voor deze periode."
+
+#: includes/bots-admin.php:165
+msgid "No data yet for this period."
+msgstr "Nog geen data voor deze periode."
+
+#: includes/clicks-admin.php:133
+msgid "No outbound link clicks recorded yet for this period."
+msgstr "Nog geen klikken op uitgaande links geregistreerd voor deze periode."
+
+#: includes/online-now.php:125
+msgid "No pages currently being viewed."
+msgstr "Nu geen pagina's die bekeken worden."
+
+#: includes/review-notice.php:118
+msgid "Not now"
+msgstr "Niet nu"
+
+#: includes/email-report-admin.php:143
+msgid "One or more addresses, separated by commas."
+msgstr "Eén of meer adressen, gescheiden door komma's."
+
+#: includes/import-admin.php:128
+msgid ""
+"One-time import of historical view counts from Jetpack Stats and/or the old "
+"entry-views plugin, so switching to Turf doesn't lose them. Imported numbers "
+"have no timestamp or visitor data, so they only ever show up in the "
+"\"Views\" total under \"All\" - never in the 7/30/90-day windows or in "
+"\"Visitors\"."
+msgstr ""
+"Eenmalige import van historische weergavecijfers uit Jetpack Stats en/of de "
+"oude entry-views-plugin, zodat overstappen naar Turf deze niet verloren laat "
+"gaan. Geïmporteerde aantallen hebben geen tijdstempel of bezoekersgegevens, "
+"dus ze verschijnen alleen in het \"Weergaven\"-totaal onder \"Alles\" - "
+"nooit in de 7/30/90-dagen-vensters of in \"Bezoekers\"."
+
+#: includes/dashboard.php:71 includes/online-now.php:178
+#: includes/stats-widget.php:36
+msgid "Online now"
+msgstr "Nu online"
+
+#: includes/views-admin.php:64
+msgid "Operating system"
+msgstr "Besturingssysteem"
+
+#: includes/import-admin.php:160
+msgid "Options"
+msgstr "Opties"
+
+#: includes/views-admin.php:1081
+msgid "Origin renders"
+msgstr "Origin-renders"
+
+#: includes/views-admin.php:1508 includes/views-admin.php:1700
+msgid "Other"
+msgstr "Overig"
+
+#: includes/bots.php:140
+msgid "Other bot"
+msgstr "Overige bot"
+
+#: includes/bots-admin.php:58
+msgid "Other bots"
+msgstr "Overige bots"
+
+#: includes/views-admin.php:94
+msgid "Other pages"
+msgstr "Overige pagina's"
+
+#: includes/clicks-admin.php:36
+msgid "Outbound links"
+msgstr "Uitgaande links"
+
+#: includes/bots-admin.php:33 includes/views-admin.php:47
+msgid "Overview"
+msgstr "Overzicht"
+
+#: includes/import-admin.php:164
+msgid "Overwrite posts that already have a value for the new counter"
+msgstr "Overschrijf berichten die al een waarde hebben voor de nieuwe teller"
+
+#: includes/bots-admin.php:103 includes/bots-admin.php:114
+msgid "Pages crawled"
+msgstr "Pagina's gecrawld"
+
+#: includes/404s-admin.php:75 includes/csv-export.php:272
+msgid "Path"
+msgstr "Pad"
+
+#: includes/views-admin.php:108
+msgid "Peak hours"
+msgstr "Piekuren"
+
+#: includes/views-admin.php:1314
+msgid "Phone"
+msgstr "Telefoon"
+
+#: includes/views-admin.php:1367
+msgid "Poland"
+msgstr "Polen"
+
+#: includes/authors-admin.php:87
+msgid "Posts"
+msgstr "Berichten"
+
+#: includes/woocommerce-admin.php:52
+msgid "Product views"
+msgstr "Productweergaven"
+
+#: includes/views-admin.php:1082
+msgid "Raw pageviews"
+msgstr "Rauwe paginaweergaven"
+
+#: includes/csv-export.php:128 includes/views-admin.php:612
+#: includes/views-admin.php:731
+msgid "Raw views"
+msgstr "Rauwe weergaven"
+
+#: includes/email-report-admin.php:140
+msgid "Recipients"
+msgstr "Ontvangers"
+
+#: includes/csv-export.php:201
+msgid "Referrer host"
+msgstr "Verwijzende host"
+
+#: includes/email-report-admin.php:158
+msgid ""
+"Relies on WP-Cron, which only runs on a page request - a site with very "
+"little traffic may see the email arrive a few hours late. If email in "
+"general doesn't reliably arrive from this site, an SMTP plugin fixes that "
+"independently of Turf Stats."
+msgstr ""
+"Werkt via WP-Cron, dat alleen draait bij een paginabezoek - op een site met "
+"weinig verkeer kan de e-mail daardoor een paar uur later aankomen. Komt e-"
+"mail vanaf deze site sowieso onbetrouwbaar aan, dan lost een SMTP-plugin dat "
+"op, los van Turf Stats."
+
+#: includes/views-admin.php:1760
+msgid "Returning visitors"
+msgstr "Terugkerende bezoekers"
+
+#: includes/bots-admin.php:57
+msgid "SEO tools"
+msgstr "SEO-tools"
+
+#: includes/analytics-admin.php:25
+msgid "Sat"
+msgstr "Za"
+
+#: includes/email-report-admin.php:161
+msgid "Save changes"
+msgstr "Wijzigingen opslaan"
+
+#: includes/saved-ranges.php:182
+msgid "Save this range"
+msgstr "Deze periode opslaan"
+
+#: includes/saved-ranges.php:167
+msgid "Saved ranges…"
+msgstr "Opgeslagen periodes…"
+
+#: includes/views-admin.php:67
+msgid "Screen resolution"
+msgstr "Schermresolutie"
+
+#: includes/bots-admin.php:55 includes/views-admin.php:1506
+msgid "Search engines"
+msgstr "Zoekmachines"
+
+#: includes/views-admin.php:1698
+msgid "Search results"
+msgstr "Zoekresultaten"
+
+#: includes/csv-export.php:252 includes/search-admin.php:72
+#: includes/search-admin.php:104
+msgid "Search term"
+msgstr "Zoekterm"
+
+#: includes/analyse-admin.php:39
+msgid "Search terms"
+msgstr "Zoekwoorden"
+
+#: includes/csv-export.php:255
+msgid "Searches"
+msgstr "Keer gezocht"
+
+#. Description of the plugin
+#: turf-stats.php
+msgid ""
+"Self-hosted, cookieless page-view and click analytics for WordPress - no "
+"Google Analytics, no Jetpack, no external calls for tracking. Tracks views, "
+"archive pages, referrers, UTM campaigns, scroll depth/reading time, 404s, "
+"and arbitrary UI clicks."
+msgstr ""
+
+#: includes/email-report-admin.php:165
+msgid "Send test email now"
+msgstr "Stuur nu een testmail"
+
+#: includes/email-report-admin.php:135
+msgid "Send the email report on a recurring schedule"
+msgstr "Verstuur het e-mailrapport op een terugkerend schema"
+
+#: includes/email-report-admin.php:37
+msgid "Sending…"
+msgstr "Bezig met verzenden…"
+
+#. translators: %s: site name
+#: includes/email-report.php:198
+#, php-format
+msgid "Sent by Turf Stats for %s."
+msgstr "Verzonden door Turf Stats voor %s."
+
+#: includes/email-report-admin.php:38
+msgid "Sent."
+msgstr "Verzonden."
+
+#: includes/views-admin.php:1080
+msgid "Served from cache"
+msgstr "Uit cache geserveerd"
+
+#: includes/sessions-admin.php:68
+msgid "Sessions"
+msgstr "Bezoeken"
+
+#: includes/email-report-admin.php:86
+msgid "Settings saved."
+msgstr "Instellingen opgeslagen."
+
+#. translators: %d: number of additional rows hidden behind the toggle
+#: includes/postboxes.php:43
+#, php-format
+msgid "Show %d more"
+msgstr "Toon %d meer"
+
+#: includes/postboxes.php:44
+msgid "Show less"
+msgstr "Toon minder"
+
+#: includes/bots-admin.php:56 includes/views-admin.php:1507
+msgid "Social media"
+msgstr "Sociale media"
+
+#: includes/import-admin.php:58
+msgid "Something went wrong - check the browser console and try again."
+msgstr ""
+"Er ging iets mis - controleer de browserconsole en probeer het opnieuw."
+
+#: includes/views-admin.php:79
+msgid "Source"
+msgstr "Herkomst"
+
+#: includes/views-admin.php:1365
+msgid "Spain"
+msgstr "Spanje"
+
+#: includes/bots-admin.php:41
+msgid "Specific bots"
+msgstr "Specifieke bots"
+
+#: includes/import-admin.php:177
+msgid "Start import"
+msgstr "Import starten"
+
+#: includes/views-admin.php:19 includes/views-admin.php:20
+#: includes/views-admin.php:1907
+msgid "Statistics"
+msgstr "Statistieken"
+
+#: includes/forms-admin.php:59
+msgid "Submissions"
+msgstr "Inzendingen"
+
+#: includes/analytics-admin.php:26
+msgid "Sun"
+msgstr "Zo"
+
+#: includes/views-admin.php:1315 includes/views-admin.php:1335
+msgid "Tablet"
+msgstr "Tablet"
+
+#: includes/sessions-admin.php:62
+msgid ""
+"The first page of each visit - where visitors arrive. Bounce % is the share "
+"of those visits that ended on this same page."
+msgstr ""
+"De eerste pagina van elk bezoek - waar bezoekers binnenkomen. "
+"Bouncepercentage is het aandeel van die bezoeken dat op deze pagina eindigde."
+
+#: includes/views-admin.php:1642
+msgid ""
+"These sources run through a backend server on the connector's side, not "
+"through individual visitors' devices - so \"Visitors\" isn't reliable for "
+"them. \"Views\" still is."
+msgstr ""
+"Deze bronnen lopen via een backend-server aan de kant van de connector, niet "
+"via de apparaten van losse bezoekers - \"Bezoekers\" is daardoor niet "
+"betrouwbaar voor die bronnen. \"Weergaven\" wel."
+
+#: includes/analytics-admin.php:23
+msgid "Thu"
+msgstr "Do"
+
+#: includes/sessions-admin.php:33
+msgid "Times"
+msgstr "Keer"
+
+#: includes/404s-admin.php:76 includes/csv-export.php:275
+msgid "Times hit"
+msgstr "Keer geraakt"
+
+#: includes/search-admin.php:73 includes/search-admin.php:105
+msgid "Times searched"
+msgstr "Keer gezocht"
+
+#: includes/analytics-admin.php:72 includes/bots-admin.php:224
+#: includes/comments.php:82 includes/csv-export.php:175
+#: includes/views-admin.php:2081
+msgid "Title"
+msgstr "Titel"
+
+#: includes/postboxes.php:787 includes/sessions-admin.php:32
+msgid "To"
+msgstr "Naar"
+
+#: includes/views-admin.php:1106
+msgid ""
+"To verify directly: open a page on the site and check the response headers "
+"in your browser's network tab - Cloudflare adds a \"cf-cache-status\" header "
+"that reads \"HIT\" once a page is actually served from its edge cache, "
+"\"DYNAMIC\"/\"MISS\" otherwise."
+msgstr ""
+"Direct verifiëren: open een pagina op de site en bekijk de response-headers "
+"in het netwerktabblad van je browser - Cloudflare voegt een \"cf-cache-"
+"status\"-header toe die \"HIT\" toont zodra een pagina daadwerkelijk uit de "
+"edge-cache wordt geserveerd, en anders \"DYNAMIC\"/\"MISS\"."
+
+#: includes/postboxes.php:728 includes/stats-widget.php:40
+msgid "Today"
+msgstr "Vandaag"
+
+#: includes/postboxes.php:776
+msgid "Toon"
+msgstr "Toon"
+
+#: includes/clicks-admin.php:32
+msgid "Top clicks"
+msgstr "Top kliks"
+
+#: includes/email-report.php:171
+msgid "Top pages"
+msgstr "Top pagina's"
+
+#: includes/email-report.php:183
+msgid "Top referrers"
+msgstr "Top verwijzers"
+
+#: includes/views-admin.php:82
+msgid "Top referring sites"
+msgstr "Top verwijzende sites"
+
+#: includes/analyse-admin.php:51
+msgid "Trending"
+msgstr "Trending"
+
+#: includes/analytics-admin.php:21
+msgid "Tue"
+msgstr "Di"
+
+#. Plugin Name of the plugin
+#: turf-stats.php includes/dashboard.php:22
+msgid "Turf Stats"
+msgstr "Turf Stats"
+
+#: includes/bots-admin.php:225 includes/comments.php:83
+#: includes/views-admin.php:1148
+msgid "Type"
+msgstr "Type"
+
+#: includes/views-admin.php:1362
+msgid "United Kingdom"
+msgstr "Verenigd Koninkrijk"
+
+#: includes/views-admin.php:1363
+msgid "United States"
+msgstr "Verenigde Staten"
+
+#: includes/views-admin.php:1328
+msgid "Unknown (from before this feature)"
+msgstr "Onbekend (van vóór deze functie)"
+
+#: includes/views-admin.php:1324
+msgid "Unknown (no Cloudflare country detection or own GeoIP integration)"
+msgstr "Onbekend (geen Cloudflare-landdetectie of eigen GeoIP-koppeling)"
+
+#: includes/views-admin.php:1292
+msgid "Unknown (no screen size recorded)"
+msgstr "Onbekend (geen scherm-grootte)"
+
+#: includes/csv-export.php:154
+msgid "Value"
+msgstr "Waarde"
+
+#: includes/dashboard.php:77
+msgid "View all statistics"
+msgstr "Alle statistieken bekijken"
+
+#: includes/authors-admin.php:88 includes/csv-export.php:121
+#: includes/csv-export.php:178 includes/csv-export.php:204
+#: includes/csv-export.php:235 includes/email-report.php:152
+#: includes/views-admin.php:597 includes/views-admin.php:607
+#: includes/views-admin.php:657 includes/views-admin.php:726
+#: includes/views-admin.php:798 includes/views-admin.php:2082
+#: includes/views-admin.php:2181
+msgid "Views"
+msgstr "Weergaven"
+
+#: includes/analytics-admin.php:73
+msgid "Views (24h)"
+msgstr "Weergaven (24u)"
+
+#: includes/dashboard.php:72
+msgid "Views today"
+msgstr "Weergaven vandaag"
+
+#: includes/views-admin.php:616 includes/views-admin.php:735
+msgid "Views/visitor"
+msgstr "Weergaven/bezoeker"
+
+#: includes/analyse-admin.php:47
+msgid "Visitor routes"
+msgstr "Bezoekersroutes"
+
+#: includes/csv-export.php:122 includes/csv-export.php:181
+#: includes/csv-export.php:207 includes/csv-export.php:238
+#: includes/email-report.php:161 includes/views-admin.php:598
+#: includes/views-admin.php:615 includes/views-admin.php:658
+#: includes/views-admin.php:734 includes/views-admin.php:799
+#: includes/views-admin.php:2083 includes/views-admin.php:2182
+msgid "Visitors"
+msgstr "Bezoekers"
+
+#: includes/views-admin.php:986
+msgid "Visitors per hour"
+msgstr "Bezoekers per uur"
+
+#: includes/dashboard.php:73
+msgid "Visitors today"
+msgstr "Bezoekers vandaag"
+
+#: includes/analytics-admin.php:22
+msgid "Wed"
+msgstr "Wo"
+
+#: includes/email-report-admin.php:150
+msgid "Weekly"
+msgstr "Wekelijks"
+
+#: includes/search-admin.php:99
+msgid ""
+"What visitors search for but don't find - candidates for new content or a "
+"redirect."
+msgstr ""
+"Wat bezoekers zoeken maar niet vinden - kandidaten voor nieuwe content of "
+"een redirect."
+
+#: includes/social-share.php:25
+msgid "WhatsApp"
+msgstr "WhatsApp"
+
+#: includes/404s-admin.php:99
+msgid ""
+"Which non-existent URLs visitors hit - handy for finding and fixing broken "
+"links."
+msgstr ""
+"Welke niet-bestaande URL's bezoekers raken - handig om kapotte links te "
+"vinden en te fixen."
+
+#: includes/sessions-admin.php:26
+msgid ""
+"Which page visitors click through to next within a single visit (sessions "
+"with max. 30 minutes between views)."
+msgstr ""
+"Van welke pagina bezoekers naar welke andere pagina doorklikken binnen één "
+"bezoek (sessies van max. 30 minuten tussen weergaven)."
+
+#: includes/analyse-admin.php:64
+msgid "WooCommerce funnel"
+msgstr "WooCommerce-funnel"
+
+#: includes/social-share.php:21
+msgid "X (Twitter)"
+msgstr "X (Twitter)"
+
+#: includes/postboxes.php:729 includes/stats-widget.php:44
+msgid "Yesterday"
+msgstr "Gisteren"
+
+#. translators: 1: "weekly" or "monthly", 2: site name
+#: includes/email-report.php:120
+#, php-format
+msgid "Your %1$s stats for %2$s"
+msgstr "Je %1$s statistieken voor %2$s"
+
+#: includes/analyse-admin.php:43
+msgid "Zero-result searches"
+msgstr "Zoekopdrachten zonder resultaat"
+
+#: includes/import-admin.php:155
+msgid "entry-views plugin"
+msgstr "entry-views-plugin"
+
+#. Author of the plugin
+#: turf-stats.php
+msgid "fbloemhof"
+msgstr ""
+
+#. Author URI of the plugin
+#: turf-stats.php
+msgid "https://github.com/fbloemhof"
+msgstr ""
+
+#. Plugin URI of the plugin
+#: turf-stats.php
+msgid "https://github.com/fbloemhof/turf-stats"
+msgstr ""
+
+#: includes/email-report.php:116
+msgid "monthly"
+msgstr "maandelijkse"
+
+#: includes/views-admin.php:488
+msgid "new"
+msgstr "nieuw"
+
+#: includes/views-admin.php:1092
+msgid "no caching layer detected"
+msgstr "geen cachelaag gedetecteerd"
+
+#: includes/email-report.php:116
+msgid "weekly"
+msgstr "wekelijkse"
+
+#~ msgid "%1$02d:00 yesterday — %2$s visitors"
+#~ msgstr "%1$02d:00 gisteren — %2$s bezoekers"
+
+#~ msgid "Most viewed"
+#~ msgstr "Meest bekeken"
+
+#~ msgid "No comments yet for this period."
+#~ msgstr "Nog geen reacties voor deze periode."
+
+#~ msgid "No content activity for this period."
+#~ msgstr "Geen content-activiteit voor deze periode."
+
+#~ msgid ""
+#~ "No form submissions yet for this period (or no Contact Form 7/Gravity "
+#~ "Forms active)."
+#~ msgstr ""
+#~ "Nog geen formulierinzendingen voor deze periode (of geen Contact Form 7/"
+#~ "Gravity Forms actief)."
+
+#~ msgid "No searches yet for this period."
+#~ msgstr "Nog geen zoekopdrachten voor deze periode."
+
+#~ msgid "No sessions with more than one page view yet for this period."
+#~ msgstr "Nog geen sessies met meer dan één paginaweergave voor deze periode."
+
+#~ msgid "No zero-result searches for this period."
+#~ msgstr "Geen zoekopdrachten zonder resultaat voor deze periode."
+
+#~ msgid "Not enough recent views yet to determine trends."
+#~ msgstr "Nog niet genoeg recente weergaven om trends te bepalen."
+
+#~ msgid "Visitors per hour (today)"
+#~ msgstr "Bezoekers per uur (vandaag)"
+
+#~ msgid "Visitors per hour, today vs. yesterday"
+#~ msgstr "Bezoekers per uur, vandaag versus gisteren"
+
+#~ msgid "vs yesterday"
+#~ msgstr "t.o.v. gisteren"

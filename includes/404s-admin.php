@@ -51,12 +51,13 @@ function turf_404s_get_top_paths( $days ) {
 		) );
 	}
 
+	list( $where_sql, $date_params ) = turf_period_where_sql( $days, 'hit_at' );
+
 	return $wpdb->get_results( $wpdb->prepare(
 		"SELECT path, COUNT(*) AS hits, MAX(hit_at) AS last_hit FROM $table
-		WHERE hit_at >= %s
+		WHERE 1=1 $where_sql
 		GROUP BY path ORDER BY hits DESC LIMIT %d",
-		turf_period_start_sql_date( $days ),
-		turf_list_max()
+		array_merge( $date_params, array( turf_list_max() ) )
 	) );
 }
 
@@ -87,6 +88,7 @@ function turf_404s_render_top_paths( $days ) {
 		</tbody>
 	</table>
 	<?php
+	turf_render_export_link( 'turf_export_404s' );
 }
 
 function turf_404s_render_admin_page() {

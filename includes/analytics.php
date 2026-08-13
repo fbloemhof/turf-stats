@@ -25,12 +25,8 @@ function turf_get_peak_hours( $days ) {
 	$offset_seconds = (int) round( ( (float) get_option( 'gmt_offset' ) ) * HOUR_IN_SECONDS );
 	$local_expr     = "DATE_ADD(v.viewed_at, INTERVAL $offset_seconds SECOND)";
 
-	$where_date = '';
-
-	if ( 0 !== $days ) {
-		$where_date = 'AND v.viewed_at >= %s';
-		$params[]   = turf_period_start_sql_date( $days );
-	}
+	list( $where_date, $date_params ) = turf_period_where_sql( $days, 'v.viewed_at' );
+	$params = array_merge( $params, $date_params );
 
 	$rows = $wpdb->get_results( $wpdb->prepare(
 		"SELECT WEEKDAY($local_expr) AS weekday, HOUR($local_expr) AS hour, COUNT(*) AS views
