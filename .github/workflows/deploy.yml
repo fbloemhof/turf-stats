@@ -28,3 +28,9 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: ${{ github.workspace }}/turf-stats.zip
+          # Baseline release notes generated from commits/PRs since the
+          # previous tag, so a release is never published with an empty
+          # body even if no one hand-writes notes for it. `gh release edit
+          # --notes-file` afterwards fully replaces this (doesn't append),
+          # so richer hand-written notes still work the same as before.
+          generate_release_notes: true
