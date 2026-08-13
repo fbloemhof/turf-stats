@@ -1,8 +1,9 @@
 <?php
 /**
  * Subtle, dismissible "leave a review" nudge shown ~3 days after the plugin
- * is activated. Shown on all admin screens except the Turf Stats pages
- * themselves (those already showcase the plugin).
+ * is activated. Shown on all admin screens, including the Turf Stats main
+ * overview page (highest-intent moment); suppressed on the plugin's other
+ * subpages (settings, etc.) to avoid nagging mid-task.
  *
  * Dismissal ("Not now") is a snooze, not a permanent kill switch: the nudge
  * reappears once after a random 30-90 day gap, up to 3 times. After the third
@@ -84,8 +85,11 @@ function turf_should_show_review_nudge() {
 		return false;
 	}
 
-	// Don't show on the Turf Stats pages themselves.
-	if ( ! empty( $_GET['page'] ) && 0 === strpos( sanitize_key( $_GET['page'] ), 'turf-' ) ) {
+	// Don't show on the Turf Stats subpages (settings, etc.) - but the main
+	// overview page is exactly where an engaged user is most likely to see
+	// and act on this, so it stays.
+	$page = ! empty( $_GET['page'] ) ? sanitize_key( $_GET['page'] ) : '';
+	if ( 'turf-stats' !== $page && 0 === strpos( $page, 'turf-' ) ) {
 		return false;
 	}
 
