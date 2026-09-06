@@ -773,7 +773,7 @@ function turf_render_period_tabs( $base_url, $default_period = '7' ) {
 		<?php echo $hidden; ?>
 		<label for="turf-date"><?php echo esc_html__( 'Go to date', 'turf-stats' ); ?></label>
 		<input type="date" id="turf-date" name="date" value="<?php echo esc_attr( $current_date ); ?>" max="<?php echo esc_attr( wp_date( 'Y-m-d' ) ); ?>" />
-		<?php submit_button( __( 'Toon', 'turf-stats' ), 'secondary', '', false ); ?>
+		<?php submit_button( __( 'Show', 'turf-stats' ), 'secondary', '', false ); ?>
 		<?php if ( $current_date ) : ?>
 			<a class="button" href="<?php echo esc_url( remove_query_arg( array( 'date', 'period' ), $base_url ) ); ?>"><?php echo esc_html__( 'Clear date', 'turf-stats' ); ?></a>
 		<?php endif; ?>

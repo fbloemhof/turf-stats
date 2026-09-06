@@ -1013,7 +1013,7 @@ msgid "Today"
 msgstr "Vandaag"
 
 #: includes/postboxes.php:776
-msgid "Toon"
+msgid "Show"
 msgstr "Toon"
 
 #: includes/clicks-admin.php:32
