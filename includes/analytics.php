@@ -18,32 +18,34 @@ if ( ! defined( 'ABSPATH' ) ) {
  * side of a DST change.
  */
 function turf_get_peak_hours( $days ) {
-	global $wpdb;
-	$table = turf_table();
-	list( $join, $where, $params ) = turf_site_join_and_where();
+	return turf_stats_cached( array( 'peak_hours', $days ), function () use ( $days ) {
+		global $wpdb;
+		$table = turf_table();
+		list( $join, $where, $params ) = turf_site_join_and_where();
 
-	$offset_seconds = (int) round( ( (float) get_option( 'gmt_offset' ) ) * HOUR_IN_SECONDS );
-	$local_expr     = "DATE_ADD(v.viewed_at, INTERVAL $offset_seconds SECOND)";
+		$offset_seconds = (int) round( ( (float) get_option( 'gmt_offset' ) ) * HOUR_IN_SECONDS );
+		$local_expr     = "DATE_ADD(v.viewed_at, INTERVAL $offset_seconds SECOND)";
 
-	list( $where_date, $date_params ) = turf_period_where_sql( $days, 'v.viewed_at' );
-	$params = array_merge( $params, $date_params );
+		list( $where_date, $date_params ) = turf_period_where_sql( $days, 'v.viewed_at' );
+		$params = array_merge( $params, $date_params );
 
-	$rows = $wpdb->get_results( $wpdb->prepare(
-		"SELECT WEEKDAY($local_expr) AS weekday, HOUR($local_expr) AS hour, COUNT(*) AS views
-		FROM $table v
-		$join
-		WHERE $where $where_date
-		GROUP BY weekday, hour",
-		$params
-	) );
+		$rows = $wpdb->get_results( $wpdb->prepare(
+			"SELECT WEEKDAY($local_expr) AS weekday, HOUR($local_expr) AS hour, COUNT(*) AS views
+			FROM $table v
+			$join
+			WHERE $where $where_date
+			GROUP BY weekday, hour",
+			$params
+		) );
 
-	$grid = array_fill( 0, 7, array_fill( 0, 24, 0 ) );
+		$grid = array_fill( 0, 7, array_fill( 0, 24, 0 ) );
 
-	foreach ( $rows as $row ) {
-		$grid[ (int) $row->weekday ][ (int) $row->hour ] = (int) $row->views;
-	}
+		foreach ( $rows as $row ) {
+			$grid[ (int) $row->weekday ][ (int) $row->hour ] = (int) $row->views;
+		}
 
-	return $grid;
+		return $grid;
+	} );
 }
 
 /**

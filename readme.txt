@@ -4,7 +4,7 @@ Tags: analytics, statistics, privacy, page views, cookieless
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.23.0
+Stable tag: 1.24.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -120,6 +120,27 @@ On the plugin's GitHub repository: https://github.com/fbloemhof/turf-stats/issue
    tracked separately from human visitors, with the pages they crawl most.
 
 == Changelog ==
+
+= 1.24.0 =
+* The Statistics page now loads noticeably faster: most boxes (device/
+  browser/OS/country breakdowns, sources, UTM campaigns, top pages/terms,
+  peak hours, etc.) load their data in the background right after the page
+  appears, instead of making you wait for every query to finish first.
+* The heaviest stats queries are now cached for a few minutes, so reloading
+  the page or switching periods no longer repeats the same slow database
+  query every time.
+* Visual refresh of the Statistics page: breakdown lists, the totals tiles,
+  the daily chart, and report tables (top pages, top search terms, 404s,
+  clicks, etc.) now share one consistent, more compact look with a hover
+  highlight per row and a full-width bar behind each breakdown item instead
+  of a separate small bar - including the Bots page's breakdown, which now
+  matches the rest of the plugin instead of using its own older style.
+* New sortable "Views" column on the posts/pages list (and any other tracked
+  post type), so you can see view counts without leaving the list.
+* Fixed the "From/To" (session routes) and outbound-links tables showing
+  their second column right-aligned instead of left-aligned.
+* Fixed the "Show more" toggle not working on boxes that load their data in
+  the background.
 
 = 1.23.0 =
 * Custom date ranges: pick any start/end date instead of just the fixed

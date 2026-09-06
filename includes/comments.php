@@ -18,55 +18,59 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Comment totals for a date range (UTC), or all-time when $days is 0.
  */
 function turf_get_comment_totals( $days, $offset_days = 0 ) {
-	global $wpdb;
+	return turf_stats_cached( array( 'comment_totals', $days, $offset_days ), function () use ( $days, $offset_days ) {
+		global $wpdb;
 
-	list( $placeholders, $post_types ) = turf_post_type_in_clause();
+		list( $placeholders, $post_types ) = turf_post_type_in_clause();
 
-	if ( 0 === $days ) {
+		if ( 0 === $days ) {
+			return (int) $wpdb->get_var( $wpdb->prepare(
+				"SELECT COUNT(*) FROM $wpdb->comments c
+				INNER JOIN $wpdb->posts p ON p.ID = c.comment_post_ID
+				WHERE c.comment_approved = '1' AND p.post_type IN ($placeholders) AND p.post_status = 'publish'", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- $placeholders is a generated %s list; values go through prepare().
+				$post_types
+			) );
+		}
+
+		list( $start, $end ) = turf_period_window( $days, $offset_days );
+
 		return (int) $wpdb->get_var( $wpdb->prepare(
 			"SELECT COUNT(*) FROM $wpdb->comments c
 			INNER JOIN $wpdb->posts p ON p.ID = c.comment_post_ID
-			WHERE c.comment_approved = '1' AND p.post_type IN ($placeholders) AND p.post_status = 'publish'", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- $placeholders is a generated %s list; values go through prepare().
-			$post_types
+			WHERE c.comment_approved = '1' AND p.post_type IN ($placeholders) AND p.post_status = 'publish'
+			AND c.comment_date_gmt >= %s AND c.comment_date_gmt < %s", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- $placeholders is a generated %s list; values go through prepare().
+			array_merge( $post_types, array( $start, $end ) )
 		) );
-	}
-
-	list( $start, $end ) = turf_period_window( $days, $offset_days );
-
-	return (int) $wpdb->get_var( $wpdb->prepare(
-		"SELECT COUNT(*) FROM $wpdb->comments c
-		INNER JOIN $wpdb->posts p ON p.ID = c.comment_post_ID
-		WHERE c.comment_approved = '1' AND p.post_type IN ($placeholders) AND p.post_status = 'publish'
-		AND c.comment_date_gmt >= %s AND c.comment_date_gmt < %s", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- $placeholders is a generated %s list; values go through prepare().
-		array_merge( $post_types, array( $start, $end ) )
-	) );
+	} );
 }
 
 function turf_get_top_commented_posts( $days ) {
-	global $wpdb;
+	return turf_stats_cached( array( 'top_commented_posts', $days ), function () use ( $days ) {
+		global $wpdb;
 
-	list( $placeholders, $post_types ) = turf_post_type_in_clause();
+		list( $placeholders, $post_types ) = turf_post_type_in_clause();
 
-	$where_date = '';
-	$params     = $post_types;
+		$where_date = '';
+		$params     = $post_types;
 
-	if ( 0 !== $days ) {
-		list( $where_date, $date_params ) = turf_period_where_sql( $days, 'c.comment_date_gmt' );
-		$params     = array_merge( $params, $date_params );
-	}
+		if ( 0 !== $days ) {
+			list( $where_date, $date_params ) = turf_period_where_sql( $days, 'c.comment_date_gmt' );
+			$params     = array_merge( $params, $date_params );
+		}
 
-	$params[] = turf_list_max();
+		$params[] = turf_list_max();
 
-	return $wpdb->get_results( $wpdb->prepare(
-		"SELECT c.comment_post_ID AS post_id, COUNT(*) AS comments
-		FROM $wpdb->comments c
-		INNER JOIN $wpdb->posts p ON p.ID = c.comment_post_ID
-		WHERE c.comment_approved = '1' AND p.post_type IN ($placeholders) AND p.post_status = 'publish' $where_date
-		GROUP BY c.comment_post_ID
-		ORDER BY comments DESC
-		LIMIT %d", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- $placeholders is a generated %s list; values go through prepare().
-		$params
-	) );
+		return $wpdb->get_results( $wpdb->prepare(
+			"SELECT c.comment_post_ID AS post_id, COUNT(*) AS comments
+			FROM $wpdb->comments c
+			INNER JOIN $wpdb->posts p ON p.ID = c.comment_post_ID
+			WHERE c.comment_approved = '1' AND p.post_type IN ($placeholders) AND p.post_status = 'publish' $where_date
+			GROUP BY c.comment_post_ID
+			ORDER BY comments DESC
+			LIMIT %d", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- $placeholders is a generated %s list; values go through prepare().
+			$params
+		) );
+	} );
 }
 
 function turf_render_top_commented_posts( $days ) {

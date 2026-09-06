@@ -25,7 +25,7 @@ function turf_render_session_routes( $days ) {
 	<p class="description">
 		<?php esc_html_e( 'Which page visitors click through to next within a single visit (sessions with max. 30 minutes between views).', 'turf-stats' ); ?>
 	</p>
-	<table class="wp-list-table widefat fixed striped">
+	<table class="wp-list-table widefat fixed striped turf-table--label-label-num">
 		<thead>
 			<tr>
 				<th><?php esc_html_e( 'From', 'turf-stats' ); ?></th>

@@ -30,6 +30,200 @@ function turf_admin_menu() {
 add_action( 'admin_menu', 'turf_admin_menu' );
 
 /**
+ * Every metabox on the page except "Overview"/"Currently viewed", keyed by
+ * box id, as { title, context, callback }. $callback takes $days and echoes
+ * the box's content exactly like the old inline closures did - it's a
+ * function of $days rather than closing over it, because this same
+ * definitions array is shared between the page's own registration (below)
+ * and turf_ajax_load_box(), which resolves $days from the AJAX request
+ * instead of the original page load.
+ *
+ * Split into 'turf_overview'/'turf_compact'/'turf_wide' context groups so
+ * they still render as three separate areas (one full-width box, a 2-up
+ * grid of compact breakdowns, then the rest full-width again) while staying
+ * one continuous drag/drop scope for postboxes.js.
+ */
+function turf_lazy_box_definitions() {
+	$defs = array(
+		'turf_content_activity' => array(
+			'title'    => __( 'Content activity', 'turf-stats' ),
+			'context'  => 'turf_overview',
+			'callback' => function ( $days ) {
+				turf_render_content_activity( $days );
+			},
+		),
+		'turf_device'           => array(
+			'title'    => __( 'Device', 'turf-stats' ),
+			'context'  => 'turf_compact',
+			'callback' => function ( $days ) {
+				turf_render_breakdown( 'device_type', $days );
+			},
+		),
+		'turf_browser'          => array(
+			'title'    => __( 'Browser', 'turf-stats' ),
+			'context'  => 'turf_compact',
+			'callback' => function ( $days ) {
+				turf_render_breakdown( 'browser', $days );
+			},
+		),
+		'turf_os'               => array(
+			'title'    => __( 'Operating system', 'turf-stats' ),
+			'context'  => 'turf_compact',
+			'callback' => function ( $days ) {
+				turf_render_breakdown( 'os', $days );
+			},
+		),
+		'turf_screen'           => array(
+			'title'    => __( 'Screen resolution', 'turf-stats' ),
+			'context'  => 'turf_compact',
+			'callback' => function ( $days ) {
+				turf_render_screen_breakdown( $days );
+			},
+		),
+		'turf_language'         => array(
+			'title'    => __( 'Language', 'turf-stats' ),
+			'context'  => 'turf_compact',
+			'callback' => function ( $days ) {
+				turf_render_breakdown( 'language', $days );
+			},
+		),
+		'turf_country'          => array(
+			'title'    => __( 'Country of origin', 'turf-stats' ),
+			'context'  => 'turf_compact',
+			'callback' => function ( $days ) {
+				turf_render_breakdown( 'country', $days );
+			},
+		),
+		'turf_new_returning'    => array(
+			'title'    => __( 'New vs. returning', 'turf-stats' ),
+			'context'  => 'turf_compact',
+			'callback' => function ( $days ) {
+				turf_render_new_vs_returning( $days );
+			},
+		),
+		'turf_referrer'         => array(
+			'title'    => __( 'Source', 'turf-stats' ),
+			'context'  => 'turf_compact',
+			'callback' => function ( $days ) {
+				turf_render_referrer_breakdown( $days );
+			},
+		),
+		'turf_top_referrers'    => array(
+			'title'    => __( 'Top referring sites', 'turf-stats' ),
+			'context'  => 'turf_compact',
+			'callback' => function ( $days ) {
+				turf_render_top_referrer_hosts( $days );
+			},
+		),
+		'turf_utm_source'       => array(
+			'title'    => __( 'Campaign source (UTM)', 'turf-stats' ),
+			'context'  => 'turf_compact',
+			'callback' => function ( $days ) {
+				turf_render_breakdown( 'utm_source', $days, true );
+			},
+		),
+		'turf_utm_medium'       => array(
+			'title'    => __( 'Campaign medium (UTM)', 'turf-stats' ),
+			'context'  => 'turf_compact',
+			'callback' => function ( $days ) {
+				turf_render_breakdown( 'utm_medium', $days, true );
+			},
+		),
+		'turf_utm_content'      => array(
+			'title'    => __( 'Campaign content (UTM)', 'turf-stats' ),
+			'context'  => 'turf_compact',
+			'callback' => function ( $days ) {
+				turf_render_breakdown( 'utm_content', $days, true );
+			},
+		),
+		'turf_other_pages'      => array(
+			'title'    => __( 'Other pages', 'turf-stats' ),
+			'context'  => 'turf_compact',
+			'callback' => function ( $days ) {
+				turf_render_other_pages_breakdown( $days );
+			},
+		),
+		'turf_caching'          => array(
+			'title'    => __( 'Caching', 'turf-stats' ),
+			'context'  => 'turf_wide',
+			'callback' => function ( $days ) {
+				turf_render_caching( $days );
+			},
+		),
+		'turf_peak_hours'       => array(
+			'title'    => __( 'Peak hours', 'turf-stats' ),
+			'context'  => 'turf_wide',
+			'callback' => function ( $days ) {
+				// A single day is too sparse for a meaningful 7x24 heatmap -
+				// shows the last 7 days for context instead, same as the
+				// Vandaag chart. A custom range (however long) aggregates
+				// across its own full span, same as any other multi-day
+				// period - turf_get_peak_hours() goes through
+				// turf_period_where_sql(), which already understands it.
+				turf_render_peak_hours( turf_is_single_day( $days ) ? 7 : $days );
+			},
+		),
+	);
+
+	$post_types = turf_trackable_post_types();
+	usort( $post_types, function ( $a, $b ) {
+		return strnatcasecmp( turf_get_post_type_label( $a ), turf_get_post_type_label( $b ) );
+	} );
+
+	foreach ( $post_types as $post_type ) {
+		$defs[ 'turf_posts_' . $post_type ] = array(
+			'title'    => turf_get_post_type_label( $post_type ),
+			'context'  => 'turf_wide',
+			'callback' => function ( $days ) use ( $post_type ) {
+				turf_render_admin_table( $post_type, $days );
+			},
+		);
+	}
+
+	$defs['turf_comments'] = array(
+		'title'    => __( 'Most discussed', 'turf-stats' ),
+		'context'  => 'turf_wide',
+		'callback' => function ( $days ) {
+			turf_render_top_commented_posts( $days );
+		},
+	);
+
+	$taxonomies = turf_trackable_taxonomies();
+	usort( $taxonomies, function ( $a, $b ) {
+		return strnatcasecmp( turf_get_taxonomy_label( $a ), turf_get_taxonomy_label( $b ) );
+	} );
+
+	foreach ( $taxonomies as $taxonomy ) {
+		$defs[ 'turf_terms_' . $taxonomy ] = array(
+			'title'    => turf_get_taxonomy_label( $taxonomy ),
+			'context'  => 'turf_wide',
+			'callback' => function ( $days ) use ( $taxonomy ) {
+				turf_render_admin_terms_table( $taxonomy, $days );
+			},
+		);
+	}
+
+	return $defs;
+}
+
+/**
+ * Placeholder content for a lazily-loaded box - a spinner plus the marker
+ * js/lazy-boxes.js looks for to know which box to fetch. Registered via
+ * add_meta_box() directly (not turf_maybe_add_meta_box()), since whether the
+ * box turns out to have data isn't known until the AJAX call actually runs
+ * the query - the "hide if empty" behaviour these boxes used to get for free
+ * now happens client-side (lazy-boxes.js removes the box if the response
+ * comes back with no HTML) instead of at registration time.
+ */
+function turf_render_lazy_box_placeholder( $box_id ) {
+	?>
+	<div class="turf-lazy-box" data-turf-lazy-box="<?php echo esc_attr( $box_id ); ?>">
+		<span class="spinner is-active" style="float:none;"></span>
+	</div>
+	<?php
+}
+
+/**
  * Three sections, each its own context group so they can render as
  * separate areas on the page (one full-width box, a 2-up grid of compact
  * breakdowns, then the rest full-width again) while still being one
@@ -37,6 +231,11 @@ add_action( 'admin_menu', 'turf_admin_menu' );
  * stat boxes), 'turf_compact' (the device/browser/etc. breakdowns, laid out
  * two-per-row via turf_render_postbox_grid_column()), and 'turf_wide' (peak
  * hours, then the per-post-type/taxonomy tables).
+ *
+ * Only "Overview" and "Currently viewed" (genuinely live data, on its own
+ * poll) render eagerly here - every other box registers as an empty
+ * placeholder that js/lazy-boxes.js fills in via turf_ajax_load_box() after
+ * the page paints, so a slow query no longer blocks the whole page.
  */
 function turf_views_register_metaboxes() {
 	$hook = get_current_screen()->id;
@@ -50,108 +249,49 @@ function turf_views_register_metaboxes() {
 
 	add_meta_box( 'turf_online_now_pages', __( 'Currently viewed', 'turf-stats' ), 'turf_render_online_now_pages', $hook, 'turf_overview' );
 
-	turf_maybe_add_meta_box( 'turf_content_activity', __( 'Content activity', 'turf-stats' ), function () use ( $days ) {
-		turf_render_content_activity( $days );
-	}, $hook, 'turf_overview' );
-
-	$compact_boxes = array(
-		array( 'turf_device', __( 'Device', 'turf-stats' ), function () use ( $days ) {
-			turf_render_breakdown( 'device_type', $days );
-		} ),
-		array( 'turf_browser', __( 'Browser', 'turf-stats' ), function () use ( $days ) {
-			turf_render_breakdown( 'browser', $days );
-		} ),
-		array( 'turf_os', __( 'Operating system', 'turf-stats' ), function () use ( $days ) {
-			turf_render_breakdown( 'os', $days );
-		} ),
-		array( 'turf_screen', __( 'Screen resolution', 'turf-stats' ), function () use ( $days ) {
-			turf_render_screen_breakdown( $days );
-		} ),
-		array( 'turf_language', __( 'Language', 'turf-stats' ), function () use ( $days ) {
-			turf_render_breakdown( 'language', $days );
-		} ),
-		array( 'turf_country', __( 'Country of origin', 'turf-stats' ), function () use ( $days ) {
-			turf_render_breakdown( 'country', $days );
-		} ),
-		array( 'turf_new_returning', __( 'New vs. returning', 'turf-stats' ), function () use ( $days ) {
-			turf_render_new_vs_returning( $days );
-		} ),
-		array( 'turf_referrer', __( 'Source', 'turf-stats' ), function () use ( $days ) {
-			turf_render_referrer_breakdown( $days );
-		} ),
-		array( 'turf_top_referrers', __( 'Top referring sites', 'turf-stats' ), function () use ( $days ) {
-			turf_render_top_referrer_hosts( $days );
-		} ),
-		array( 'turf_utm_source', __( 'Campaign source (UTM)', 'turf-stats' ), function () use ( $days ) {
-			turf_render_breakdown( 'utm_source', $days, true );
-		} ),
-		array( 'turf_utm_medium', __( 'Campaign medium (UTM)', 'turf-stats' ), function () use ( $days ) {
-			turf_render_breakdown( 'utm_medium', $days, true );
-		} ),
-		array( 'turf_utm_content', __( 'Campaign content (UTM)', 'turf-stats' ), function () use ( $days ) {
-			turf_render_breakdown( 'utm_content', $days, true );
-		} ),
-		array( 'turf_other_pages', __( 'Other pages', 'turf-stats' ), function () use ( $days ) {
-			turf_render_other_pages_breakdown( $days );
-		} ),
-	);
-
-	foreach ( $compact_boxes as $box ) {
-		list( $id, $title, $callback ) = $box;
-		turf_maybe_add_meta_box( $id, $title, $callback, $hook, 'turf_compact' );
-	}
-
-	turf_maybe_add_meta_box( 'turf_caching', __( 'Caching', 'turf-stats' ), function () use ( $days ) {
-		turf_render_caching( $days );
-	}, $hook, 'turf_wide' );
-
-	add_meta_box( 'turf_peak_hours', __( 'Peak hours', 'turf-stats' ), function () use ( $days ) {
-		// A single day is too sparse for a meaningful 7x24 heatmap - shows
-		// the last 7 days for context instead, same as the Vandaag chart. A
-		// custom range (however long) aggregates across its own full span,
-		// same as any other multi-day period - turf_get_peak_hours() goes
-		// through turf_period_where_sql(), which already understands it.
-		turf_render_peak_hours( turf_is_single_day( $days ) ? 7 : $days );
-	}, $hook, 'turf_wide' );
-
-	$post_types = turf_trackable_post_types();
-	usort( $post_types, function ( $a, $b ) {
-		return strnatcasecmp( turf_get_post_type_label( $a ), turf_get_post_type_label( $b ) );
-	} );
-
-	foreach ( $post_types as $post_type ) {
-		turf_maybe_add_meta_box(
-			'turf_posts_' . $post_type,
-			turf_get_post_type_label( $post_type ),
-			function () use ( $post_type, $days ) {
-				turf_render_admin_table( $post_type, $days );
-			},
-			$hook,
-			'turf_wide'
-		);
-	}
-
-	turf_maybe_add_meta_box( 'turf_comments', __( 'Most discussed', 'turf-stats' ), function () use ( $days ) {
-		turf_render_top_commented_posts( $days );
-	}, $hook, 'turf_wide' );
-
-	$taxonomies = turf_trackable_taxonomies();
-	usort( $taxonomies, function ( $a, $b ) {
-		return strnatcasecmp( turf_get_taxonomy_label( $a ), turf_get_taxonomy_label( $b ) );
-	} );
-
-	foreach ( $taxonomies as $taxonomy ) {
-		turf_maybe_add_meta_box(
-			'turf_terms_' . $taxonomy,
-			turf_get_taxonomy_label( $taxonomy ),
-			function () use ( $taxonomy, $days ) {
-				turf_render_admin_terms_table( $taxonomy, $days );
-			},
-			$hook,
-			'turf_wide'
-		);
+	foreach ( turf_lazy_box_definitions() as $box_id => $def ) {
+		add_meta_box( $box_id, $def['title'], function () use ( $box_id ) {
+			turf_render_lazy_box_placeholder( $box_id );
+		}, $hook, $def['context'] );
 	}
 }
+
+/**
+ * Renders one deferred box's content on demand - the AJAX counterpart to the
+ * placeholders turf_views_register_metaboxes() registers. $days/date/range
+ * are re-supplied by js/lazy-boxes.js (read from the same data-* attributes
+ * turf_overview_refresh_enqueue() already relies on for the "Overview" stat
+ * tiles), forwarded into $_GET exactly like turf_ajax_overview_stats() does,
+ * so turf_get_requested_days()/turf_custom_range_bounds() resolve identically
+ * to how they did on the original page load.
+ */
+function turf_ajax_load_box() {
+	if ( ! current_user_can( 'manage_options' ) || ! wp_verify_nonce( sanitize_key( $_POST['nonce'] ?? '' ), 'turf_load_box' ) ) {
+		wp_send_json_error( 'forbidden', 403 );
+	}
+
+	$box_id = sanitize_key( $_POST['box_id'] ?? '' );
+	$defs   = turf_lazy_box_definitions();
+
+	if ( ! isset( $defs[ $box_id ] ) ) {
+		wp_send_json_error( 'unknown_box', 400 );
+	}
+
+	foreach ( array( 'date', 'range_start', 'range_end' ) as $key ) {
+		if ( ! empty( $_POST[ $key ] ) ) {
+			$_GET[ $key ] = sanitize_text_field( wp_unslash( $_POST[ $key ] ) );
+		}
+	}
+
+	$days = isset( $_POST['days'] ) ? (int) $_POST['days'] : 7;
+
+	ob_start();
+	call_user_func( $defs[ $box_id ]['callback'], $days );
+	$html = trim( ob_get_clean() );
+
+	wp_send_json_success( array( 'html' => $html ) );
+}
+add_action( 'wp_ajax_turf_load_box', 'turf_ajax_load_box' );
 
 /**
  * Builds a `post_type IN (%s, %s, ...)` placeholder string plus the matching
@@ -220,29 +360,31 @@ function turf_site_join_and_where( $alias = 'v' ) {
  *                          doesn't apply to a single calendar day.
  */
 function turf_get_range_site_totals( $days, $offset_days = 0 ) {
-	global $wpdb;
+	return turf_stats_cached( array( 'range_site_totals', $days, $offset_days ), function () use ( $days, $offset_days ) {
+		global $wpdb;
 
-	$table = turf_table();
-	list( $join, $where, $params ) = turf_site_join_and_where();
+		$table = turf_table();
+		list( $join, $where, $params ) = turf_site_join_and_where();
 
-	list( $start, $end ) = turf_period_window( $days, $offset_days );
+		list( $start, $end ) = turf_period_window( $days, $offset_days );
 
-	$bounds = '';
-	if ( null !== $start ) {
-		$bounds = 'AND v.viewed_at >= %s AND v.viewed_at < %s';
-		$params = array_merge( $params, array( $start, $end ) );
-	}
+		$bounds = '';
+		if ( null !== $start ) {
+			$bounds = 'AND v.viewed_at >= %s AND v.viewed_at < %s';
+			$params = array_merge( $params, array( $start, $end ) );
+		}
 
-	$row = $wpdb->get_row( $wpdb->prepare(
-		"SELECT COUNT(*) AS views, COUNT(DISTINCT v.visitor_hash) AS visitors
-		FROM $table v
-		$join
-		WHERE $where
-		$bounds",
-		$params
-	) );
+		$row = $wpdb->get_row( $wpdb->prepare(
+			"SELECT COUNT(*) AS views, COUNT(DISTINCT v.visitor_hash) AS visitors
+			FROM $table v
+			$join
+			WHERE $where
+			$bounds",
+			$params
+		) );
 
-	return array( 'views' => (int) $row->views, 'visitors' => (int) $row->visitors );
+		return array( 'views' => (int) $row->views, 'visitors' => (int) $row->visitors );
+	} );
 }
 
 /**
@@ -284,30 +426,32 @@ function turf_get_range_raw_views( $days, $offset_days = 0 ) {
  * @return array{raw:int, origin:int}|null
  */
 function turf_get_range_cache_totals( $days, $offset_days = 0 ) {
-	global $wpdb;
+	return turf_stats_cached( array( 'range_cache_totals', $days, $offset_days ), function () use ( $days, $offset_days ) {
+		global $wpdb;
 
-	$table = turf_raw_hits_table();
+		$table = turf_raw_hits_table();
 
-	if ( 0 === $days ) {
-		// "All" - whole table, no date bounds (the offset math below collapses
-		// to an empty range at days = 0).
-		$row = $wpdb->get_row( "SELECT SUM(hits) AS raw, SUM(origin_hits) AS origin FROM $table" );
-	} else {
-		list( $start, $end ) = turf_period_window( $days, $offset_days );
+		if ( 0 === $days ) {
+			// "All" - whole table, no date bounds (the offset math below collapses
+			// to an empty range at days = 0).
+			$row = $wpdb->get_row( "SELECT SUM(hits) AS raw, SUM(origin_hits) AS origin FROM $table" );
+		} else {
+			list( $start, $end ) = turf_period_window( $days, $offset_days );
 
-		$row = $wpdb->get_row( $wpdb->prepare(
-			"SELECT SUM(hits) AS raw, SUM(origin_hits) AS origin
-			FROM $table WHERE hit_hour >= %s AND hit_hour < %s",
-			$start,
-			$end
-		) );
-	}
+			$row = $wpdb->get_row( $wpdb->prepare(
+				"SELECT SUM(hits) AS raw, SUM(origin_hits) AS origin
+				FROM $table WHERE hit_hour >= %s AND hit_hour < %s",
+				$start,
+				$end
+			) );
+		}
 
-	if ( ! $row || null === $row->raw ) {
-		return null;
-	}
+		if ( ! $row || null === $row->raw ) {
+			return null;
+		}
 
-	return array( 'raw' => (int) $row->raw, 'origin' => (int) $row->origin );
+		return array( 'raw' => (int) $row->raw, 'origin' => (int) $row->origin );
+	} );
 }
 
 /**
@@ -424,36 +568,38 @@ function turf_get_daily_site_totals_for_range( $start_ymd, $end_ymd ) {
  * this plugin went live (the event table has no visitor data for imports).
  */
 function turf_get_alltime_site_totals() {
-	global $wpdb;
+	return turf_stats_cached( array( 'alltime_site_totals' ), function () {
+		global $wpdb;
 
-	list( $placeholders, $post_types ) = turf_post_type_in_clause();
+		list( $placeholders, $post_types ) = turf_post_type_in_clause();
 
-	$post_views = $wpdb->get_var( $wpdb->prepare(
-		"SELECT SUM(m.meta_value + 0) FROM $wpdb->posts p
-		INNER JOIN $wpdb->postmeta m ON m.post_id = p.ID AND m.meta_key = %s
-		WHERE p.post_type IN ($placeholders) AND p.post_status = 'publish'", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- $placeholders is a generated %s list; values go through prepare().
-		array_merge( array( TURF_META_KEY ), $post_types )
-	) );
+		$post_views = $wpdb->get_var( $wpdb->prepare(
+			"SELECT SUM(m.meta_value + 0) FROM $wpdb->posts p
+			INNER JOIN $wpdb->postmeta m ON m.post_id = p.ID AND m.meta_key = %s
+			WHERE p.post_type IN ($placeholders) AND p.post_status = 'publish'", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- $placeholders is a generated %s list; values go through prepare().
+			array_merge( array( TURF_META_KEY ), $post_types )
+		) );
 
-	$taxonomies       = turf_trackable_taxonomies();
-	$tax_placeholders = implode( ',', array_fill( 0, count( $taxonomies ), '%s' ) );
+		$taxonomies       = turf_trackable_taxonomies();
+		$tax_placeholders = implode( ',', array_fill( 0, count( $taxonomies ), '%s' ) );
 
-	$term_views = $wpdb->get_var( $wpdb->prepare(
-		"SELECT SUM(m.meta_value + 0) FROM $wpdb->term_taxonomy tt
-		INNER JOIN $wpdb->termmeta m ON m.term_id = tt.term_id AND m.meta_key = %s
-		WHERE tt.taxonomy IN ($tax_placeholders)",
-		array_merge( array( TURF_META_KEY ), $taxonomies )
-	) );
+		$term_views = $wpdb->get_var( $wpdb->prepare(
+			"SELECT SUM(m.meta_value + 0) FROM $wpdb->term_taxonomy tt
+			INNER JOIN $wpdb->termmeta m ON m.term_id = tt.term_id AND m.meta_key = %s
+			WHERE tt.taxonomy IN ($tax_placeholders)",
+			array_merge( array( TURF_META_KEY ), $taxonomies )
+		) );
 
-	$table = turf_table();
-	list( $join, $where, $params ) = turf_site_join_and_where();
+		$table = turf_table();
+		list( $join, $where, $params ) = turf_site_join_and_where();
 
-	$visitors = $wpdb->get_var( $wpdb->prepare(
-		"SELECT COUNT(DISTINCT v.visitor_hash) FROM $table v $join WHERE $where",
-		$params
-	) );
+		$visitors = $wpdb->get_var( $wpdb->prepare(
+			"SELECT COUNT(DISTINCT v.visitor_hash) FROM $table v $join WHERE $where",
+			$params
+		) );
 
-	return array( 'views' => (int) $post_views + (int) $term_views, 'visitors' => (int) $visitors );
+		return array( 'views' => (int) $post_views + (int) $term_views, 'visitors' => (int) $visitors );
+	} );
 }
 
 /**
@@ -564,6 +710,23 @@ function turf_overview_refresh_enqueue( $hook ) {
 		'ajaxUrl'  => admin_url( 'admin-ajax.php' ),
 		'nonce'    => wp_create_nonce( 'turf_overview_stats' ),
 		'interval' => 30000, // ms
+	) );
+
+	// Depends on 'turf-postbox-more' (enqueued by turf_postboxes_enqueue(),
+	// same $hook) purely for script *order* - lazy-boxes.js calls
+	// window.turfInitPostboxMore() on each box it fills in, so that function
+	// must already be defined by the time it runs.
+	wp_enqueue_script(
+		'turf-lazy-boxes',
+		TURF_URL . 'js/lazy-boxes.js',
+		array( 'turf-postbox-more' ),
+		TURF_VERSION,
+		true
+	);
+
+	wp_localize_script( 'turf-lazy-boxes', 'turfLazyBoxes', array(
+		'ajaxUrl' => admin_url( 'admin-ajax.php' ),
+		'nonce'   => wp_create_nonce( 'turf_load_box' ),
 	) );
 }
 add_action( 'admin_enqueue_scripts', 'turf_overview_refresh_enqueue' );
@@ -1012,7 +1175,7 @@ function turf_render_hourly_visitors_chart( $days = TURF_PERIOD_TODAY ) {
 				<path class="bk-stats-hourly__line" d="<?php echo esc_attr( $today_line ); ?>" vector-effect="non-scaling-stroke" />
 			<?php endif; ?>
 			<?php foreach ( $today_points as $p ) : ?>
-				<circle class="bk-stats-hourly__dot" cx="<?php echo esc_attr( $p['x'] ); ?>" cy="<?php echo esc_attr( $p['y'] ); ?>" r="2.5" vector-effect="non-scaling-stroke">
+				<circle class="bk-stats-hourly__dot" cx="<?php echo esc_attr( $p['x'] ); ?>" cy="<?php echo esc_attr( $p['y'] ); ?>" r="1.5" vector-effect="non-scaling-stroke">
 					<title>
 				<?php
 				printf(
@@ -1167,24 +1330,26 @@ function turf_render_content_activity( $days ) {
  * @return array{added: int, modified: int}
  */
 function turf_get_content_activity( $post_type, $days ) {
-	global $wpdb;
+	return turf_stats_cached( array( 'content_activity', $post_type, $days ), function () use ( $post_type, $days ) {
+		global $wpdb;
 
-	list( $added_where, $added_params )     = turf_period_where_sql( $days, 'post_date_gmt' );
-	list( $modified_where, $modified_params ) = turf_period_where_sql( $days, 'post_modified_gmt' );
+		list( $added_where, $added_params )     = turf_period_where_sql( $days, 'post_date_gmt' );
+		list( $modified_where, $modified_params ) = turf_period_where_sql( $days, 'post_modified_gmt' );
 
-	$added = (int) $wpdb->get_var( $wpdb->prepare(
-		"SELECT COUNT(*) FROM $wpdb->posts WHERE post_type = %s AND post_status = 'publish' $added_where",
-		array_merge( array( $post_type ), $added_params )
-	) );
+		$added = (int) $wpdb->get_var( $wpdb->prepare(
+			"SELECT COUNT(*) FROM $wpdb->posts WHERE post_type = %s AND post_status = 'publish' $added_where",
+			array_merge( array( $post_type ), $added_params )
+		) );
 
-	$modified = (int) $wpdb->get_var( $wpdb->prepare(
-		"SELECT COUNT(*) FROM $wpdb->posts
-		WHERE post_type = %s AND post_status = 'publish'
-		$modified_where AND post_modified_gmt != post_date_gmt",
-		array_merge( array( $post_type ), $modified_params )
-	) );
+		$modified = (int) $wpdb->get_var( $wpdb->prepare(
+			"SELECT COUNT(*) FROM $wpdb->posts
+			WHERE post_type = %s AND post_status = 'publish'
+			$modified_where AND post_modified_gmt != post_date_gmt",
+			array_merge( array( $post_type ), $modified_params )
+		) );
 
-	return array( 'added' => $added, 'modified' => $modified );
+		return array( 'added' => $added, 'modified' => $modified );
+	} );
 }
 
 /**
@@ -1219,15 +1384,17 @@ function turf_get_breakdown( $column, $days, $exclude_empty = false ) {
 
 	$where_empty = $exclude_empty ? "AND v.$column != ''" : '';
 
-	return $wpdb->get_results( $wpdb->prepare(
-		"SELECT v.$column AS label, COUNT(*) AS views, COUNT(DISTINCT v.visitor_hash) AS visitors
-		FROM $table v
-		$join
-		WHERE $where $where_date $where_empty
-		GROUP BY v.$column
-		ORDER BY views DESC", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- $column is checked against the fixed $allowed whitelist above; table/join/where are internal literals.
-		$params
-	) );
+	return turf_stats_cached( array( 'breakdown', $column, $days, $exclude_empty ), function () use ( $wpdb, $table, $join, $where, $where_date, $where_empty, $column, $params ) {
+		return $wpdb->get_results( $wpdb->prepare(
+			"SELECT v.$column AS label, COUNT(*) AS views, COUNT(DISTINCT v.visitor_hash) AS visitors
+			FROM $table v
+			$join
+			WHERE $where $where_date $where_empty
+			GROUP BY v.$column
+			ORDER BY views DESC", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- $column is checked against the fixed $allowed whitelist above; table/join/where are internal literals.
+			$params
+		) );
+	} );
 }
 
 /**
@@ -1256,22 +1423,24 @@ function turf_get_screen_breakdown( $days ) {
 		$params = array_merge( $params, $date_params );
 	}
 
-	return $wpdb->get_results( $wpdb->prepare(
-		"SELECT
-			CASE
-				WHEN v.screen_width IS NULL OR v.screen_height IS NULL
-					THEN CASE WHEN v.referrer_host IN ('" . TURF_REST_SOURCE_MARKER . "','" . TURF_CONNECTOR_APP_SOURCE_MARKER . "') THEN 'app' ELSE '' END
-				ELSE CONCAT(v.screen_width, '×', v.screen_height)
-			END AS label,
-			MAX(v.screen_width) AS screen_width,
-			COUNT(*) AS views, COUNT(DISTINCT v.visitor_hash) AS visitors
-		FROM $table v
-		$join
-		WHERE $where $where_date
-		GROUP BY label
-		ORDER BY views DESC", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- join/where are internal literals from turf_site_join_and_where(); the two referrer markers are internal constants, not user input.
-		$params
-	) );
+	return turf_stats_cached( array( 'screen_breakdown', $days ), function () use ( $wpdb, $table, $join, $where, $where_date, $params ) {
+		return $wpdb->get_results( $wpdb->prepare(
+			"SELECT
+				CASE
+					WHEN v.screen_width IS NULL OR v.screen_height IS NULL
+						THEN CASE WHEN v.referrer_host IN ('" . TURF_REST_SOURCE_MARKER . "','" . TURF_CONNECTOR_APP_SOURCE_MARKER . "') THEN 'app' ELSE '' END
+					ELSE CONCAT(v.screen_width, '×', v.screen_height)
+				END AS label,
+				MAX(v.screen_width) AS screen_width,
+				COUNT(*) AS views, COUNT(DISTINCT v.visitor_hash) AS visitors
+			FROM $table v
+			$join
+			WHERE $where $where_date
+			GROUP BY label
+			ORDER BY views DESC", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- join/where are internal literals from turf_site_join_and_where(); the two referrer markers are internal constants, not user input.
+			$params
+		) );
+	} );
 }
 
 function turf_render_screen_breakdown( $days ) {
@@ -1483,15 +1652,17 @@ function turf_get_referrer_breakdown( $days ) {
 		$params = array_merge( $params, $date_params );
 	}
 
-	return $wpdb->get_results( $wpdb->prepare(
-		"SELECT $case AS label, COUNT(*) AS views, COUNT(DISTINCT v.visitor_hash) AS visitors
-		FROM $table v
-		$join
-		WHERE $where $where_date
-		GROUP BY label
-		ORDER BY views DESC", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- $case/$join/$where are built entirely from literals in turf_referrer_case_sql()/turf_site_join_and_where(); no user input.
-		$params
-	) );
+	return turf_stats_cached( array( 'referrer_breakdown', $days ), function () use ( $wpdb, $table, $join, $where, $where_date, $case, $params ) {
+		return $wpdb->get_results( $wpdb->prepare(
+			"SELECT $case AS label, COUNT(*) AS views, COUNT(DISTINCT v.visitor_hash) AS visitors
+			FROM $table v
+			$join
+			WHERE $where $where_date
+			GROUP BY label
+			ORDER BY views DESC", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- $case/$join/$where are built entirely from literals in turf_referrer_case_sql()/turf_site_join_and_where(); no user input.
+			$params
+		) );
+	} );
 }
 
 function turf_referrer_bucket_label( $bucket ) {
@@ -1535,17 +1706,19 @@ function turf_get_top_referrer_hosts( $days, $limit = 10 ) {
 	$params[] = TURF_CONNECTOR_APP_SOURCE_MARKER;
 	$params[] = $limit;
 
-	return $wpdb->get_results( $wpdb->prepare(
-		"SELECT v.referrer_host AS label, COUNT(*) AS views, COUNT(DISTINCT v.visitor_hash) AS visitors
-		FROM $table v
-		$join
-		WHERE $where $where_date
-		AND v.referrer_host != '' AND v.referrer_host != %s AND v.referrer_host != %s AND v.referrer_host != %s
-		GROUP BY v.referrer_host
-		ORDER BY views DESC
-		LIMIT %d",
-		$params
-	) );
+	return turf_stats_cached( array( 'top_referrer_hosts', $days, $limit ), function () use ( $wpdb, $table, $join, $where, $where_date, $params ) {
+		return $wpdb->get_results( $wpdb->prepare(
+			"SELECT v.referrer_host AS label, COUNT(*) AS views, COUNT(DISTINCT v.visitor_hash) AS visitors
+			FROM $table v
+			$join
+			WHERE $where $where_date
+			AND v.referrer_host != '' AND v.referrer_host != %s AND v.referrer_host != %s AND v.referrer_host != %s
+			GROUP BY v.referrer_host
+			ORDER BY views DESC
+			LIMIT %d",
+			$params
+		) );
+	} );
 }
 
 /**
@@ -1585,7 +1758,9 @@ function turf_render_breakdown_rows( $rows, $label_callback, $visible = 0 ) {
 		$views_pct    = (int) round( ( $views / $max_views ) * 100 );
 		$visitors_pct = (int) round( ( $visitors / $max_views ) * 100 );
 		$share        = $total_views ? (int) round( ( $views / $total_views ) * 100 ) : 0;
-		$value_text   = sprintf(
+		// The row's own tooltip still spells out the percentage share, which
+		// doesn't fit next to the numbers without crowding the row.
+		$tooltip_text = sprintf(
 			/* translators: 1: number of views, 2: percentage share of total views, 3: number of unique visitors */
 			__( '%1$s views (%2$d%%) · %3$s visitors', 'turf-stats' ),
 			number_format_i18n( $views ),
@@ -1593,13 +1768,14 @@ function turf_render_breakdown_rows( $rows, $label_callback, $visible = 0 ) {
 			number_format_i18n( $visitors )
 		);
 		?>
-		<div class="bk-stats-bar-row" title="<?php echo esc_attr( $value_text ); ?>">
+		<div class="bk-stats-bar-row" title="<?php echo esc_attr( $tooltip_text ); ?>">
+			<span class="bk-stats-bar-row__fill bk-stats-bar-row__fill--views" style="width:<?php echo (int) $views_pct; ?>%"></span>
+			<span class="bk-stats-bar-row__fill bk-stats-bar-row__fill--visitors" style="width:<?php echo (int) $visitors_pct; ?>%"></span>
 			<span class="bk-stats-bar-row__label"><?php echo esc_html( call_user_func( $label_callback, $row->label ) ); ?></span>
-			<span class="bk-stats-bar-row__track">
-				<span class="bk-stats-bar-row__fill bk-stats-bar-row__fill--views" style="width:<?php echo (int) $views_pct; ?>%"></span>
-				<span class="bk-stats-bar-row__fill bk-stats-bar-row__fill--visitors" style="width:<?php echo (int) $visitors_pct; ?>%"></span>
+			<span class="bk-stats-bar-row__value">
+				<span class="bk-stats-bar-row__value-views"><?php echo esc_html( number_format_i18n( $views ) ); ?></span>
+				<span class="bk-stats-bar-row__value-visitors"><?php echo esc_html( number_format_i18n( $visitors ) ); ?></span>
 			</span>
-			<span class="bk-stats-bar-row__value"><?php echo esc_html( $value_text ); ?></span>
 		</div>
 		<?php
 	endforeach;
@@ -1666,29 +1842,31 @@ function turf_render_top_referrer_hosts( $days ) {
  * have no post_id/term_id to list in a per-post-type/taxonomy table.
  */
 function turf_get_other_pages_breakdown( $days ) {
-	global $wpdb;
-	$table = turf_table();
+	return turf_stats_cached( array( 'other_pages_breakdown', $days ), function () use ( $days ) {
+		global $wpdb;
+		$table = turf_table();
 
-	if ( 0 === $days ) {
-		return $wpdb->get_results(
+		if ( 0 === $days ) {
+			return $wpdb->get_results(
+				"SELECT page_type AS label, COUNT(*) AS views, COUNT(DISTINCT visitor_hash) AS visitors
+				FROM $table
+				WHERE page_type IS NOT NULL
+				GROUP BY page_type
+				ORDER BY views DESC"
+			);
+		}
+
+		list( $where_sql, $params ) = turf_period_where_sql( $days, 'viewed_at' );
+
+		return $wpdb->get_results( $wpdb->prepare(
 			"SELECT page_type AS label, COUNT(*) AS views, COUNT(DISTINCT visitor_hash) AS visitors
 			FROM $table
-			WHERE page_type IS NOT NULL
+			WHERE page_type IS NOT NULL $where_sql
 			GROUP BY page_type
-			ORDER BY views DESC"
-		);
-	}
-
-	list( $where_sql, $params ) = turf_period_where_sql( $days, 'viewed_at' );
-
-	return $wpdb->get_results( $wpdb->prepare(
-		"SELECT page_type AS label, COUNT(*) AS views, COUNT(DISTINCT visitor_hash) AS visitors
-		FROM $table
-		WHERE page_type IS NOT NULL $where_sql
-		GROUP BY page_type
-		ORDER BY views DESC",
-		$params
-	) );
+			ORDER BY views DESC",
+			$params
+		) );
+	} );
 }
 
 function turf_other_page_type_label( $type ) {
@@ -1715,42 +1893,44 @@ function turf_render_other_pages_breakdown( $days ) {
  * possible with the existing hash, just not surfaced anywhere until now.
  */
 function turf_get_new_vs_returning( $days ) {
-	global $wpdb;
+	return turf_stats_cached( array( 'new_vs_returning', $days ), function () use ( $days ) {
+		global $wpdb;
 
-	$table = turf_table();
-	list( $join, $where, $params ) = turf_site_join_and_where();
+		$table = turf_table();
+		list( $join, $where, $params ) = turf_site_join_and_where();
 
-	list( $start, $end ) = turf_period_window( $days, 0 );
+		list( $start, $end ) = turf_period_window( $days, 0 );
 
-	if ( null === $start ) {
-		$start = '1970-01-01 00:00:00';
-		$end   = current_time( 'mysql', true );
-	}
+		if ( null === $start ) {
+			$start = '1970-01-01 00:00:00';
+			$end   = current_time( 'mysql', true );
+		}
 
-	$row = $wpdb->get_row( $wpdb->prepare(
-		"SELECT
-			COUNT(DISTINCT CASE WHEN earlier.visitor_hash IS NULL THEN v.visitor_hash END) AS new_visitors,
-			COUNT(DISTINCT CASE WHEN earlier.visitor_hash IS NOT NULL THEN v.visitor_hash END) AS returning_visitors
-		FROM $table v
-		$join
-		LEFT JOIN $table earlier ON earlier.visitor_hash = v.visitor_hash AND earlier.viewed_at < %s
-		WHERE $where AND v.viewed_at >= %s AND v.viewed_at < %s",
-		array_merge( array( $start ), $params, array( $start, $end ) )
-	) );
+		$row = $wpdb->get_row( $wpdb->prepare(
+			"SELECT
+				COUNT(DISTINCT CASE WHEN earlier.visitor_hash IS NULL THEN v.visitor_hash END) AS new_visitors,
+				COUNT(DISTINCT CASE WHEN earlier.visitor_hash IS NOT NULL THEN v.visitor_hash END) AS returning_visitors
+			FROM $table v
+			$join
+			LEFT JOIN $table earlier ON earlier.visitor_hash = v.visitor_hash AND earlier.viewed_at < %s
+			WHERE $where AND v.viewed_at >= %s AND v.viewed_at < %s",
+			array_merge( array( $start ), $params, array( $start, $end ) )
+		) );
 
-	$new       = $row ? (int) $row->new_visitors : 0;
-	$returning = $row ? (int) $row->returning_visitors : 0;
+		$new       = $row ? (int) $row->new_visitors : 0;
+		$returning = $row ? (int) $row->returning_visitors : 0;
 
-	// Nothing at all this period - return empty so the box hides rather than
-	// showing two zero-length bars.
-	if ( 0 === $new && 0 === $returning ) {
-		return array();
-	}
+		// Nothing at all this period - return empty so the box hides rather than
+		// showing two zero-length bars.
+		if ( 0 === $new && 0 === $returning ) {
+			return array();
+		}
 
-	return array(
-		(object) array( 'label' => 'nieuw', 'views' => $new, 'visitors' => $new ),
-		(object) array( 'label' => 'terugkerend', 'views' => $returning, 'visitors' => $returning ),
-	);
+		return array(
+			(object) array( 'label' => 'nieuw', 'views' => $new, 'visitors' => $new ),
+			(object) array( 'label' => 'terugkerend', 'views' => $returning, 'visitors' => $returning ),
+		);
+	} );
 }
 
 function turf_render_new_vs_returning( $days ) {
@@ -1777,16 +1957,23 @@ function turf_render_new_vs_returning( $days ) {
  */
 function turf_admin_inline_css() {
 	return <<<'CSS'
-		.bk-stats-overview__totals { display: flex; gap: 24px; margin-bottom: 16px; flex-wrap: wrap; }
-		.bk-stats-box { min-width: 120px; }
+		.bk-stats-overview__totals { display: flex; gap: 4px; margin-bottom: 16px; flex-wrap: wrap; }
+		/* Same rounded-hover-card language as .bk-stats-bar-row, so the KPI
+		   tiles at the top of the page read as one system with the lists
+		   below them instead of two different styles stacked together. */
+		.bk-stats-box { min-width: 120px; padding: 8px 14px; border-radius: 4px; transition: background-color .1s ease; }
+		.bk-stats-box:hover { background: #f0f0f1; }
 		.bk-stats-box__label { display: block; color: #646970; font-size: 13px; }
-		.bk-stats-box__value { display: block; font-size: 24px; font-weight: 600; margin: 4px 0; }
-		.bk-stats-box__change { font-size: 12px; font-weight: 600; }
+		.bk-stats-box__value { display: block; font-size: 24px; font-weight: 600; margin: 4px 0; color: #1d2327; font-variant-numeric: tabular-nums; }
+		.bk-stats-box__change { font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; }
 		.bk-stats-box__change--up { color: var(--wp-admin-theme-color, #2271b1); }
 		.bk-stats-box__change--down { color: #d63638; }
 		.bk-stats-box__change--new { color: #646970; }
 		.bk-stats-overview__legend { display: flex; gap: 16px; margin-bottom: 8px; font-size: 12px; color: #646970; }
 		.bk-stats-legend::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: middle; }
+		/* Deliberately more saturated than the fills they key (12%/22% blends
+		   into near-white) - a 10px swatch needs more color weight than a
+		   large-area fill to stay legible sitting alone on a white page. */
 		.bk-stats-legend--views::before { background: color-mix(in srgb, var(--wp-admin-theme-color, #2271b1) 35%, #fff); }
 		.bk-stats-legend--visitors::before { background: var(--wp-admin-theme-color, #2271b1); }
 		.turf-date-jump { display: inline-flex; align-items: center; gap: 6px; margin: 0 0 0 16px; vertical-align: middle; font-size: 13px; font-family: inherit; }
@@ -1796,11 +1983,18 @@ function turf_admin_inline_css() {
 		.turf-dash .bk-stats-overview__totals { margin-bottom: 12px; }
 		.turf-dash__more { margin-top: 10px; }
 		.bk-stats-chart { display: flex; align-items: flex-end; gap: 8px; height: 200px; padding: 10px 0; border-bottom: 1px solid #dcdcde; overflow-x: auto; }
-		.bk-stats-chart__col { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center; height: 100%; }
+		/* Same rounded-hover-card language as .bk-stats-bar-row/.bk-stats-box -
+		   hovering a day highlights its full column (bars + label), not just
+		   the bar itself, so the hint reads as "this day" rather than a
+		   random rectangle. */
+		.bk-stats-chart__col { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center; height: 100%; padding: 0 2px; border-radius: 4px; transition: background-color .1s ease; }
+		.bk-stats-chart__col:hover { background: #f0f0f1; }
 		.bk-stats-chart__bars { position: relative; width: 100%; max-width: 36px; height: 160px; }
-		.bk-stats-chart__bar { position: absolute; bottom: 0; left: 0; width: 100%; border-radius: 2px 2px 0 0; }
-		.bk-stats-chart__bar--views { background: color-mix(in srgb, var(--wp-admin-theme-color, #2271b1) 35%, #fff); }
-		.bk-stats-chart__bar--visitors { background: var(--wp-admin-theme-color, #2271b1); }
+		.bk-stats-chart__bar { position: absolute; bottom: 0; left: 0; width: 100%; border-radius: 4px 4px 0 0; }
+		/* Same subtle tint formula as .bk-stats-bar-row__fill, so the daily
+		   chart and the breakdown lists read as the same color language. */
+		.bk-stats-chart__bar--views { background: color-mix(in srgb, var(--wp-admin-theme-color, #2271b1) 12%, #f6f7f7); }
+		.bk-stats-chart__bar--visitors { background: color-mix(in srgb, var(--wp-admin-theme-color, #2271b1) 22%, #f6f7f7); }
 		/* bottom: <bar height>% already places the label's bottom edge exactly
 		   at the bar's top (no transform - translateY(-100%) on top of that
 		   would double the offset and push the tallest bar's label out of the
@@ -1822,11 +2016,18 @@ function turf_admin_inline_css() {
 		.bk-stats-chart--very-dense { gap: 2px; }
 		.bk-stats-chart--very-dense .bk-stats-chart__col { min-width: 2px; }
 		.bk-stats-chart__label { margin-top: 6px; font-size: 11px; color: #646970; }
+		.bk-stats-chart__col:hover .bk-stats-chart__value,
+		.bk-stats-chart__col:hover .bk-stats-chart__label { color: #1d2327; }
 		.bk-stats-hourly { margin-bottom: 18px; }
 		.bk-stats-hourly__svg { display: block; width: 100%; height: auto; overflow: visible; }
 		.bk-stats-hourly__area { fill: color-mix(in srgb, var(--wp-admin-theme-color, #2271b1) 12%, transparent); }
 		.bk-stats-hourly__line { fill: none; stroke: var(--wp-admin-theme-color, #2271b1); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
-		.bk-stats-hourly__dot { fill: var(--wp-admin-theme-color, #2271b1); }
+		/* A white ring lifts the dot off the thick line underneath instead of
+		   the two just merging into one blob - the non-scaling-stroke
+		   attribute on the <circle> (already present, previously unused since
+		   no stroke was set) keeps this ring a constant width regardless of
+		   the SVG's own viewBox scaling. */
+		.bk-stats-hourly__dot { fill: var(--wp-admin-theme-color, #2271b1); stroke: #fff; stroke-width: 1.2; }
 		.bk-stats-legend--yesterday::before { background: #646970; }
 		.bk-stats-hourly__line--yesterday { fill: none; stroke: #646970; stroke-width: 1.5; stroke-dasharray: 4 3; stroke-linejoin: round; stroke-linecap: round; opacity: 0.45; }
 		.bk-stats-hourly__dot--yesterday { fill: #646970; opacity: 0.45; }
@@ -1834,19 +2035,54 @@ function turf_admin_inline_css() {
 		.bk-stats-hourly__grid { stroke: #dcdcde; stroke-width: 1; }
 		.bk-stats-cache-env { margin-top: 12px; }
 		.bk-stats-badge { display: inline-block; margin-left: 6px; padding: 2px 8px; border-radius: 10px; background: var(--wp-admin-theme-color, #2271b1); color: #fff; font-size: 11px; line-height: 1.6; }
-		.bk-stats-bar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 12px; min-width: 0; max-width: 100%; }
-		.bk-stats-bar-row__label { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-		.bk-stats-bar-row__track { position: relative; width: 150px; flex-shrink: 0; background: #f0f0f1; border-radius: 3px; height: 10px; overflow: hidden; }
-		.bk-stats-bar-row__fill { position: absolute; top: 0; left: 0; height: 100%; border-radius: 3px; }
-		.bk-stats-bar-row__fill--views { background: color-mix(in srgb, var(--wp-admin-theme-color, #2271b1) 35%, #fff); }
-		.bk-stats-bar-row__fill--visitors { background: var(--wp-admin-theme-color, #2271b1); }
-		/* A *fixed* width, not shrink-to-content - rows with shorter text
-		   (e.g. "17 weergaven (5%) · 10 bezoekers" vs. "247 weergaven (80%)
-		   · 167 bezoekers") would otherwise each end at a different X
-		   position, making the bars/labels above them drift row to row
-		   instead of lining up. overflow+ellipsis is the backstop for an
-		   edge-case number wider than this. */
-		.bk-stats-bar-row__value { flex-shrink: 0; width: 220px; overflow: hidden; text-align: right; color: #646970; white-space: nowrap; text-overflow: ellipsis; }
+		/* Every report table in the plugin (top posts, top terms, 404s,
+		   clicks, etc.) lives inside a .postbox whose own header already
+		   names the list - core's .wp-list-table styling (bordered box,
+		   shaded header, zebra stripes) stacks a second, heavier header and
+		   box-within-a-box on top of that. Scoped to .postbox .inside so this
+		   never touches WP's own list tables (Posts, Plugins, ...), which
+		   never live inside a Turf postbox. */
+		.postbox .inside table.wp-list-table { border: none; box-shadow: none; }
+		.postbox .inside table.wp-list-table thead th {
+			background: transparent; border: 0; border-bottom: 1px solid #dcdcde;
+			color: #1d2327; font-size: 13px; font-weight: 600;
+		}
+		/* Core's own .striped CSS shades *odd* rows - reset that first so
+		   only our even-row rule (higher specificity via nth-child, so it
+		   already wins over this) is the one actually painting a stripe. */
+		.postbox .inside table.wp-list-table.striped > tbody > tr { background: transparent; }
+		.postbox .inside table.wp-list-table.striped > tbody > tr:nth-child(even) { background: #f6f7f7; }
+		.postbox .inside table.wp-list-table > tbody > tr:hover,
+		.postbox .inside table.wp-list-table.striped > tbody > tr:hover { background: #f0f0f1; }
+		.postbox .inside table.wp-list-table > tbody > tr > td { border-bottom: 1px solid #f0f0f1; font-variant-numeric: tabular-nums; }
+		.postbox .inside table.wp-list-table > tbody > tr:last-child > td { border-bottom: none; }
+		/* First column holds the row's identity (title/path/name); every
+		   column after it is a number or date, so right-aligning them keeps
+		   digits lined up without hand-listing which columns are numeric per
+		   table. */
+		.postbox .inside table.wp-list-table th:not(:first-child),
+		.postbox .inside table.wp-list-table td:not(:first-child) { text-align: right; }
+		/* The couple of tables shaped "label, label, count" (session routes'
+		   From/To, outbound clicks' Destination/From page) - their 2nd
+		   column is also a page identity, not a number, so it reads wrong
+		   right-aligned. */
+		.postbox .inside table.wp-list-table.turf-table--label-label-num th:nth-child(2),
+		.postbox .inside table.wp-list-table.turf-table--label-label-num td:nth-child(2) { text-align: left; }
+		/* The fill bar runs the row's full width (like Jetpack's stats list)
+		   instead of a separate side track - it's an absolutely positioned
+		   layer behind the label/value, which sit on top via z-index. */
+		.bk-stats-bar-row { position: relative; display: flex; align-items: center; gap: 8px; margin-bottom: 2px; padding: 5px 8px; border-radius: 4px; font-size: 13px; min-width: 0; max-width: 100%; overflow: hidden; }
+		.bk-stats-bar-row:hover { background: #f0f0f1; }
+		.bk-stats-bar-row__label { position: relative; z-index: 1; flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #1d2327; }
+		.bk-stats-bar-row__fill { position: absolute; top: 0; left: 0; bottom: 0; border-radius: 4px; z-index: 0; }
+		.bk-stats-bar-row__fill--views { background: color-mix(in srgb, var(--wp-admin-theme-color, #2271b1) 12%, #f6f7f7); }
+		.bk-stats-bar-row__fill--visitors { background: color-mix(in srgb, var(--wp-admin-theme-color, #2271b1) 22%, #f6f7f7); }
+		.bk-stats-bar-row__value { position: relative; z-index: 1; flex-shrink: 0; display: flex; align-items: baseline; gap: 6px; text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+		.bk-stats-bar-row__value-views { color: #1d2327; font-weight: 600; }
+		.bk-stats-bar-row__value-visitors { position: relative; padding-left: 12px; color: #646970; font-weight: 400; font-size: 12px; }
+		/* Small tick in the visitors bar's own color - the only visual cue
+		   distinguishing it from the views number next to it. */
+		.bk-stats-bar-row__value-visitors::before { content: ""; position: absolute; left: 0; top: 50%; width: 6px; height: 6px; border-radius: 2px; transform: translateY(-50%); background: var(--wp-admin-theme-color, #2271b1); }
 		.turf-postbox-grid .meta-box-sortables {
 			display: grid;
 			grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
@@ -1862,8 +2098,7 @@ function turf_admin_inline_css() {
 		@media (max-width: 600px) {
 			.bk-stats-overview__totals { flex-wrap: wrap; }
 			.bk-stats-box { flex: 1 1 auto; }
-			.bk-stats-bar-row__track { width: 50px; }
-			.bk-stats-bar-row__value { width: 110px; font-size: 11px; }
+			.bk-stats-bar-row { font-size: 12px; }
 		}
 		/* WP core adds .ui-sortable-handle to the draggable box header and
 		   sets touch-action:none on it unconditionally (wp-admin/css/
@@ -1992,24 +2227,26 @@ function turf_format_scroll( $pct ) {
  * that as '—' rather than a misleading 0.
  */
 function turf_get_avg_load_time_ms( $days ) {
-	global $wpdb;
+	return turf_stats_cached( array( 'avg_load_time_ms', $days ), function () use ( $days ) {
+		global $wpdb;
 
-	$table = turf_table();
-	list( $join, $where, $params ) = turf_site_join_and_where();
+		$table = turf_table();
+		list( $join, $where, $params ) = turf_site_join_and_where();
 
-	$where_date = '';
+		$where_date = '';
 
-	if ( 0 !== $days ) {
-		list( $where_date, $date_params ) = turf_period_where_sql( $days, 'v.viewed_at' );
-		$params = array_merge( $params, $date_params );
-	}
+		if ( 0 !== $days ) {
+			list( $where_date, $date_params ) = turf_period_where_sql( $days, 'v.viewed_at' );
+			$params = array_merge( $params, $date_params );
+		}
 
-	$avg = $wpdb->get_var( $wpdb->prepare(
-		"SELECT AVG(v.load_time_ms) FROM $table v $join WHERE $where $where_date AND v.load_time_ms IS NOT NULL", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- table is own-prefix; join/where are internal literals from turf_site_join_and_where(); no user input.
-		$params
-	) );
+		$avg = $wpdb->get_var( $wpdb->prepare(
+			"SELECT AVG(v.load_time_ms) FROM $table v $join WHERE $where $where_date AND v.load_time_ms IS NOT NULL", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- table is own-prefix; join/where are internal literals from turf_site_join_and_where(); no user input.
+			$params
+		) );
 
-	return ( null === $avg ) ? null : (int) round( $avg );
+		return ( null === $avg ) ? null : (int) round( $avg );
+	} );
 }
 
 function turf_format_load_time( $ms ) {
@@ -2021,51 +2258,53 @@ function turf_format_load_time( $ms ) {
 }
 
 function turf_get_top_posts_for_period( $post_type, $days ) {
-	global $wpdb;
+	return turf_stats_cached( array( 'top_posts', $post_type, $days ), function () use ( $post_type, $days ) {
+		global $wpdb;
 
-	if ( 0 === $days ) {
-		$query = new WP_Query( array(
-			'post_type'           => $post_type,
-			'post_status'         => 'publish',
-			'posts_per_page'      => turf_list_max(),
-			'orderby'             => 'meta_value_num',
-			'order'               => 'DESC',
-			'meta_key'            => TURF_META_KEY,
-			'ignore_sticky_posts' => true,
-			'no_found_rows'       => true,
-		) );
+		if ( 0 === $days ) {
+			$query = new WP_Query( array(
+				'post_type'           => $post_type,
+				'post_status'         => 'publish',
+				'posts_per_page'      => turf_list_max(),
+				'orderby'             => 'meta_value_num',
+				'order'               => 'DESC',
+				'meta_key'            => TURF_META_KEY,
+				'ignore_sticky_posts' => true,
+				'no_found_rows'       => true,
+			) );
 
-		$rows = array();
-		foreach ( $query->posts as $post ) {
-			$engagement = turf_get_alltime_engagement( $post->ID, 'post' );
-			$rows[]     = (object) array(
-				'post_id'      => $post->ID,
-				'views'        => turf_get_views( $post->ID ),
-				'visitors'     => turf_get_alltime_visitors( $post->ID ),
-				'avg_duration' => $engagement['avg_duration'],
-				'avg_scroll'   => $engagement['avg_scroll'],
-			);
+			$rows = array();
+			foreach ( $query->posts as $post ) {
+				$engagement = turf_get_alltime_engagement( $post->ID, 'post' );
+				$rows[]     = (object) array(
+					'post_id'      => $post->ID,
+					'views'        => turf_get_views( $post->ID ),
+					'visitors'     => turf_get_alltime_visitors( $post->ID ),
+					'avg_duration' => $engagement['avg_duration'],
+					'avg_scroll'   => $engagement['avg_scroll'],
+				);
+			}
+
+			return $rows;
 		}
 
-		return $rows;
-	}
+		$table = turf_table();
 
-	$table = turf_table();
+		list( $where_sql, $date_params ) = turf_period_where_sql( $days, 'v.viewed_at' );
 
-	list( $where_sql, $date_params ) = turf_period_where_sql( $days, 'v.viewed_at' );
-
-	return $wpdb->get_results( $wpdb->prepare(
-		"SELECT v.post_id AS post_id, COUNT(*) AS views, COUNT(DISTINCT v.visitor_hash) AS visitors,
-			AVG(v.duration_seconds) AS avg_duration, AVG(v.scroll_depth) AS avg_scroll
-		FROM $table v
-		INNER JOIN $wpdb->posts p ON p.ID = v.post_id
-		WHERE p.post_type = %s AND p.post_status = 'publish'
-		$where_sql
-		GROUP BY v.post_id
-		ORDER BY views DESC
-		LIMIT %d",
-		array_merge( array( $post_type ), $date_params, array( turf_list_max() ) )
-	) );
+		return $wpdb->get_results( $wpdb->prepare(
+			"SELECT v.post_id AS post_id, COUNT(*) AS views, COUNT(DISTINCT v.visitor_hash) AS visitors,
+				AVG(v.duration_seconds) AS avg_duration, AVG(v.scroll_depth) AS avg_scroll
+			FROM $table v
+			INNER JOIN $wpdb->posts p ON p.ID = v.post_id
+			WHERE p.post_type = %s AND p.post_status = 'publish'
+			$where_sql
+			GROUP BY v.post_id
+			ORDER BY views DESC
+			LIMIT %d",
+			array_merge( array( $post_type ), $date_params, array( turf_list_max() ) )
+		) );
+	} );
 }
 
 function turf_render_admin_table( $post_type, $days ) {
@@ -2122,49 +2361,51 @@ function turf_get_alltime_term_visitors( $term_id ) {
 }
 
 function turf_get_top_terms_for_period( $taxonomy, $days ) {
-	global $wpdb;
+	return turf_stats_cached( array( 'top_terms', $taxonomy, $days ), function () use ( $taxonomy, $days ) {
+		global $wpdb;
 
-	if ( 0 === $days ) {
-		$query = new WP_Term_Query( array(
-			'taxonomy'   => $taxonomy,
-			'hide_empty' => false,
-			'number'     => turf_list_max(),
-			'orderby'    => 'meta_value_num',
-			'order'      => 'DESC',
-			'meta_key'   => TURF_META_KEY,
-		) );
+		if ( 0 === $days ) {
+			$query = new WP_Term_Query( array(
+				'taxonomy'   => $taxonomy,
+				'hide_empty' => false,
+				'number'     => turf_list_max(),
+				'orderby'    => 'meta_value_num',
+				'order'      => 'DESC',
+				'meta_key'   => TURF_META_KEY,
+			) );
 
-		$rows = array();
-		foreach ( $query->get_terms() as $term ) {
-			$engagement = turf_get_alltime_engagement( $term->term_id, 'term' );
-			$rows[]     = (object) array(
-				'term_id'      => $term->term_id,
-				'views'        => turf_get_views( $term->term_id, 'term' ),
-				'visitors'     => turf_get_alltime_term_visitors( $term->term_id ),
-				'avg_duration' => $engagement['avg_duration'],
-				'avg_scroll'   => $engagement['avg_scroll'],
-			);
+			$rows = array();
+			foreach ( $query->get_terms() as $term ) {
+				$engagement = turf_get_alltime_engagement( $term->term_id, 'term' );
+				$rows[]     = (object) array(
+					'term_id'      => $term->term_id,
+					'views'        => turf_get_views( $term->term_id, 'term' ),
+					'visitors'     => turf_get_alltime_term_visitors( $term->term_id ),
+					'avg_duration' => $engagement['avg_duration'],
+					'avg_scroll'   => $engagement['avg_scroll'],
+				);
+			}
+
+			return $rows;
 		}
 
-		return $rows;
-	}
+		$table = turf_table();
 
-	$table = turf_table();
+		list( $where_sql, $date_params ) = turf_period_where_sql( $days, 'v.viewed_at' );
 
-	list( $where_sql, $date_params ) = turf_period_where_sql( $days, 'v.viewed_at' );
-
-	return $wpdb->get_results( $wpdb->prepare(
-		"SELECT v.term_id AS term_id, COUNT(*) AS views, COUNT(DISTINCT v.visitor_hash) AS visitors,
-			AVG(v.duration_seconds) AS avg_duration, AVG(v.scroll_depth) AS avg_scroll
-		FROM $table v
-		INNER JOIN $wpdb->term_taxonomy tt ON tt.term_id = v.term_id
-		WHERE tt.taxonomy = %s
-		$where_sql
-		GROUP BY v.term_id
-		ORDER BY views DESC
-		LIMIT %d",
-		array_merge( array( $taxonomy ), $date_params, array( turf_list_max() ) )
-	) );
+		return $wpdb->get_results( $wpdb->prepare(
+			"SELECT v.term_id AS term_id, COUNT(*) AS views, COUNT(DISTINCT v.visitor_hash) AS visitors,
+				AVG(v.duration_seconds) AS avg_duration, AVG(v.scroll_depth) AS avg_scroll
+			FROM $table v
+			INNER JOIN $wpdb->term_taxonomy tt ON tt.term_id = v.term_id
+			WHERE tt.taxonomy = %s
+			$where_sql
+			GROUP BY v.term_id
+			ORDER BY views DESC
+			LIMIT %d",
+			array_merge( array( $taxonomy ), $date_params, array( turf_list_max() ) )
+		) );
+	} );
 }
 
 function turf_render_admin_terms_table( $taxonomy, $days ) {

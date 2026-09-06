@@ -171,19 +171,17 @@ function turf_bots_render_simple_breakdown( $rows, $label_callback ) {
 			$share = $total ? (int) round( ( $count / $total ) * 100 ) : 0;
 			?>
 			<?php
-			$value_text = sprintf(
+			$tooltip_text = sprintf(
 				/* translators: 1: number of hits, 2: percentage share of total */
 				__( '%1$s times (%2$d%%)', 'turf-stats' ),
 				number_format_i18n( $count ),
 				$share
 			);
 			?>
-			<div class="bk-stats-bar-row" title="<?php echo esc_attr( $value_text ); ?>">
+			<div class="bk-stats-bar-row" title="<?php echo esc_attr( $tooltip_text ); ?>">
+				<span class="bk-stats-bar-row__fill bk-stats-bar-row__fill--views" style="width:<?php echo (int) $pct; ?>%"></span>
 				<span class="bk-stats-bar-row__label"><?php echo esc_html( call_user_func( $label_callback, $row->label ) ); ?></span>
-				<span class="bk-stats-bar-row__track">
-					<span class="bk-stats-bar-row__fill bk-stats-bar-row__fill--views" style="width:<?php echo (int) $pct; ?>%"></span>
-				</span>
-				<span class="bk-stats-bar-row__value"><?php echo esc_html( $value_text ); ?></span>
+				<span class="bk-stats-bar-row__value"><?php echo esc_html( number_format_i18n( $count ) ); ?></span>
 			</div>
 		<?php endforeach; ?>
 	<?php endif; ?>

@@ -47,20 +47,30 @@
 		container.insertAdjacentElement( 'afterend', link );
 	}
 
-	document.addEventListener( 'DOMContentLoaded', function () {
-		document.querySelectorAll( '.postbox .inside .bk-stats-bar-list' ).forEach( function ( list ) {
+	// Scoped to $root so this can run either once for the whole page (initial
+	// load) or again for just one box's markup after js/lazy-boxes.js injects
+	// it - a box that arrives after DOMContentLoaded would otherwise never get
+	// its "Show more" toggle set up at all.
+	function init( root ) {
+		root.querySelectorAll( '.postbox .inside .bk-stats-bar-list' ).forEach( function ( list ) {
 			var rows = list.querySelectorAll( ':scope > .bk-stats-bar-row' );
 			setup( list, rows.length, visibleCount( list ) );
 		} );
 
 		// Excludes .bk-stats-heatmap - its rows are a fixed 7-day grid, not a
 		// ranked list, so there is nothing meaningful to collapse.
-		document.querySelectorAll( '.postbox .inside > table:not(.bk-stats-heatmap)' ).forEach( function ( table ) {
+		root.querySelectorAll( '.postbox .inside > table:not(.bk-stats-heatmap)' ).forEach( function ( table ) {
 			var tbody = table.querySelector( ':scope > tbody' );
 			if ( ! tbody ) {
 				return;
 			}
 			setup( table, tbody.children.length, visibleCount( table ) );
 		} );
+	}
+
+	window.turfInitPostboxMore = init;
+
+	document.addEventListener( 'DOMContentLoaded', function () {
+		init( document );
 	} );
 }() );

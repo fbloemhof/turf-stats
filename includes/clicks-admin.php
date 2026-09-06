@@ -137,7 +137,7 @@ function turf_clicks_render_top_outbound_links( $days ) {
 	<p class="description">
 		<?php esc_html_e( 'Clicks on links to other websites - detected automatically, no data-turf-click needed.', 'turf-stats' ); ?>
 	</p>
-	<table class="wp-list-table widefat fixed striped">
+	<table class="wp-list-table widefat fixed striped turf-table--label-label-num">
 		<thead>
 			<tr>
 				<th><?php esc_html_e( 'Destination', 'turf-stats' ); ?></th>
