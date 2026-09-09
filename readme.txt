@@ -4,7 +4,7 @@ Tags: analytics, statistics, privacy, page views, cookieless
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.24.0
+Stable tag: 1.25.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -120,6 +120,14 @@ On the plugin's GitHub repository: https://github.com/fbloemhof/turf-stats/issue
    tracked separately from human visitors, with the pages they crawl most.
 
 == Changelog ==
+
+= 1.25.0 =
+* Large view/visitor counts are now shown abbreviated ("12,3k", "1,2 mln")
+  in the totals tiles, the [turf_stats] shortcode widget, and the view
+  count shown to visitors on single posts - so big numbers keep fitting
+  their fixed-width space. Tables and CSV exports still show exact figures.
+* Fixed the "Go to date" button showing the Dutch word "Toon" instead of
+  "Show" for every locale except Dutch.
 
 = 1.24.0 =
 * The Statistics page now loads noticeably faster: most boxes (device/

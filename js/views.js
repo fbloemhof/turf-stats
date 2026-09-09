@@ -56,6 +56,32 @@
 			}
 		}
 
+		// Mirrors turf_format_compact_number() in includes/views.php, so the
+		// same view count reads the same way whether it's rendered server-side
+		// (admin, [turf_stats] widget) or filled in here after the AJAX count.
+		function formatCompactCount( count ) {
+			var locale = turfViews.locale || undefined;
+
+			if ( count < 1000 ) {
+				return count.toLocaleString( locale );
+			}
+
+			var thousands = Math.round( ( count / 1000 ) * 10 ) / 10;
+
+			if ( thousands < 1000 ) {
+				return trimCompact( thousands, locale ) + 'k';
+			}
+
+			// Rounding the thousands figure pushed it to 1000+ - use millions.
+			return trimCompact( Math.round( ( count / 1000000 ) * 10 ) / 10, locale ) + ' mln';
+		}
+
+		function trimCompact( scaled, locale ) {
+			var decimals = ( Math.floor( scaled ) === scaled ) ? 0 : 1;
+
+			return scaled.toLocaleString( locale, { minimumFractionDigits: decimals, maximumFractionDigits: decimals } );
+		}
+
 		// Tracks how far a visitor scrolls and how long they stay, attached to
 		// the same event row the initial view created. Sent once, when the
 		// visitor leaves - sendBeacon so it still goes out even as the tab closes.
@@ -141,7 +167,7 @@
 			.then( function ( r ) { return r.json(); } )
 			.then( function ( data ) {
 				if ( data.success && data.data.views > 0 ) {
-					var count = data.data.views.toLocaleString( turfViews.locale || undefined );
+					var count = formatCompactCount( data.data.views );
 					updateLabel( ' • ' + turfViews.viewsLabel.replace( '%s', count ) );
 				} else {
 					updateLabel( ' • ' );

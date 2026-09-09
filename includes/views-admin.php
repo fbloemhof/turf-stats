@@ -655,9 +655,9 @@ function turf_render_change_badge( $change ) {
  */
 function turf_render_stat_box_inner( $label, $value, $change, $suffix = '', $preformatted = false ) {
 	// $preformatted values (e.g. "2m 45s", "1,6") are already display-ready
-	// strings - don't run them through number_format_i18n(), which expects a
-	// bare number.
-	$display = $preformatted ? $value . $suffix : number_format_i18n( $value ) . $suffix;
+	// strings - don't run them through turf_format_compact_number(), which
+	// expects a bare number.
+	$display = $preformatted ? $value . $suffix : turf_format_compact_number( $value ) . $suffix;
 	?>
 	<span class="bk-stats-box__label"><?php echo esc_html( $label ); ?></span>
 	<span class="bk-stats-box__value"><?php echo esc_html( $display ); ?></span>

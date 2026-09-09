@@ -252,6 +252,39 @@ function turf_get_views( $object_id, $type = 'post' ) {
 }
 
 /**
+ * Locale-formatted view/visitor count, abbreviated above 1,000 ("12,3k") and
+ * 1,000,000 ("1,2 mln") so large totals stay readable in a fixed-width span.
+ * Below 1,000 this is identical to number_format_i18n( $number ).
+ */
+function turf_format_compact_number( $number ) {
+	$number = (float) $number;
+
+	if ( $number < 1000 ) {
+		return number_format_i18n( $number );
+	}
+
+	$thousands = round( $number / 1000, 1 );
+
+	if ( $thousands < 1000 ) {
+		return turf_format_compact_trim( $thousands ) . 'k';
+	}
+
+	// Rounding the thousands figure pushed it to 1000+ (e.g. 999,950 rounds
+	// to "1000.0k") - use the millions tier instead.
+	return turf_format_compact_trim( round( $number / 1000000, 1 ) ) . ' mln';
+}
+
+/**
+ * Drops a redundant ".0" (e.g. "12.0" -> "12") before handing off to
+ * number_format_i18n(), which applies the locale's decimal separator.
+ */
+function turf_format_compact_trim( $scaled ) {
+	$decimals = ( floor( $scaled ) === $scaled ) ? 0 : 1;
+
+	return number_format_i18n( $scaled, $decimals );
+}
+
+/**
  * The post type's own registered label, so the admin report never needs a
  * hand-maintained translation table to stay in sync with trackable_post_types().
  */

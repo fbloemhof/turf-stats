@@ -94,7 +94,7 @@ function turf_stats_widget_shortcode( $atts ) {
 		<ul class="<?php echo esc_attr( $class ); ?>">
 			<?php foreach ( $rows as list( $label, $value ) ) : ?>
 				<li class="turf-stats-widget__row">
-					<span class="turf-stats-widget__value"><?php echo esc_html( number_format_i18n( $value ) ); ?></span>
+					<span class="turf-stats-widget__value"><?php echo esc_html( turf_format_compact_number( $value ) ); ?></span>
 					<span class="turf-stats-widget__label"><?php echo esc_html( $label ); ?></span>
 				</li>
 			<?php endforeach; ?>
@@ -105,7 +105,7 @@ function turf_stats_widget_shortcode( $atts ) {
 		<table class="<?php echo esc_attr( $class ); ?>">
 			<?php foreach ( $rows as list( $label, $value ) ) : ?>
 				<tr class="turf-stats-widget__row">
-					<td class="turf-stats-widget__value"><?php echo esc_html( number_format_i18n( $value ) ); ?></td>
+					<td class="turf-stats-widget__value"><?php echo esc_html( turf_format_compact_number( $value ) ); ?></td>
 					<td class="turf-stats-widget__label"><?php echo esc_html( $label ); ?></td>
 				</tr>
 			<?php endforeach; ?>
