@@ -9,6 +9,21 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
+#: includes/views-admin.php:1839
+msgid ""
+"\"Standalone\" means the page was opened from an installed PWA (Add to "
+"Home Screen / Install app) - detected live in the browser, not a true "
+"install count. Someone who installs the app but never opens it standalone "
+"isn't counted here, and this is unrelated to the \"App / REST API\" source "
+"used by companion-app integrations elsewhere on this page."
+msgstr ""
+"\"Standalone\" betekent dat de pagina is geopend vanuit een "
+"geïnstalleerde PWA (Toevoegen aan startscherm / App installeren) - live "
+"gedetecteerd in de browser, geen echte installatieteller. Iemand die de "
+"app installeert maar nooit standalone opent, wordt hier niet meegeteld, "
+"en dit staat los van de bron \"App / REST API\" die elders op deze pagina "
+"wordt gebruikt voor companion-app-integraties."
+
 #: includes/import-admin.php:55
 msgid " (dry run, nothing written)"
 msgstr " (droogloop, niets weggeschreven)"
@@ -52,6 +67,12 @@ msgstr "%1$s keer (%2$d%%)"
 #, php-format
 msgid "%1$s views (%2$d%%) · %3$s visitors"
 msgstr "%1$s weergaven (%2$d%%) · %3$s bezoekers"
+
+#. translators: 1: date, 2: already-formatted value (e.g. "120ms", "2m 45s")
+#: includes/analyse-admin.php:213
+#, php-format
+msgid "%1$s — %2$s"
+msgstr "%1$s — %2$s"
 
 #. translators: 1: date, 2: number of views, 3: number of visitors
 #: includes/views-admin.php:810
@@ -253,6 +274,10 @@ msgstr "Bouncepercentage (%)"
 #: includes/views-admin.php:61
 msgid "Browser"
 msgstr "Browser"
+
+#: includes/views-admin.php:1514
+msgid "Browser tab"
+msgstr "Browsertab"
 
 #: includes/analyse-admin.php:55
 msgid "By author"
@@ -612,6 +637,10 @@ msgstr "Review schrijven"
 msgid "LinkedIn"
 msgstr "LinkedIn"
 
+#: includes/analyse-admin.php:35
+msgid "Load time trend"
+msgstr "Laadtijdtrend"
+
 #: includes/csv-export.php:151
 msgid "Metric"
 msgstr "Metriek"
@@ -750,6 +779,10 @@ msgstr "Overzicht"
 #: includes/import-admin.php:164
 msgid "Overwrite posts that already have a value for the new counter"
 msgstr "Overschrijf berichten die al een waarde hebben voor de nieuwe teller"
+
+#: includes/views-admin.php:84
+msgid "PWA vs. browser"
+msgstr "PWA vs. browser"
 
 #: includes/bots-admin.php:103 includes/bots-admin.php:114
 msgid "Pages crawled"
@@ -931,6 +964,10 @@ msgstr "Spanje"
 msgid "Specific bots"
 msgstr "Specifieke bots"
 
+#: includes/views-admin.php:1513
+msgid "Standalone (installed PWA)"
+msgstr "Standalone (geïnstalleerde PWA)"
+
 #: includes/import-admin.php:177
 msgid "Start import"
 msgstr "Import starten"
@@ -969,6 +1006,10 @@ msgstr ""
 "Deze bronnen lopen via een backend-server aan de kant van de connector, niet "
 "via de apparaten van losse bezoekers - \"Bezoekers\" is daardoor niet "
 "betrouwbaar voor die bronnen. \"Weergaven\" wel."
+
+#: includes/analyse-admin.php:39
+msgid "Time/visit trend"
+msgstr "Tijd/bezoek-trend"
 
 #: includes/analytics-admin.php:23
 msgid "Thu"
@@ -1057,6 +1098,10 @@ msgstr "Verenigd Koninkrijk"
 #: includes/views-admin.php:1363
 msgid "United States"
 msgstr "Verenigde Staten"
+
+#: includes/views-admin.php:1504
+msgid "Unknown (REST API/companion app, or from before this feature)"
+msgstr "Onbekend (REST API/companion-app, of van vóór deze functie)"
 
 #: includes/views-admin.php:1328
 msgid "Unknown (from before this feature)"

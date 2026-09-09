@@ -35,6 +35,25 @@
 		var screenWidth  = ( window.screen && window.screen.width )  ? window.screen.width  : ( window.innerWidth  || 0 );
 		var screenHeight = ( window.screen && window.screen.height ) ? window.screen.height : ( window.innerHeight || 0 );
 
+		// Whether this pageview is running inside an installed PWA rather than
+		// a normal browser tab. There's no server-visible "was this app
+		// installed" signal (browsers never report that), but a page running
+		// standalone right now is directly observable - matchMedia covers
+		// Android/desktop installs, navigator.standalone is Safari's
+		// iOS-only equivalent (iOS doesn't support the display-mode media
+		// feature for "Add to Home Screen" web apps).
+		var displayMode = 'browser';
+		if ( true === window.navigator.standalone ||
+			( window.matchMedia && (
+				window.matchMedia( '(display-mode: standalone)' ).matches ||
+				window.matchMedia( '(display-mode: fullscreen)' ).matches ||
+				window.matchMedia( '(display-mode: minimal-ui)' ).matches ||
+				window.matchMedia( '(display-mode: window-controls-overlay)' ).matches
+			) )
+		) {
+			displayMode = 'standalone';
+		}
+
 		var body = new URLSearchParams();
 		body.set( 'action', 'turf_track_view' );
 		body.set( 'post_id', turfViews.postId );
@@ -47,6 +66,7 @@
 		body.set( 'utm_content', urlParams.get( 'utm_content' ) || '' );
 		body.set( 'screen_width', screenWidth );
 		body.set( 'screen_height', screenHeight );
+		body.set( 'display_mode', displayMode );
 
 		function updateLabel( text ) {
 			var el = document.getElementById( 'post-views' );

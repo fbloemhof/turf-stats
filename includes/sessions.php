@@ -280,6 +280,105 @@ function turf_get_avg_session_seconds( $days ) {
 }
 
 /**
+ * Average time/visit (s) per day - the per-day counterpart to
+ * turf_get_avg_session_seconds(), for the "Time/visit trend" chart on the
+ * Analysis page. Same reconstruction as turf_get_avg_session_seconds() (one
+ * pass over the period's rows, not turf_compute_sessions() - see that
+ * function's docblock for why), but bucketed by the day each session
+ * started instead of averaged into one grand total.
+ *
+ * @return array[] One array('date' => 'Y-m-d', 'value' => int|null) per day,
+ *                 oldest first; empty when turf_get_trend_date_list() is
+ *                 (single-day/"Alles" period, or an invalid custom range).
+ */
+function turf_get_daily_session_duration_series( $days ) {
+	$dates = turf_get_trend_date_list( $days );
+
+	if ( ! $dates ) {
+		return array();
+	}
+
+	return turf_stats_cached( array( 'daily_session_duration_series', $days ), function () use ( $days, $dates ) {
+		global $wpdb;
+		$table = turf_table();
+		list( $join, $where, $params ) = turf_site_join_and_where();
+
+		list( $where_date, $date_params ) = turf_period_where_sql( $days, 'v.viewed_at' );
+		$params   = array_merge( $params, $date_params );
+		$params[] = turf_session_row_limit();
+
+		$rows = $wpdb->get_results( $wpdb->prepare(
+			"SELECT v.visitor_hash AS visitor_hash, v.viewed_at AS viewed_at, v.duration_seconds AS duration_seconds
+			FROM $table v
+			$join
+			WHERE $where $where_date
+			ORDER BY v.visitor_hash, v.viewed_at
+			LIMIT %d",
+			$params
+		) );
+
+		$totals = array(); // date (site timezone) => array( $sum_seconds, $session_count )
+
+		if ( $rows ) {
+			$gap = turf_session_gap_seconds();
+			$tz  = wp_timezone();
+
+			$current_visitor   = null;
+			$session_start     = null;
+			$session_start_day = null;
+			$last_time         = null;
+			$last_duration     = 0;
+
+			$flush = function () use ( &$totals, &$session_start, &$session_start_day, &$last_time, &$last_duration ) {
+				if ( null === $session_start ) {
+					return;
+				}
+
+				if ( ! isset( $totals[ $session_start_day ] ) ) {
+					$totals[ $session_start_day ] = array( 0, 0 );
+				}
+
+				$totals[ $session_start_day ][0] += ( $last_time - $session_start ) + $last_duration;
+				++$totals[ $session_start_day ][1];
+			};
+
+			foreach ( $rows as $row ) {
+				$time     = strtotime( $row->viewed_at . ' UTC' );
+				$duration = null !== $row->duration_seconds ? (int) $row->duration_seconds : 0;
+
+				$is_new_session = ( $row->visitor_hash !== $current_visitor )
+					|| ( null === $last_time )
+					|| ( $time - $last_time > $gap );
+
+				if ( $is_new_session ) {
+					$flush();
+
+					$current_visitor   = $row->visitor_hash;
+					$session_start     = $time;
+					$session_start_day = ( new DateTime( '@' . $time ) )->setTimezone( $tz )->format( 'Y-m-d' );
+				}
+
+				$last_time     = $time;
+				$last_duration = $duration;
+			}
+
+			$flush();
+		}
+
+		$daily = array();
+		foreach ( $dates as $date ) {
+			$bucket  = isset( $totals[ $date ] ) ? $totals[ $date ] : null;
+			$daily[] = array(
+				'date'  => $date,
+				'value' => ( $bucket && $bucket[1] > 0 ) ? (int) round( $bucket[0] / $bucket[1] ) : null,
+			);
+		}
+
+		return $daily;
+	} );
+}
+
+/**
  * Top landing pages: the first pageview of each reconstructed session, i.e.
  * where visits actually begin. Aggregated by page, with the share of those
  * sessions that were single-page (bounced) as a per-landing bounce rate.

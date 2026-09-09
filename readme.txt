@@ -4,7 +4,7 @@ Tags: analytics, statistics, privacy, page views, cookieless
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.25.2
+Stable tag: 1.26.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -120,6 +120,15 @@ On the plugin's GitHub repository: https://github.com/fbloemhof/turf-stats/issue
    tracked separately from human visitors, with the pages they crawl most.
 
 == Changelog ==
+
+= 1.26.0 =
+* Added "Load time trend" and "Time/visit trend" daily line charts to the
+  Analysis page, next to the existing peak-hours heatmap.
+* Added a "PWA vs. browser" breakdown to the Statistics page: detects
+  whether a pageview ran inside an installed PWA (Add to Home Screen /
+  Install app) or a normal browser tab. This is a rough estimate of active
+  PWA usage, not a hard install count - browsers don't report installs to
+  the server.
 
 = 1.25.2 =
 * Reverted 1.25.1: "mln" for millions reads fine on Dutch sites too, so

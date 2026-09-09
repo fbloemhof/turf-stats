@@ -80,6 +80,13 @@ function turf_lazy_box_definitions() {
 				turf_render_screen_breakdown( $days );
 			},
 		),
+		'turf_display_mode'    => array(
+			'title'    => __( 'PWA vs. browser', 'turf-stats' ),
+			'context'  => 'turf_compact',
+			'callback' => function ( $days ) {
+				turf_render_display_mode_breakdown( $days );
+			},
+		),
 		'turf_language'         => array(
 			'title'    => __( 'Language', 'turf-stats' ),
 			'context'  => 'turf_compact',
@@ -1366,7 +1373,7 @@ function turf_get_content_activity( $post_type, $days ) {
 function turf_get_breakdown( $column, $days, $exclude_empty = false ) {
 	global $wpdb;
 
-	$allowed = array( 'device_type', 'browser', 'os', 'language', 'country', 'utm_source', 'utm_medium', 'utm_content' );
+	$allowed = array( 'device_type', 'browser', 'os', 'display_mode', 'language', 'country', 'utm_source', 'utm_medium', 'utm_content' );
 
 	if ( ! in_array( $column, $allowed, true ) ) {
 		return array();
@@ -1493,8 +1500,21 @@ function turf_breakdown_label( $column, $raw ) {
 		return __( 'Unknown (no Cloudflare country detection or own GeoIP integration)', 'turf-stats' );
 	}
 
+	if ( 'display_mode' === $column && '' === $raw ) {
+		return __( 'Unknown (REST API/companion app, or from before this feature)', 'turf-stats' );
+	}
+
 	if ( '' === $raw ) {
 		return __( 'Unknown (from before this feature)', 'turf-stats' );
+	}
+
+	if ( 'display_mode' === $column ) {
+		$labels = array(
+			'standalone' => __( 'Standalone (installed PWA)', 'turf-stats' ),
+			'browser'    => __( 'Browser tab', 'turf-stats' ),
+		);
+
+		return $labels[ $raw ] ?? $raw;
 	}
 
 	if ( 'device_type' === $column ) {
@@ -1794,6 +1814,29 @@ function turf_render_breakdown( $column, $days, $exclude_empty = false ) {
 	// - see turf_ajax_export_breakdown()'s own whitelist.
 	if ( $rows && in_array( $column, array( 'device_type', 'browser', 'os' ), true ) ) {
 		turf_render_export_link( 'turf_export_breakdown', array( 'column' => $column ) );
+	}
+}
+
+/**
+ * "Standalone" means the page was viewed inside an installed PWA at that
+ * moment (see js/views.js's matchMedia/navigator.standalone check) - a live,
+ * directly observable signal, but not the same thing as an install count:
+ * an install that's never opened standalone never shows up here, and
+ * visitor_hash is a rolling IP+UA window, not a stable per-install ID, so
+ * "visitors" here is a rough estimate of active use, not a hard user count.
+ * Spelled out below the bars because "app" already means something else
+ * elsewhere on this page (the REST API/companion-app buckets in the Screen
+ * resolution and Source boxes are a separate, non-PWA integration).
+ */
+function turf_render_display_mode_breakdown( $days ) {
+	$rows = turf_get_breakdown( 'display_mode', $days );
+
+	turf_render_breakdown_rows( $rows, function ( $raw ) {
+		return turf_breakdown_label( 'display_mode', $raw );
+	} );
+
+	if ( $rows ) {
+		echo '<p class="description">' . esc_html__( '"Standalone" means the page was opened from an installed PWA (Add to Home Screen / Install app) - detected live in the browser, not a true install count. Someone who installs the app but never opens it standalone isn\'t counted here, and this is unrelated to the "App / REST API" source used by companion-app integrations elsewhere on this page.', 'turf-stats' ) . '</p>';
 	}
 }
 
@@ -2133,6 +2176,14 @@ function turf_admin_inline_css() {
 		.bk-stats-heatmap { border-collapse: collapse; width: 100%; }
 		.bk-stats-heatmap th { font-size: 10px; color: #646970; font-weight: 400; text-align: center; padding: 2px; }
 		.bk-stats-heatmap td { height: 18px; border: 1px solid #fff; }
+		/* Same visual family as .bk-stats-hourly (the peak-hours chart) - see
+		   turf_render_trend_chart() in includes/analyse-admin.php. */
+		.bk-trend-chart__svg { display: block; width: 100%; height: auto; overflow: visible; }
+		.bk-trend-chart__line { fill: none; stroke: var(--wp-admin-theme-color, #2271b1); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+		.bk-trend-chart__dot { fill: var(--wp-admin-theme-color, #2271b1); stroke: #fff; stroke-width: 1.2; }
+		.bk-trend-chart__grid { stroke: #dcdcde; stroke-width: 1; }
+		.bk-trend-chart__axis { fill: #646970; font-size: 10px; }
+		.bk-trend-chart__axis--y { font-variant-numeric: tabular-nums; }
 		CSS;
 }
 
@@ -2246,6 +2297,96 @@ function turf_get_avg_load_time_ms( $days ) {
 		) );
 
 		return ( null === $avg ) ? null : (int) round( $avg );
+	} );
+}
+
+/**
+ * Y-m-d date list for the daily trend charts on the Analysis page - N-day and
+ * custom-range periods only. Single-day (Today/Yesterday/a fixed date) and
+ * "Alles" periods return an empty array: averaging a metric over a single day,
+ * or an unbounded all-time period, isn't a trend - turf_render_trend_chart()
+ * treats an empty series the same way turf_maybe_add_meta_box() treats any
+ * other empty render: the box just doesn't appear.
+ *
+ * @return string[] Oldest first.
+ */
+function turf_get_trend_date_list( $days ) {
+	if ( TURF_PERIOD_CUSTOM === $days ) {
+		list( $start_ymd, $end_ymd ) = turf_custom_range_bounds();
+
+		if ( null === $start_ymd ) {
+			return array();
+		}
+
+		$tz     = wp_timezone();
+		$cursor = DateTime::createFromFormat( 'Y-m-d', $start_ymd, $tz )->setTime( 0, 0, 0 );
+		$end_dt = DateTime::createFromFormat( 'Y-m-d', $end_ymd, $tz )->setTime( 0, 0, 0 )->modify( '+1 day' );
+
+		$dates = array();
+		while ( $cursor < $end_dt ) {
+			$dates[] = $cursor->format( 'Y-m-d' );
+			$cursor->modify( '+1 day' );
+		}
+
+		return $dates;
+	}
+
+	if ( turf_is_single_day( $days ) || 0 === $days ) {
+		return array();
+	}
+
+	$dates = array();
+	for ( $i = $days - 1; $i >= 0; $i-- ) {
+		$dates[] = gmdate( 'Y-m-d', strtotime( "-$i days" ) );
+	}
+
+	return $dates;
+}
+
+/**
+ * Average page load time (ms) per day - the per-day counterpart to
+ * turf_get_avg_load_time_ms(), for the "Load time trend" chart on the
+ * Analysis page.
+ *
+ * @return array[] One array('date' => 'Y-m-d', 'value' => int|null) per day,
+ *                 oldest first; empty when turf_get_trend_date_list() is
+ *                 (single-day/"Alles" period, or an invalid custom range).
+ */
+function turf_get_daily_load_time_series( $days ) {
+	$dates = turf_get_trend_date_list( $days );
+
+	if ( ! $dates ) {
+		return array();
+	}
+
+	return turf_stats_cached( array( 'daily_load_time_series', $days ), function () use ( $days, $dates ) {
+		global $wpdb;
+
+		$table = turf_table();
+		list( $join, $where, $params ) = turf_site_join_and_where();
+		list( $where_date, $date_params ) = turf_period_where_sql( $days, 'v.viewed_at' );
+		$params = array_merge( $params, $date_params );
+
+		$results = $wpdb->get_results( $wpdb->prepare(
+			"SELECT DATE(v.viewed_at) AS day, AVG(v.load_time_ms) AS avg_ms
+			FROM $table v
+			$join
+			WHERE $where $where_date
+			AND v.load_time_ms IS NOT NULL
+			GROUP BY DATE(v.viewed_at)", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- table is own-prefix; join/where are internal literals from turf_site_join_and_where(); no user input.
+			$params
+		), OBJECT_K );
+
+		$daily = array();
+		foreach ( $dates as $date ) {
+			$row     = isset( $results[ $date ] ) ? $results[ $date ] : null;
+			$daily[] = array(
+				'date'  => $date,
+				'value' => $row ? (int) round( $row->avg_ms ) : null,
+			);
+		}
+
+		return $daily;
 	} );
 }
 
