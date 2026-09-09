@@ -612,6 +612,14 @@ msgstr "Review schrijven"
 msgid "LinkedIn"
 msgstr "LinkedIn"
 
+#. translators: abbreviation appended directly after a number to mean
+#. "million" (e.g. "1.2M"). Add a leading space in your translation if your
+#. language uses one (Dutch: " mln").
+#: includes/views.php:276
+#: includes/views.php:640
+msgid "M"
+msgstr " mln"
+
 #: includes/csv-export.php:151
 msgid "Metric"
 msgstr "Metriek"
@@ -1197,6 +1205,14 @@ msgstr ""
 #: turf-stats.php
 msgid "https://github.com/fbloemhof/turf-stats"
 msgstr ""
+
+#. translators: abbreviation appended directly after a number to mean
+#. "thousand" (e.g. "12.3k"). Add a leading space in your translation if your
+#. language uses one.
+#: includes/views.php:270
+#: includes/views.php:638
+msgid "k"
+msgstr "k"
 
 #: includes/email-report.php:116
 msgid "monthly"

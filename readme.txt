@@ -4,7 +4,7 @@ Tags: analytics, statistics, privacy, page views, cookieless
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.25.0
+Stable tag: 1.25.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -120,6 +120,12 @@ On the plugin's GitHub repository: https://github.com/fbloemhof/turf-stats/issue
    tracked separately from human visitors, with the pages they crawl most.
 
 == Changelog ==
+
+= 1.25.1 =
+* Fixed: the abbreviated view/visitor counts added in 1.25.0 always showed
+  the Dutch "mln" for millions, even on English (and other) sites. The
+  "k"/"M" suffixes are now translatable, so non-Dutch locales show "1.2M"
+  instead of "1,2 mln".
 
 = 1.25.0 =
 * Large view/visitor counts are now shown abbreviated ("12,3k", "1,2 mln")

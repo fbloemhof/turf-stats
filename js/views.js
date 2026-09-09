@@ -69,11 +69,11 @@
 			var thousands = Math.round( ( count / 1000 ) * 10 ) / 10;
 
 			if ( thousands < 1000 ) {
-				return trimCompact( thousands, locale ) + 'k';
+				return trimCompact( thousands, locale ) + ( turfViews.unitK || 'k' );
 			}
 
 			// Rounding the thousands figure pushed it to 1000+ - use millions.
-			return trimCompact( Math.round( ( count / 1000000 ) * 10 ) / 10, locale ) + ' mln';
+			return trimCompact( Math.round( ( count / 1000000 ) * 10 ) / 10, locale ) + ( turfViews.unitM || 'M' );
 		}
 
 		function trimCompact( scaled, locale ) {
