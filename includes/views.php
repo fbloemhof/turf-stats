@@ -252,8 +252,8 @@ function turf_get_views( $object_id, $type = 'post' ) {
 }
 
 /**
- * Locale-formatted view/visitor count, abbreviated above 1,000 ("12.3k") and
- * 1,000,000 ("1.2M") so large totals stay readable in a fixed-width span.
+ * Locale-formatted view/visitor count, abbreviated above 1,000 ("12,3k") and
+ * 1,000,000 ("1,2 mln") so large totals stay readable in a fixed-width span.
  * Below 1,000 this is identical to number_format_i18n( $number ).
  */
 function turf_format_compact_number( $number ) {
@@ -266,14 +266,12 @@ function turf_format_compact_number( $number ) {
 	$thousands = round( $number / 1000, 1 );
 
 	if ( $thousands < 1000 ) {
-		/* translators: abbreviation appended directly after a number to mean "thousand" (e.g. "12.3k"). Add a leading space in your translation if your language uses one. */
-		return turf_format_compact_trim( $thousands ) . __( 'k', 'turf-stats' );
+		return turf_format_compact_trim( $thousands ) . 'k';
 	}
 
 	// Rounding the thousands figure pushed it to 1000+ (e.g. 999,950 rounds
 	// to "1000.0k") - use the millions tier instead.
-	/* translators: abbreviation appended directly after a number to mean "million" (e.g. "1.2M"). Add a leading space in your translation if your language uses one (Dutch: " mln"). */
-	return turf_format_compact_trim( round( $number / 1000000, 1 ) ) . __( 'M', 'turf-stats' );
+	return turf_format_compact_trim( round( $number / 1000000, 1 ) ) . ' mln';
 }
 
 /**
@@ -634,10 +632,6 @@ function turf_enqueue() {
 		/* translators: %s is the (already locale-formatted) view count. */
 		'viewsLabel' => __( '%s times viewed', 'turf-stats' ),
 		'locale'     => get_bloginfo( 'language' ),
-		/* translators: abbreviation appended directly after a number to mean "thousand" (e.g. "12.3k"). Add a leading space in your translation if your language uses one. */
-		'unitK'      => __( 'k', 'turf-stats' ),
-		/* translators: abbreviation appended directly after a number to mean "million" (e.g. "1.2M"). Add a leading space in your translation if your language uses one (Dutch: " mln"). */
-		'unitM'      => __( 'M', 'turf-stats' ),
 	) );
 }
 add_action( 'wp_enqueue_scripts', 'turf_enqueue' );
