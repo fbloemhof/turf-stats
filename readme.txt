@@ -4,7 +4,7 @@ Tags: analytics, statistics, privacy, page views, cookieless
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.30.0
+Stable tag: 1.31.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -120,6 +120,18 @@ On the plugin's GitHub repository: https://github.com/fbloemhof/turf-stats/issue
    tracked separately from human visitors, with the pages they crawl most.
 
 == Changelog ==
+
+= 1.31.0 =
+* Search success on the Analysis page: for each search term, what visitors
+  did within 30 minutes after searching - opened a post or page, searched
+  again for something else, went to another page, or left. Derived from
+  the existing search and view logs (no extra tracking), so it also covers
+  searches recorded before this version.
+* New "Opened search results" box: which post or page visitors opened
+  after searching for a term.
+* New "Search refinements" box: searches followed by a search for
+  something else ("agenda" -> "evenementen"), candidates for synonyms,
+  redirects or clearer titles.
 
 = 1.30.0 =
 * Funnels: define on the Clicks page, one per line, how visitors should

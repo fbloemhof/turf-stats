@@ -52,6 +52,18 @@ function turf_analyse_register_metaboxes() {
 		turf_search_render_zero_results( $days );
 	}, $hook, 'normal' );
 
+	turf_maybe_add_meta_box( 'turf_search_success', __( 'Search success', 'turf-stats' ), function () use ( $days ) {
+		turf_search_render_success( $days );
+	}, $hook, 'normal' );
+
+	turf_maybe_add_meta_box( 'turf_search_clicked_results', __( 'Opened search results', 'turf-stats' ), function () use ( $days ) {
+		turf_search_render_clicked_results( $days );
+	}, $hook, 'normal' );
+
+	turf_maybe_add_meta_box( 'turf_search_refinements', __( 'Search refinements', 'turf-stats' ), function () use ( $days ) {
+		turf_search_render_refinements( $days );
+	}, $hook, 'normal' );
+
 	turf_maybe_add_meta_box( 'turf_session_routes', __( 'Visitor routes', 'turf-stats' ), function () use ( $days ) {
 		turf_render_session_routes( $days );
 	}, $hook, 'normal' );

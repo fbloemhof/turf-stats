@@ -1436,6 +1436,67 @@ msgstr "Trechters opgeslagen, maar sommige regels zijn overgeslagen:"
 msgid "Funnels saved."
 msgstr "Trechters opgeslagen."
 
+#: includes/search-admin.php:190
+msgid "Opened a result"
+msgstr "Resultaat geopend"
+
+#: includes/search-admin.php:191
+msgid "Searched again"
+msgstr "Opnieuw gezocht"
+
+#: includes/search-admin.php:192
+msgid "Went elsewhere"
+msgstr "Elders heen"
+
+#: includes/search-admin.php:193
+msgid "Left"
+msgstr "Vertrokken"
+
+#: includes/search-admin.php:236
+msgid ""
+"What visitors did within 30 minutes after a search: opened a post or page, "
+"searched for something else, went to another page, or left the site."
+msgstr ""
+"Wat bezoekers binnen 30 minuten na een zoekopdracht deden: een bericht of "
+"pagina geopend, naar iets anders gezocht, naar een andere pagina gegaan, of "
+"de site verlaten."
+
+#: includes/search-admin.php:250
+msgid "All searches"
+msgstr "Alle zoekopdrachten"
+
+#: includes/search-admin.php:301
+msgid ""
+"Searches followed by a search for something else - candidates for "
+"synonyms, redirects or clearer titles."
+msgstr ""
+"Zoekopdrachten gevolgd door een zoekopdracht naar iets anders - kandidaten "
+"voor synoniemen, redirects of duidelijkere titels."
+
+#: includes/search-admin.php:306
+msgid "First searched for"
+msgstr "Eerst gezocht naar"
+
+#: includes/search-admin.php:307
+msgid "Then searched for"
+msgstr "Daarna gezocht naar"
+
+#: includes/search-admin.php:356
+msgid "Opened"
+msgstr "Geopend"
+
+#: includes/analyse-admin.php:55
+msgid "Search success"
+msgstr "Zoeksucces"
+
+#: includes/analyse-admin.php:59
+msgid "Opened search results"
+msgstr "Geopende zoekresultaten"
+
+#: includes/analyse-admin.php:63
+msgid "Search refinements"
+msgstr "Aangepaste zoektermen"
+
 #~ msgid "%1$02d:00 yesterday — %2$s visitors"
 #~ msgstr "%1$02d:00 gisteren — %2$s bezoekers"
 

@@ -11,7 +11,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'TURF_SEARCH_DB_VERSION', '1.0' );
+define( 'TURF_SEARCH_DB_VERSION', '1.1' );
 
 function turf_search_table() {
 	global $wpdb;
@@ -29,6 +29,8 @@ function turf_search_install() {
 	$table           = turf_search_table();
 	$charset_collate = $wpdb->get_charset_collate();
 
+	// visitor_lookup (added in 1.1) serves the search-success follow-up
+	// lookups in includes/search-admin.php ("what did this visitor do next").
 	dbDelta( "CREATE TABLE $table (
 		id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
 		search_term VARCHAR(255) NOT NULL,
@@ -37,7 +39,8 @@ function turf_search_install() {
 		searched_at DATETIME NOT NULL,
 		PRIMARY KEY  (id),
 		KEY term_lookup (search_term, searched_at),
-		KEY zero_results (results_count, searched_at)
+		KEY zero_results (results_count, searched_at),
+		KEY visitor_lookup (visitor_hash, searched_at)
 	) $charset_collate;" );
 
 	update_option( 'turf_search_db_version', TURF_SEARCH_DB_VERSION );

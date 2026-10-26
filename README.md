@@ -179,7 +179,7 @@ wp turf-stats unflag-bots [--from=…] [--to=…]   # undo, restores view counts
 | Page | What's on it |
 |---|---|
 | **Statistics** | The core audience picture: overview chart, headline stat boxes, the compact device/browser/OS/language/country/referrer/UTM breakdowns (two columns), a cache-offload box, a peak-hours heatmap, and per-post-type/per-taxonomy tables. Defaults to "Today". |
-| **Analysis** | The deeper, diagnostic stats: landing pages, search terms (+ zero-result), visitor routes, trending content, per-author stats, form submissions, and the WooCommerce funnel. Kept separate so Statistics doesn't become a wall of boxes. |
+| **Analysis** | The deeper, diagnostic stats: landing pages, search terms (+ zero-result), search success (opened a result / searched again / went elsewhere / left, which results were opened, and which searches were refined into what), visitor routes, trending content, per-author stats, form submissions, and the WooCommerce funnel. Kept separate so Statistics doesn't become a wall of boxes. |
 | **Clicks** | Funnels, top `data-turf-click` keys, destinations of tagged links, plus an "Outbound links" breakdown (full destination URL + source page). |
 | **404s** | Top requested-but-missing paths, with the query-string parameter *names* (never values), how many hits look human (with an "All hits / Humans only" toggle), and a "Broken internal links" list of own pages that link to a missing URL. |
 | **Bots & LLMs** | See above. |
