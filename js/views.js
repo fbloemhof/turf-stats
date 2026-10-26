@@ -7,13 +7,23 @@
 
 	document.addEventListener( 'DOMContentLoaded', function () {
 		var referrerHost = '';
+		var referrerPath = '';
 
 		try {
 			if ( document.referrer ) {
-				referrerHost = new URL( document.referrer ).hostname;
+				var referrerUrl = new URL( document.referrer );
+				referrerHost    = referrerUrl.hostname;
+
+				// The linking page's path, only for navigation within this
+				// site (bare and www. count as the same site) - an external
+				// referrer's path never leaves the browser.
+				if ( referrerHost.replace( /^www\./, '' ) === window.location.hostname.replace( /^www\./, '' ) ) {
+					referrerPath = referrerUrl.pathname;
+				}
 			}
 		} catch ( e ) {
 			referrerHost = '';
+			referrerPath = '';
 		}
 
 		var urlParams = new URLSearchParams( window.location.search );
@@ -63,6 +73,7 @@
 		// by postId, but the agenda, archives etc. all share page_type 'other'.
 		body.set( 'path', 'other' === turfViews.objectType ? window.location.pathname : '' );
 		body.set( 'referrer', referrerHost );
+		body.set( 'referrer_path', referrerPath );
 		body.set( 'utm_source', urlParams.get( 'utm_source' ) || '' );
 		body.set( 'utm_medium', urlParams.get( 'utm_medium' ) || '' );
 		body.set( 'utm_campaign', urlParams.get( 'utm_campaign' ) || '' );

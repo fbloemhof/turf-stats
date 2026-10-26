@@ -1078,6 +1078,10 @@ msgstr "Top referrers"
 msgid "Top referring sites"
 msgstr "Top verwijzende sites"
 
+#: includes/views-admin.php:126
+msgid "Top internal referring pages"
+msgstr "Top interne verwijzende pagina's"
+
 #: includes/analyse-admin.php:51
 msgid "Trending"
 msgstr "Trending"

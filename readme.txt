@@ -75,7 +75,8 @@ privacy policy.
 Per page view Turf stores, in your own database only: a one-way visitor hash,
 timestamp, the page viewed, device type / browser / OS family (parsed from the
 user-agent), language, country code (only if Cloudflare provides it), referrer
-hostname, UTM parameters, scroll depth, and reading time. Raw event rows are
+hostname (plus the linking page's path, for links within your own site only),
+UTM parameters, scroll depth, and reading time. Raw event rows are
 pruned automatically after 18 months (filterable); aggregate totals are kept.
 Nothing is ever transmitted off your server.
 

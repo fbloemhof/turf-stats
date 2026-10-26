@@ -122,6 +122,13 @@ function turf_lazy_box_definitions() {
 				turf_render_top_referrer_hosts( $days );
 			},
 		),
+		'turf_top_internal_referrers' => array(
+			'title'    => __( 'Top internal referring pages', 'turf-stats' ),
+			'context'  => 'turf_compact',
+			'callback' => function ( $days ) {
+				turf_render_top_internal_referrers( $days );
+			},
+		),
 		'turf_utm_source'       => array(
 			'title'    => __( 'Campaign source (UTM)', 'turf-stats' ),
 			'context'  => 'turf_compact',
@@ -1763,6 +1770,42 @@ function turf_get_top_referrer_hosts( $days, $limit = 10 ) {
 }
 
 /**
+ * Pages on this site that visitors navigated from (referrer_path, recorded
+ * since 1.11 for same-site referrers only) - "which pages send readers on?",
+ * e.g. the homepage vs. a sidebar block on a busy landing page. Older rows
+ * have an empty referrer_path and simply don't show up here.
+ */
+function turf_get_top_internal_referrers( $days, $limit = 10 ) {
+	global $wpdb;
+
+	$table = turf_table();
+	list( $join, $where, $params ) = turf_site_join_and_where();
+
+	$where_date = '';
+
+	if ( 0 !== $days ) {
+		list( $where_date, $date_params ) = turf_period_where_sql( $days, 'v.viewed_at' );
+		$params = array_merge( $params, $date_params );
+	}
+
+	$params[] = $limit;
+
+	return turf_stats_cached( array( 'top_internal_referrers', $days, $limit ), function () use ( $wpdb, $table, $join, $where, $where_date, $params ) {
+		return $wpdb->get_results( $wpdb->prepare(
+			"SELECT v.referrer_path AS label, COUNT(*) AS views, COUNT(DISTINCT v.visitor_hash) AS visitors
+			FROM $table v
+			$join
+			WHERE $where $where_date
+			AND v.referrer_path != ''
+			GROUP BY v.referrer_path
+			ORDER BY views DESC
+			LIMIT %d",
+			$params
+		) );
+	} );
+}
+
+/**
  * Shared renderer for any "rows with views+visitors, stacked bar per row"
  * breakdown block (device, browser, referrer bucket, top referrer hosts).
  * The block's heading comes from the metabox title it's rendered inside of -
@@ -1897,6 +1940,10 @@ function turf_render_top_referrer_hosts( $days ) {
 	if ( $rows ) {
 		turf_render_export_link( 'turf_export_referrers' );
 	}
+}
+
+function turf_render_top_internal_referrers( $days ) {
+	turf_render_breakdown_rows( turf_get_top_internal_referrers( $days, turf_list_max() ), 'strval', 10 );
 }
 
 /**

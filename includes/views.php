@@ -21,7 +21,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 define( 'TURF_META_KEY', '_turf_views' );
-define( 'TURF_DB_VERSION', '1.10' );
+define( 'TURF_DB_VERSION', '1.11' );
 
 /**
  * Sentinel referrer_host value for views recorded via the REST API (e.g. a
@@ -96,6 +96,7 @@ function turf_install() {
 		browser VARCHAR(20) NOT NULL DEFAULT '',
 		os VARCHAR(10) NOT NULL DEFAULT '',
 		referrer_host VARCHAR(255) NOT NULL DEFAULT '',
+		referrer_path VARCHAR(255) NOT NULL DEFAULT '',
 		language VARCHAR(5) NOT NULL DEFAULT '',
 		country VARCHAR(2) NOT NULL DEFAULT '',
 		utm_source VARCHAR(50) NOT NULL DEFAULT '',
@@ -122,6 +123,8 @@ function turf_install() {
 	// are already identified by their ID. Rows from before 1.9 keep ''.
 	// suspect (added in 1.10) flags behavior-detected bots - see
 	// includes/suspect.php for its values.
+	// referrer_path (added in 1.11) is the linking page's path, only for
+	// referrers on the site's own host - external paths are never stored.
 	//
 	// dbDelta doesn't reliably relax an existing NOT NULL column - do that explicitly
 	// (harmless no-op on a fresh install, where it's already nullable).
@@ -732,7 +735,7 @@ function turf_view_suspect_flag( $visitor_hash, $extra ) {
  * set) - call this directly from your theme/plugin's redirect code instead,
  * guarded by a `function_exists( 'turf_track_view' )` check.
  *
- * @param array $extra Optional: referrer_host, utm_source, utm_medium, utm_campaign, utm_content.
+ * @param array $extra Optional: referrer_host, referrer_path, utm_source, utm_medium, utm_campaign, utm_content.
  */
 function turf_track_view( $object_id, $object_type = 'post', $extra = array() ) {
 	if ( 'term' === $object_type ) {
@@ -787,6 +790,7 @@ function turf_track_view( $object_id, $object_type = 'post', $extra = array() ) 
 				'browser'        => turf_parse_browser( $user_agent ),
 				'os'             => turf_parse_os( $user_agent ),
 				'referrer_host'  => $extra['referrer_host'] ?? '',
+				'referrer_path'  => $extra['referrer_path'] ?? '',
 				'language'       => turf_parse_language(),
 				'country'        => turf_get_country(),
 				'utm_source'     => $extra['utm_source'] ?? '',
@@ -798,7 +802,7 @@ function turf_track_view( $object_id, $object_type = 'post', $extra = array() ) 
 				'display_mode'   => $extra['display_mode'] ?? '',
 				'suspect'        => $suspect,
 			),
-			array( '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%d', '%s', '%d' )
+			array( '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%d', '%s', '%d' )
 		);
 
 		$event_id = $wpdb->insert_id;
@@ -867,6 +871,7 @@ function turf_track_other_view( $page_type, $extra = array() ) {
 			'browser'       => turf_parse_browser( $user_agent ),
 			'os'            => turf_parse_os( $user_agent ),
 			'referrer_host' => $extra['referrer_host'] ?? '',
+			'referrer_path' => $extra['referrer_path'] ?? '',
 			'language'      => turf_parse_language(),
 			'country'       => turf_get_country(),
 			'utm_source'    => $extra['utm_source'] ?? '',
@@ -878,7 +883,7 @@ function turf_track_other_view( $page_type, $extra = array() ) {
 			'display_mode'  => $extra['display_mode'] ?? '',
 			'suspect'       => $suspect,
 		),
-		array( '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%d', '%s', '%d' )
+		array( '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%d', '%s', '%d' )
 	);
 
 	return array( 'event_id' => $wpdb->insert_id );
@@ -911,6 +916,13 @@ function turf_ajax_track_view() {
 		// here but not for REST/app or redirect-time server-side tracking.
 		'is_pageview'   => true,
 	);
+
+	// The linking page, for internal navigation only ("which pages send
+	// readers to this post?"). views.js only sends it for same-site
+	// referrers; re-checked here since the request is user-controllable.
+	if ( isset( $_POST['referrer_path'] ) && turf_is_own_host( $extra['referrer_host'] ) ) {
+		$extra['referrer_path'] = turf_sanitize_path( wp_unslash( $_POST['referrer_path'] ) );
+	}
 
 	if ( 'other' === $object_type ) {
 		$page_type     = isset( $_POST['page_type'] ) ? sanitize_key( $_POST['page_type'] ) : 'other';
