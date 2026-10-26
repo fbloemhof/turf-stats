@@ -898,6 +898,11 @@ msgid ""
 "archive pages, referrers, UTM campaigns, scroll depth/reading time, 404s, "
 "and arbitrary UI clicks."
 msgstr ""
+"Zelfgehoste, cookieloze statistieken voor paginaweergaven en klikken in "
+"WordPress - geen Google Analytics, geen Jetpack, geen externe aanroepen "
+"voor het meten. Meet weergaven, archiefpagina's, verwijzers, UTM-"
+"campagnes, scrolldiepte/leestijd, 404's en willekeurige klikken in de "
+"interface."
 
 #: includes/email-report-admin.php:165
 msgid "Send test email now"
@@ -1446,7 +1451,7 @@ msgstr "Opnieuw gezocht"
 
 #: includes/search-admin.php:192
 msgid "Went elsewhere"
-msgstr "Elders heen"
+msgstr "Andere pagina"
 
 #: includes/search-admin.php:193
 msgid "Left"
