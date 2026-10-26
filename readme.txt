@@ -4,7 +4,7 @@ Tags: analytics, statistics, privacy, page views, cookieless
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.29.0
+Stable tag: 1.30.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -120,6 +120,19 @@ On the plugin's GitHub repository: https://github.com/fbloemhof/turf-stats/issue
    tracked separately from human visitors, with the pages they crawl most.
 
 == Changelog ==
+
+= 1.30.0 =
+* Funnels: define on the Clicks page, one per line, how visitors should
+  move through the site (e.g. "Tickets: click event-landing-ticket-hero >
+  view /boeken/ > form cf7 12"), and see how many visitors reach each step.
+  Steps can be a data-turf-click key, a page view or a Contact Form 7 /
+  Gravity Forms submission, matched on the same cookieless visitor hash
+  views use, with each step within an hour of the previous one
+  (turf_funnel_step_window). Funnels can also be added in code through the
+  turf_funnels filter.
+* Clicks now record the visitor hash, so they can be linked to what the
+  same visitor did next. Clicks from before this version have none and
+  don't count towards funnels.
 
 = 1.29.0 =
 * Behavior-based bot detection: visitors with a normal browser user-agent

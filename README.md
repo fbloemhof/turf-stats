@@ -180,7 +180,7 @@ wp turf-stats unflag-bots [--from=…] [--to=…]   # undo, restores view counts
 |---|---|
 | **Statistics** | The core audience picture: overview chart, headline stat boxes, the compact device/browser/OS/language/country/referrer/UTM breakdowns (two columns), a cache-offload box, a peak-hours heatmap, and per-post-type/per-taxonomy tables. Defaults to "Today". |
 | **Analysis** | The deeper, diagnostic stats: landing pages, search terms (+ zero-result), visitor routes, trending content, per-author stats, form submissions, and the WooCommerce funnel. Kept separate so Statistics doesn't become a wall of boxes. |
-| **Clicks** | Top `data-turf-click` keys, plus an "Outbound links" breakdown (full destination URL + source page). |
+| **Clicks** | Funnels, top `data-turf-click` keys, destinations of tagged links, plus an "Outbound links" breakdown (full destination URL + source page). |
 | **404s** | Top requested-but-missing paths, with the query-string parameter *names* (never values), how many hits look human (with an "All hits / Humans only" toggle), and a "Broken internal links" list of own pages that link to a missing URL. |
 | **Bots & LLMs** | See above. |
 
@@ -222,6 +222,28 @@ still tracked — it just won't show a number anywhere.
 ```php
 <a href="…" data-turf-click="homepage-cta-button">…</a>
 ```
+
+### Funnels
+
+Define funnels on the **Clicks** page, one per line: a name, a colon, then the
+steps separated by `>`:
+
+```
+Tickets: click event-landing-ticket-hero > view /boeken/ > form cf7 12
+```
+
+| Step | Matches |
+|---|---|
+| `click <key>` | a `data-turf-click` key |
+| `view <path>` | a view of the post/page at that path (or full URL), or of an "other" page with that path |
+| `form <id>` / `form <plugin> <id>` | a Contact Form 7 (`cf7`) or Gravity Forms (`gravityforms`) submission |
+
+A visitor reaches a step when they did it within an hour (`turf_funnel_step_window`)
+after reaching the previous one, matched on the same cookieless visitor hash
+views use — so a funnel covers data recorded before it was defined. Clicks only
+count from 1.30.0 on (older clicks have no visitor hash). Taxonomy archives
+can't be a `view` step. Code can add funnels in the parsed shape through the
+`turf_funnels` filter (see `includes/funnels.php`).
 
 ### Ready-made social-share links
 
@@ -292,6 +314,8 @@ is *method* (deduplication) versus real *loss* (ad-blockers, etc.).
 | `turf_bot_signatures` | see `includes/bots.php` | Known bot/LLM user-agent signatures, grouped by category |
 | `turf_rate_limit_max_views` | `60` | New views within the window above which a visitor is flagged as a bot (0 disables) |
 | `turf_rate_limit_window` | `600` (10 min) | Window, in seconds, for `turf_rate_limit_max_views` |
+| `turf_funnels` | funnels from the Clicks page | Add or change funnels in code (parsed shape, see `includes/funnels.php`) |
+| `turf_funnel_step_window` | `3600` (1 hour) | Longest gap, in seconds, between two consecutive funnel steps |
 | `turf_suspect_min_daily_views` | `30` | Views on one day, all without engagement, above which a visitor is flagged (0 disables) |
 | `turf_visitor_country` | `''` | Supply a country code when Cloudflare's `CF-IPCountry` header isn't present |
 | `turf_session_gap_seconds` | 30 minutes | Gap between two pageviews that still counts as the same session |

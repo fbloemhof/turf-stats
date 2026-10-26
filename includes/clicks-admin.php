@@ -29,6 +29,10 @@ function turf_clicks_register_metaboxes() {
 
 	$days = turf_get_requested_days();
 
+	add_meta_box( 'turf_clicks_funnels', __( 'Funnels', 'turf-stats' ), function () use ( $days ) {
+		turf_render_funnels( $days );
+	}, $hook, 'normal' );
+
 	add_meta_box( 'turf_clicks_top', __( 'Top clicks', 'turf-stats' ), function () use ( $days ) {
 		turf_clicks_render_top_keys( $days );
 	}, $hook, 'normal' );

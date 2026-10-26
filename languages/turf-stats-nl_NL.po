@@ -1349,6 +1349,93 @@ msgstr ""
 "(%5$d+ weergaven op één dag zonder enig scroll-/leestijdsignaal): %2$s "
 "weergaven."
 
+#: includes/clicks-admin.php:32
+msgid "Funnels"
+msgstr "Trechters"
+
+#. translators: 1: line number, 2: the step that couldn't be read
+#: includes/funnels.php:83
+#, php-format
+msgid "Line %1$d: can't read step \"%2$s\"."
+msgstr "Regel %1$d: stap \"%2$s\" is niet te lezen."
+
+#. translators: %d: line number
+#: includes/funnels.php:92
+#, php-format
+msgid "Line %d: a funnel needs at least two steps."
+msgstr "Regel %d: een trechter heeft minstens twee stappen nodig."
+
+#. translators: %d: funnel number
+#: includes/funnels.php:97
+#, php-format
+msgid "Funnel %d"
+msgstr "Trechter %d"
+
+#. translators: %s: data-turf-click key
+#: includes/funnels.php:119
+#, php-format
+msgid "Click: %s"
+msgstr "Klik: %s"
+
+#. translators: %s: page path
+#: includes/funnels.php:122
+#, php-format
+msgid "View: %s"
+msgstr "Weergave: %s"
+
+#. translators: %s: form id (optionally prefixed with the form plugin)
+#: includes/funnels.php:125
+#, php-format
+msgid "Form: %s"
+msgstr "Formulier: %s"
+
+#: includes/funnels.php:243
+msgid "No funnels defined yet - add one below."
+msgstr "Nog geen trechters ingesteld - voeg er hieronder een toe."
+
+#: includes/funnels.php:254
+msgid "Step"
+msgstr "Stap"
+
+#: includes/funnels.php:256
+msgid "Of first step"
+msgstr "Van eerste stap"
+
+#: includes/funnels.php:257
+msgid "Of previous step"
+msgstr "Van vorige stap"
+
+#: includes/funnels.php:281
+msgid "Edit funnels"
+msgstr "Trechters bewerken"
+
+#: includes/funnels.php:285
+msgid ""
+"One funnel per line: a name, a colon, then the steps separated by \">\". "
+"Steps: \"click <key>\" (a data-turf-click key), \"view <path>\" (a page on "
+"this site), \"form <id>\" or \"form <plugin> <id>\" (cf7 or gravityforms). "
+"Steps of one visitor count when each follows the previous within an hour. "
+"Clicks only count since they record the visitor (Turf Stats 1.30)."
+msgstr ""
+"Eén trechter per regel: een naam, een dubbele punt, dan de stappen "
+"gescheiden door \">\". Stappen: \"click <sleutel>\" (een data-turf-click-"
+"sleutel), \"view <pad>\" (een pagina op deze site), \"form <id>\" of \"form "
+"<plugin> <id>\" (cf7 of gravityforms). Stappen van één bezoeker tellen als "
+"elke stap binnen een uur na de vorige volgt. Klikken tellen pas mee sinds "
+"ze de bezoeker vastleggen (Turf Stats 1.30)."
+
+#: includes/funnels.php:288
+msgid "Save funnels"
+msgstr "Trechters opslaan"
+
+#: includes/funnels.php:314
+msgid "Funnels saved, but some lines were skipped:"
+msgstr "Trechters opgeslagen, maar sommige regels zijn overgeslagen:"
+
+#: includes/funnels.php:322
+msgid "Funnels saved."
+msgstr "Trechters opgeslagen."
+
 #~ msgid "%1$02d:00 yesterday — %2$s visitors"
 #~ msgstr "%1$02d:00 gisteren — %2$s bezoekers"
 

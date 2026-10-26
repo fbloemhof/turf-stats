@@ -22,7 +22,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'TURF_CLICKS_DB_VERSION', '1.2' );
+define( 'TURF_CLICKS_DB_VERSION', '1.3' );
 
 /**
  * Sentinel click_key for automatically-detected outbound link clicks -
@@ -50,14 +50,20 @@ function turf_clicks_install() {
 	// target_url holds a full outbound URL (not just a hostname) since 1.2, so
 	// it needs to be long enough for real query-string-laden links - hence 512
 	// rather than the original 255. dbDelta widens the existing column in place.
+	//
+	// visitor_hash (added in 1.3) is the same one-way hash views, searches and
+	// form submissions use, so a click can be followed through to what the
+	// same visitor did next (see includes/funnels.php). Older rows keep ''.
 	dbDelta( "CREATE TABLE $table (
 		id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
 		click_key VARCHAR(100) NOT NULL,
 		context VARCHAR(191) NOT NULL DEFAULT '',
 		target_url VARCHAR(512) NULL DEFAULT NULL,
+		visitor_hash CHAR(32) NOT NULL DEFAULT '',
 		clicked_at DATETIME NOT NULL,
 		PRIMARY KEY  (id),
-		KEY key_lookup (click_key, clicked_at)
+		KEY key_lookup (click_key, clicked_at),
+		KEY visitor_lookup (visitor_hash, clicked_at)
 	) $charset_collate;" );
 
 	update_option( 'turf_clicks_db_version', TURF_CLICKS_DB_VERSION );
@@ -145,12 +151,13 @@ function turf_clicks_ajax_track() {
 	$wpdb->insert(
 		turf_clicks_table(),
 		array(
-			'click_key'   => $key,
-			'context'     => $context,
-			'target_url'  => $target_url,
-			'clicked_at'  => current_time( 'mysql', true ),
+			'click_key'    => $key,
+			'context'      => $context,
+			'target_url'   => $target_url,
+			'visitor_hash' => turf_visitor_hash( $user_agent ),
+			'clicked_at'   => current_time( 'mysql', true ),
 		),
-		array( '%s', '%s', '%s', '%s' )
+		array( '%s', '%s', '%s', '%s', '%s' )
 	);
 
 	wp_send_json_success();

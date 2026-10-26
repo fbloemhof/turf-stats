@@ -69,6 +69,7 @@ foreach ( array(
 	'turf_woo_db_version',
 	'turf_remove_data_on_uninstall',
 	'turf_suspect_last_day',
+	'turf_funnels_definition',
 ) as $turf_option ) {
 	delete_option( $turf_option );
 }
