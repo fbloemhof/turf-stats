@@ -266,14 +266,20 @@ function turf_ajax_export_404s() {
 	turf_export_check_access();
 
 	$days = turf_get_requested_days( 'today' );
-	$rows = turf_404s_get_top_paths( $days );
+	$rows = turf_404s_get_top_paths( $days, turf_404s_humans_only() );
 
 	turf_stream_csv( 'turf-404s.csv', $rows, array(
 		__( 'Path', 'turf-stats' ) => function ( $row ) {
 			return $row->path;
 		},
+		__( 'Parameters', 'turf-stats' ) => function ( $row ) {
+			return $row->query_keys;
+		},
 		__( 'Times hit', 'turf-stats' ) => function ( $row ) {
 			return (int) $row->hits;
+		},
+		__( 'Humans', 'turf-stats' ) => function ( $row ) {
+			return (int) $row->humans;
 		},
 		__( 'Last hit', 'turf-stats' ) => function ( $row ) {
 			return get_date_from_gmt( $row->last_hit, 'Y-m-d H:i:s' );

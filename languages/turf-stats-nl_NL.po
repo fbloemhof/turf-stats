@@ -1279,6 +1279,53 @@ msgstr "Pushmeldingen"
 msgid "Other pages by URL"
 msgstr "Overige pagina's per URL"
 
+#: includes/404s-admin.php:34
+msgid "Broken internal links"
+msgstr "Kapotte interne links"
+
+#: includes/404s-admin.php:136
+msgid "All hits"
+msgstr "Alle hits"
+
+#: includes/404s-admin.php:137
+msgid "Humans only"
+msgstr "Alleen mensen"
+
+#: includes/404s-admin.php:162
+msgid ""
+"Parameter names are shown, never their values. \"Humans\" counts hits from "
+"a browser-like request or from a visitor who also viewed a normal page; "
+"404s recorded before this was tracked count as not human."
+msgstr ""
+"Alleen de namen van parameters worden getoond, nooit hun waarden. "
+"\"Mensen\" telt hits van een browserachtig verzoek of van een bezoeker die "
+"ook een gewone pagina bekeek; 404's van vóór deze registratie tellen als "
+"niet-menselijk."
+
+#: includes/404s-admin.php:168 includes/csv-export.php:281
+msgid "Humans"
+msgstr "Mensen"
+
+#: includes/404s-admin.php:192
+msgid "No broken internal links recorded for this period."
+msgstr "Geen kapotte interne links geregistreerd voor deze periode."
+
+#: includes/404s-admin.php:197
+msgid ""
+"Pages on this site that link to a missing URL - fix the link on the \"From "
+"page\"."
+msgstr ""
+"Pagina's op deze site die naar een ontbrekende URL linken - pas de link aan "
+"op de \"Vanaf pagina\"."
+
+#: includes/404s-admin.php:203
+msgid "Missing URL"
+msgstr "Ontbrekende URL"
+
+#: includes/csv-export.php:275
+msgid "Parameters"
+msgstr "Parameters"
+
 #~ msgid "%1$02d:00 yesterday — %2$s visitors"
 #~ msgstr "%1$02d:00 gisteren — %2$s bezoekers"
 

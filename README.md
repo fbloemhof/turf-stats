@@ -161,7 +161,7 @@ already deliberately exclude bots). The signature list is filterable
 | **Statistics** | The core audience picture: overview chart, headline stat boxes, the compact device/browser/OS/language/country/referrer/UTM breakdowns (two columns), a cache-offload box, a peak-hours heatmap, and per-post-type/per-taxonomy tables. Defaults to "Today". |
 | **Analysis** | The deeper, diagnostic stats: landing pages, search terms (+ zero-result), visitor routes, trending content, per-author stats, form submissions, and the WooCommerce funnel. Kept separate so Statistics doesn't become a wall of boxes. |
 | **Clicks** | Top `data-turf-click` keys, plus an "Outbound links" breakdown (full destination URL + source page). |
-| **404s** | Top requested-but-missing paths. |
+| **404s** | Top requested-but-missing paths, with the query-string parameter *names* (never values), how many hits look human (with an "All hits / Humans only" toggle), and a "Broken internal links" list of own pages that link to a missing URL. |
 | **Bots & LLMs** | See above. |
 
 Blocks with no data for the selected period are hidden entirely on the
@@ -265,6 +265,7 @@ is *method* (deduplication) versus real *loss* (ad-blockers, etc.).
 | `turf_dedup_window` | 30 minutes | How long before a repeat view from the same visitor counts again |
 | `turf_retention_months` | 18 | How long raw event rows are kept before pruning (0 disables pruning) |
 | `turf_clicks_allowed_keys` | none (any key allowed) | Optional strict allow-list for `data-turf-click` keys |
+| `turf_404s_scanner_pattern` | PHP files, dotfiles, wp-login/xmlrpc, admin tools | Regex of 404 paths that mark a hit as a scanner (never human) |
 | `turf_online_now_window` | 5 minutes | How recent a view has to be to count toward "online now" |
 | `turf_connector_app_route_patterns` | none (opt-in) | Route patterns recognized as a specific connector app's single-item requests |
 | `turf_connector_app_label` | `Connector app` | Display label for the connector-app bucket in the Source breakdown |

@@ -4,7 +4,7 @@ Tags: analytics, statistics, privacy, page views, cookieless
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.27.0
+Stable tag: 1.28.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -120,6 +120,21 @@ On the plugin's GitHub repository: https://github.com/fbloemhof/turf-stats/issue
    tracked separately from human visitors, with the pages they crawl most.
 
 == Changelog ==
+
+= 1.28.0 =
+* 404s now record the query-string parameter names (never their values),
+  so e.g. a payment-return URL shows as its own "/?status&transaction_id"
+  row instead of being lumped in with "/".
+* 404s from an internal link now record the linking page, shown in a new
+  "Broken internal links" box: which page on the site links to which
+  missing URL.
+* New "Humans" column and an "All hits / Humans only" toggle on the 404s
+  page. A hit counts as human when the request looked like a browser (no
+  scanner paths such as .php/.env/wp-login, Accept-Language present), or
+  when the same visitor also viewed a normal page within a day. The
+  scanner path pattern is filterable via turf_404s_scanner_pattern. 404s
+  recorded before this version count as not human.
+* The 404s CSV export now includes the parameter names and human hits.
 
 = 1.27.0 =
 * The bare and www. spelling of the site's own domain now count as the same
