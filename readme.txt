@@ -4,7 +4,7 @@ Tags: analytics, statistics, privacy, page views, cookieless
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.31.0
+Stable tag: 1.32.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -121,6 +121,15 @@ On the plugin's GitHub repository: https://github.com/fbloemhof/turf-stats/issue
    tracked separately from human visitors, with the pages they crawl most.
 
 == Changelog ==
+
+= 1.32.0 =
+* Views now record the linking page's path when a visitor navigates within
+  the site (the bare and www. spelling of the own domain count as the same
+  site). External referrers still only store the hostname - their path is
+  never sent or stored. A new "Top internal referring pages" box on the
+  Statistics page shows which pages send visitors on; behavior-flagged bots
+  are excluded. Views from before this version have no linking page.
+* Dutch translations now follow the translate.wordpress.org glossary.
 
 = 1.31.0 =
 * Search success on the Analysis page: for each search term, what visitors
