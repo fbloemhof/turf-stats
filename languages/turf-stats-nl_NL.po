@@ -1326,6 +1326,29 @@ msgstr "Ontbrekende URL"
 msgid "Parameters"
 msgstr "Parameters"
 
+#: includes/bots-admin.php:51
+msgid "Filtered by behavior"
+msgstr "Gefilterd op gedrag"
+
+#: includes/bots-admin.php:65
+msgid "No views filtered by behavior for this period."
+msgstr "Geen weergaven gefilterd op gedrag in deze periode."
+
+#. translators: 1: number of views flagged for their speed, 2: number of views flagged for having no engagement, 3: views per window threshold, 4: window in minutes, 5: daily views threshold
+#: includes/bots-admin.php:71
+#, php-format
+msgid ""
+"Visitors with a browser user-agent that behave like a bot - excluded from "
+"all statistics and view counts. Too fast (more than %3$d new pages in %4$d "
+"minutes): %1$s views. No engagement (%5$d+ views on one day without any "
+"scrolling/reading-time signal): %2$s views."
+msgstr ""
+"Bezoekers met een browser-user-agent die zich als bot gedragen - "
+"uitgesloten van alle statistieken en weergavetellers. Te snel (meer dan "
+"%3$d nieuwe pagina's in %4$d minuten): %1$s weergaven. Geen engagement "
+"(%5$d+ weergaven op één dag zonder enig scroll-/leestijdsignaal): %2$s "
+"weergaven."
+
 #~ msgid "%1$02d:00 yesterday — %2$s visitors"
 #~ msgstr "%1$02d:00 gisteren — %2$s bezoekers"
 

@@ -144,6 +144,26 @@ them — and kept completely separate from the human-visitor numbers (which
 already deliberately exclude bots). The signature list is filterable
 (`turf_bot_signatures`).
 
+Bots that run JavaScript and send a normal browser user-agent get past that
+check, so Turf also flags visitors by **behavior**:
+
+- **Too fast** — more than 60 new pages in 10 minutes from one visitor. Flagged
+  as it happens, never added to a post's view count.
+- **No engagement** — 30+ views on one day without a single scroll/reading-time
+  signal (a real browser sends one on practically every page it leaves).
+  Checked daily for the previous day; those views are subtracted from the view
+  counts again. Days without any engagement data site-wide are skipped.
+
+Flagged views are kept (not deleted) but excluded from every report, and listed
+in the "Filtered by behavior" box on the Bots page. REST/connector-app views are
+exempt. To apply the daily check to older history, review first, then run it:
+
+```sh
+wp turf-stats flag-bots --dry-run          # per country/browser, nothing changed
+wp turf-stats flag-bots [--from=YYYY-MM-DD] [--to=YYYY-MM-DD]
+wp turf-stats unflag-bots [--from=…] [--to=…]   # undo, restores view counts
+```
+
 ### Privacy & retention
 
 - **No cookies.** Deduplication uses a one-way hash of IP + user-agent, never the
@@ -270,6 +290,9 @@ is *method* (deduplication) versus real *loss* (ad-blockers, etc.).
 | `turf_connector_app_route_patterns` | none (opt-in) | Route patterns recognized as a specific connector app's single-item requests |
 | `turf_connector_app_label` | `Connector app` | Display label for the connector-app bucket in the Source breakdown |
 | `turf_bot_signatures` | see `includes/bots.php` | Known bot/LLM user-agent signatures, grouped by category |
+| `turf_rate_limit_max_views` | `60` | New views within the window above which a visitor is flagged as a bot (0 disables) |
+| `turf_rate_limit_window` | `600` (10 min) | Window, in seconds, for `turf_rate_limit_max_views` |
+| `turf_suspect_min_daily_views` | `30` | Views on one day, all without engagement, above which a visitor is flagged (0 disables) |
 | `turf_visitor_country` | `''` | Supply a country code when Cloudflare's `CF-IPCountry` header isn't present |
 | `turf_session_gap_seconds` | 30 minutes | Gap between two pageviews that still counts as the same session |
 | `turf_session_row_limit` | 20000 | Max rows pulled into PHP for session reconstruction (bounce rate, routes, landing pages) |

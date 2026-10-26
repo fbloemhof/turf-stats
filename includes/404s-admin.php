@@ -56,7 +56,7 @@ function turf_404s_human_sql( $alias = 'f' ) {
 
 	return "( $alias.likely_human = 1 OR ( $alias.visitor_hash != '' AND EXISTS (
 		SELECT 1 FROM $views hv
-		WHERE hv.visitor_hash = $alias.visitor_hash
+		WHERE hv.visitor_hash = $alias.visitor_hash AND hv.suspect = 0
 		AND hv.viewed_at BETWEEN $alias.hit_at - INTERVAL 1 DAY AND $alias.hit_at + INTERVAL 1 DAY
 	) ) )";
 }

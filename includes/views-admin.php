@@ -327,6 +327,8 @@ function turf_post_type_in_clause() {
  * posts/terms or types that were later excluded via the filters don't linger
  * in the totals; "other" rows have no such per-object check (there's no
  * single post/term to validate against), they're just always included.
+ * Rows flagged as behavior-detected bots (includes/suspect.php) are always
+ * excluded.
  *
  * @param string $alias Table alias of the events table in the calling query.
  *                      The default 'v' keeps the historical 'p'/'tt' join
@@ -357,7 +359,7 @@ function turf_site_join_and_where( $alias = 'v' ) {
 		($alias.post_id IS NOT NULL AND $p.post_type IN ($post_placeholders) AND $p.post_status = 'publish')
 		OR ($alias.term_id IS NOT NULL AND $tt.taxonomy IN ($tax_placeholders))
 		OR ($alias.page_type IS NOT NULL)
-	)";
+	)" . turf_not_suspect_sql( $alias );
 
 	return array( $join, $where, array_merge( $post_types, $taxonomies ) );
 }
@@ -1912,7 +1914,7 @@ function turf_get_other_pages_breakdown( $days ) {
 			return $wpdb->get_results(
 				"SELECT page_type AS label, COUNT(*) AS views, COUNT(DISTINCT visitor_hash) AS visitors
 				FROM $table
-				WHERE page_type IS NOT NULL
+				WHERE page_type IS NOT NULL AND suspect = 0
 				GROUP BY page_type
 				ORDER BY views DESC"
 			);
@@ -1923,7 +1925,7 @@ function turf_get_other_pages_breakdown( $days ) {
 		return $wpdb->get_results( $wpdb->prepare(
 			"SELECT page_type AS label, COUNT(*) AS views, COUNT(DISTINCT visitor_hash) AS visitors
 			FROM $table
-			WHERE page_type IS NOT NULL $where_sql
+			WHERE page_type IS NOT NULL AND suspect = 0 $where_sql
 			GROUP BY page_type
 			ORDER BY views DESC",
 			$params
@@ -1972,7 +1974,7 @@ function turf_get_other_paths_breakdown( $days ) {
 		return $wpdb->get_results( $wpdb->prepare(
 			"SELECT path AS label, COUNT(*) AS views, COUNT(DISTINCT visitor_hash) AS visitors
 			FROM $table
-			WHERE page_type IS NOT NULL AND path != '' $where_sql
+			WHERE page_type IS NOT NULL AND path != '' AND suspect = 0 $where_sql
 			GROUP BY path
 			ORDER BY views DESC
 			LIMIT %d",
@@ -2012,7 +2014,7 @@ function turf_get_new_vs_returning( $days ) {
 				COUNT(DISTINCT CASE WHEN earlier.visitor_hash IS NOT NULL THEN v.visitor_hash END) AS returning_visitors
 			FROM $table v
 			$join
-			LEFT JOIN $table earlier ON earlier.visitor_hash = v.visitor_hash AND earlier.viewed_at < %s
+			LEFT JOIN $table earlier ON earlier.visitor_hash = v.visitor_hash AND earlier.viewed_at < %s AND earlier.suspect = 0
 			WHERE $where AND v.viewed_at >= %s AND v.viewed_at < %s",
 			array_merge( array( $start ), $params, array( $start, $end ) )
 		) );
@@ -2268,7 +2270,7 @@ function turf_get_alltime_visitors( $post_id ) {
 	$table = turf_table();
 
 	return (int) $wpdb->get_var( $wpdb->prepare(
-		"SELECT COUNT(DISTINCT visitor_hash) FROM {$table} WHERE post_id = %d", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- own-prefix table name.
+		"SELECT COUNT(DISTINCT visitor_hash) FROM {$table} WHERE post_id = %d AND suspect = 0", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- own-prefix table name.
 		$post_id
 	) );
 }
@@ -2287,7 +2289,7 @@ function turf_get_alltime_engagement( $object_id, $type = 'post' ) {
 	$row = $wpdb->get_row( $wpdb->prepare(
 		"SELECT AVG(duration_seconds) AS avg_duration, AVG(scroll_depth) AS avg_scroll
 		FROM {$table}
-		WHERE {$column} = %d AND duration_seconds IS NOT NULL", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- own-prefix table name and whitelisted column.
+		WHERE {$column} = %d AND duration_seconds IS NOT NULL AND suspect = 0", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- own-prefix table name and whitelisted column.
 		$object_id
 	) );
 
@@ -2495,7 +2497,7 @@ function turf_get_top_posts_for_period( $post_type, $days ) {
 				AVG(v.duration_seconds) AS avg_duration, AVG(v.scroll_depth) AS avg_scroll
 			FROM $table v
 			INNER JOIN $wpdb->posts p ON p.ID = v.post_id
-			WHERE p.post_type = %s AND p.post_status = 'publish'
+			WHERE p.post_type = %s AND p.post_status = 'publish' AND v.suspect = 0
 			$where_sql
 			GROUP BY v.post_id
 			ORDER BY views DESC
@@ -2553,7 +2555,7 @@ function turf_get_alltime_term_visitors( $term_id ) {
 	$table = turf_table();
 
 	return (int) $wpdb->get_var( $wpdb->prepare(
-		"SELECT COUNT(DISTINCT visitor_hash) FROM {$table} WHERE term_id = %d", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- own-prefix table name.
+		"SELECT COUNT(DISTINCT visitor_hash) FROM {$table} WHERE term_id = %d AND suspect = 0", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- own-prefix table name.
 		$term_id
 	) );
 }
@@ -2596,7 +2598,7 @@ function turf_get_top_terms_for_period( $taxonomy, $days ) {
 				AVG(v.duration_seconds) AS avg_duration, AVG(v.scroll_depth) AS avg_scroll
 			FROM $table v
 			INNER JOIN $wpdb->term_taxonomy tt ON tt.term_id = v.term_id
-			WHERE tt.taxonomy = %s
+			WHERE tt.taxonomy = %s AND v.suspect = 0
 			$where_sql
 			GROUP BY v.term_id
 			ORDER BY views DESC

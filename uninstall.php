@@ -24,9 +24,11 @@ if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
 	exit;
 }
 
-// Always: the scheduled retention-pruning event (deactivation clears it too,
-// but uninstall can run without a prior deactivation of this code version).
+// Always: the scheduled retention-pruning and bot-check events (deactivation
+// clears them too, but uninstall can run without a prior deactivation of
+// this code version).
 wp_clear_scheduled_hook( 'turf_prune_old_events' );
+wp_clear_scheduled_hook( 'turf_suspect_check' );
 
 $turf_remove_data = ( defined( 'TURF_REMOVE_DATA_ON_UNINSTALL' ) && TURF_REMOVE_DATA_ON_UNINSTALL )
 	|| get_option( 'turf_remove_data_on_uninstall' );
@@ -66,6 +68,7 @@ foreach ( array(
 	'turf_forms_db_version',
 	'turf_woo_db_version',
 	'turf_remove_data_on_uninstall',
+	'turf_suspect_last_day',
 ) as $turf_option ) {
 	delete_option( $turf_option );
 }

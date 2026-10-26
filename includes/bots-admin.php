@@ -47,6 +47,36 @@ function turf_bots_register_metaboxes() {
 	add_meta_box( 'turf_bots_pages', __( 'Most-crawled pages', 'turf-stats' ), function () use ( $days ) {
 		turf_bots_render_top_crawled_pages( $days );
 	}, $hook, 'turf_bots_wide' );
+
+	add_meta_box( 'turf_bots_suspect', __( 'Filtered by behavior', 'turf-stats' ), function () use ( $days ) {
+		turf_bots_render_suspect_breakdown( $days );
+	}, $hook, 'turf_bots_wide' );
+}
+
+/**
+ * Views that came in as a normal visitor but were flagged as a bot by their
+ * behavior (includes/suspect.php) - kept out of every other report, listed
+ * here so it stays visible what's being filtered.
+ */
+function turf_bots_render_suspect_breakdown( $days ) {
+	$totals = turf_get_suspect_totals( $days );
+
+	if ( ! array_sum( $totals ) ) {
+		echo '<p>' . esc_html__( 'No views filtered by behavior for this period.', 'turf-stats' ) . '</p>';
+		return;
+	}
+
+	echo '<p class="description">' . esc_html( sprintf(
+		/* translators: 1: number of views flagged for their speed, 2: number of views flagged for having no engagement, 3: views per window threshold, 4: window in minutes, 5: daily views threshold */
+		__( 'Visitors with a browser user-agent that behave like a bot - excluded from all statistics and view counts. Too fast (more than %3$d new pages in %4$d minutes): %1$s views. No engagement (%5$d+ views on one day without any scrolling/reading-time signal): %2$s views.', 'turf-stats' ),
+		number_format_i18n( $totals[ TURF_SUSPECT_RATE_LIMITED ] ),
+		number_format_i18n( $totals[ TURF_SUSPECT_NO_ENGAGEMENT ] ),
+		turf_rate_limit_max_views(),
+		(int) round( turf_rate_limit_window() / MINUTE_IN_SECONDS ),
+		turf_suspect_min_daily_views()
+	) ) . '</p>';
+
+	turf_render_breakdown_rows( turf_get_suspect_breakdown( $days ), 'strval', 10 );
 }
 
 function turf_bots_category_label( $category ) {

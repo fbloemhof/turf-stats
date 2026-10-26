@@ -4,7 +4,7 @@ Tags: analytics, statistics, privacy, page views, cookieless
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.28.0
+Stable tag: 1.29.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -120,6 +120,23 @@ On the plugin's GitHub repository: https://github.com/fbloemhof/turf-stats/issue
    tracked separately from human visitors, with the pages they crawl most.
 
 == Changelog ==
+
+= 1.29.0 =
+* Behavior-based bot detection: visitors with a normal browser user-agent
+  that behave like a bot are now flagged and excluded from all statistics
+  and view counts. Too fast: more than 60 new pages in 10 minutes from one
+  visitor (flagged as it happens, never counted). No engagement: 30+ views
+  on one day without a single scroll/reading-time signal (checked daily for
+  the previous day; those views are subtracted from the view counts).
+  Days without any engagement data site-wide are skipped, and REST/
+  connector-app views are exempt. Thresholds are filterable
+  (turf_rate_limit_max_views, turf_rate_limit_window,
+  turf_suspect_min_daily_views).
+* Flagged views are kept, not deleted, and listed in a new "Filtered by
+  behavior" box on the Bots page, per country and browser/OS.
+* New WP-CLI commands: `wp turf-stats flag-bots [--dry-run]` applies the
+  daily check to older history (review with --dry-run first), and
+  `wp turf-stats unflag-bots` undoes flagging and restores the view counts.
 
 = 1.28.0 =
 * 404s now record the query-string parameter names (never their values),

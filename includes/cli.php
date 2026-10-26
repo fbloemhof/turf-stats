@@ -20,6 +20,12 @@
  * against Jetpack's API, and a throttled stats_get_csv() call returns empty -
  * indistinguishable from "post has no views" - so over-parallelizing silently
  * imports nothing for the throttled posts instead of failing loudly.
+ *
+ * Behavior-based bot flagging (see includes/suspect.php) over existing
+ * history - review with --dry-run first, undo with unflag-bots:
+ *   wp turf-stats flag-bots --dry-run
+ *   wp turf-stats flag-bots [--from=2026-07-01] [--to=2026-10-25]
+ *   wp turf-stats unflag-bots [--from=...] [--to=...]
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -125,6 +131,143 @@ class Turf_CLI_Command {
 				$dry_run ? ' (dry run, nothing written)' : ''
 			) );
 		}
+	}
+
+	/**
+	 * Run the daily "many views, no engagement" bot check over past days.
+	 *
+	 * Flags matching views (excluded from every report) and subtracts them
+	 * from the posts' view counts. Days without a single engagement signal
+	 * site-wide are skipped. Undo with `wp turf-stats unflag-bots`.
+	 *
+	 * @subcommand flag-bots
+	 *
+	 * ## OPTIONS
+	 *
+	 * [--from=<date>]
+	 * : First UTC day (YYYY-MM-DD). Defaults to the oldest recorded view.
+	 *
+	 * [--to=<date>]
+	 * : Last UTC day (YYYY-MM-DD). Defaults to yesterday.
+	 *
+	 * [--dry-run]
+	 * : Report what would be flagged, per country and browser, without
+	 * changing anything.
+	 *
+	 * @when after_wp_load
+	 */
+	public function flag_bots( $args, $assoc_args ) {
+		$dry_run = WP_CLI\Utils\get_flag_value( $assoc_args, 'dry-run', false );
+
+		list( $from, $to ) = $this->day_range( $assoc_args );
+
+		$per_group = array();
+		$visitors  = 0;
+		$views     = 0;
+		$skipped   = array();
+
+		for ( $day = $from; $day <= $to; $day = gmdate( 'Y-m-d', strtotime( $day . ' +1 day' ) ) ) {
+			$result = turf_flag_suspect_visitors( $day . ' 00:00:00', gmdate( 'Y-m-d', strtotime( $day . ' +1 day' ) ) . ' 00:00:00', $dry_run );
+
+			if ( $result['skipped'] ) {
+				$skipped[] = $day;
+				continue;
+			}
+
+			$visitors += $result['visitors'];
+			$views    += $result['views'];
+
+			foreach ( $result['rows'] as $row ) {
+				$group = ( '' === $row->country ? '?' : $row->country ) . ' · ' . $row->browser . ' / ' . $row->os;
+
+				if ( ! isset( $per_group[ $group ] ) ) {
+					$per_group[ $group ] = array( 'group' => $group, 'visitor-days' => 0, 'views' => 0 );
+				}
+
+				++$per_group[ $group ]['visitor-days'];
+				$per_group[ $group ]['views'] += (int) $row->views;
+			}
+		}
+
+		if ( $skipped ) {
+			WP_CLI::log( sprintf( 'Skipped %d day(s) without any engagement data (%s .. %s).', count( $skipped ), reset( $skipped ), end( $skipped ) ) );
+		}
+
+		if ( $per_group ) {
+			usort( $per_group, function ( $a, $b ) {
+				return $b['views'] - $a['views'];
+			} );
+			WP_CLI\Utils\format_items( 'table', $per_group, array( 'group', 'visitor-days', 'views' ) );
+		}
+
+		// visitor-days, not visitors: the same bot on 5 days counts 5 times.
+		WP_CLI::success( sprintf(
+			'%s %d view(s) from %d visitor-day(s), %s .. %s.',
+			$dry_run ? 'Would flag' : 'Flagged',
+			$views,
+			$visitors,
+			$from,
+			$to
+		) );
+	}
+
+	/**
+	 * Undo bot flagging: flagged views count as normal views again.
+	 *
+	 * Covers both kinds of flag (too fast, and no engagement) and adds the
+	 * views back to the posts' view counts.
+	 *
+	 * @subcommand unflag-bots
+	 *
+	 * ## OPTIONS
+	 *
+	 * [--from=<date>]
+	 * : First UTC day (YYYY-MM-DD). Defaults to the oldest recorded view.
+	 *
+	 * [--to=<date>]
+	 * : Last UTC day (YYYY-MM-DD). Defaults to yesterday.
+	 *
+	 * @when after_wp_load
+	 */
+	public function unflag_bots( $args, $assoc_args ) {
+		list( $from, $to ) = $this->day_range( $assoc_args );
+
+		$count = turf_unflag_suspect_views( $from . ' 00:00:00', gmdate( 'Y-m-d', strtotime( $to . ' +1 day' ) ) . ' 00:00:00' );
+
+		WP_CLI::success( sprintf( 'Unflagged %d view(s), %s .. %s.', $count, $from, $to ) );
+	}
+
+	/**
+	 * --from/--to as validated YYYY-MM-DD strings, defaulting to the oldest
+	 * recorded view and yesterday (UTC).
+	 */
+	private function day_range( $assoc_args ) {
+		global $wpdb;
+
+		$from = WP_CLI\Utils\get_flag_value( $assoc_args, 'from', '' );
+		$to   = WP_CLI\Utils\get_flag_value( $assoc_args, 'to', gmdate( 'Y-m-d', time() - DAY_IN_SECONDS ) );
+
+		if ( '' === $from ) {
+			$oldest = $wpdb->get_var( 'SELECT MIN(viewed_at) FROM ' . turf_table() );
+
+			if ( ! $oldest ) {
+				WP_CLI::error( 'No views recorded yet.' );
+			}
+
+			$from = substr( $oldest, 0, 10 );
+		}
+
+		foreach ( array( '--from' => $from, '--to' => $to ) as $flag => $value ) {
+			if ( ! turf_is_valid_ymd( $value ) ) {
+				WP_CLI::error( "$flag must be a date in YYYY-MM-DD format." );
+			}
+		}
+
+		if ( $from > $to ) {
+			WP_CLI::error( '--from must not be after --to.' );
+		}
+
+		return array( $from, $to );
 	}
 }
 

@@ -74,7 +74,7 @@ function turf_forms_render_top_forms( $days ) {
 						$views_table = turf_table();
 						list( $where_sql, $date_params ) = turf_period_where_sql( $days, 'viewed_at' );
 						$page_views  = (int) $wpdb->get_var( $wpdb->prepare(
-							"SELECT COUNT(*) FROM {$views_table} WHERE post_id = %d $where_sql", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- own-prefix table name.
+							"SELECT COUNT(*) FROM {$views_table} WHERE post_id = %d AND suspect = 0 $where_sql", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- own-prefix table name.
 							array_merge( array( $post_id ), $date_params )
 						) );
 					} else {

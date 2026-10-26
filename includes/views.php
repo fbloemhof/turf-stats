@@ -21,7 +21,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 define( 'TURF_META_KEY', '_turf_views' );
-define( 'TURF_DB_VERSION', '1.9' );
+define( 'TURF_DB_VERSION', '1.10' );
 
 /**
  * Sentinel referrer_host value for views recorded via the REST API (e.g. a
@@ -108,6 +108,7 @@ function turf_install() {
 		screen_height SMALLINT UNSIGNED NULL DEFAULT NULL,
 		load_time_ms SMALLINT UNSIGNED NULL DEFAULT NULL,
 		display_mode VARCHAR(10) NOT NULL DEFAULT '',
+		suspect TINYINT UNSIGNED NOT NULL DEFAULT 0,
 		PRIMARY KEY  (id),
 		KEY post_lookup (post_id, viewed_at),
 		KEY term_lookup (term_id, viewed_at),
@@ -119,6 +120,8 @@ function turf_install() {
 
 	// path (added in 1.9) is only filled for page_type rows - posts and terms
 	// are already identified by their ID. Rows from before 1.9 keep ''.
+	// suspect (added in 1.10) flags behavior-detected bots - see
+	// includes/suspect.php for its values.
 	//
 	// dbDelta doesn't reliably relax an existing NOT NULL column - do that explicitly
 	// (harmless no-op on a fresh install, where it's already nullable).
@@ -705,6 +708,20 @@ function turf_enqueue() {
 add_action( 'wp_enqueue_scripts', 'turf_enqueue' );
 
 /**
+ * Suspect flag for a view about to be recorded: TURF_SUSPECT_RATE_LIMITED when
+ * this visitor is adding views faster than a person reads (see
+ * includes/suspect.php), 0 otherwise. REST/connector-app views are exempt -
+ * one backend server fetches on behalf of many app users.
+ */
+function turf_view_suspect_flag( $visitor_hash, $extra ) {
+	if ( turf_is_server_side_source( $extra['referrer_host'] ?? '' ) ) {
+		return 0;
+	}
+
+	return turf_is_rate_limited( $visitor_hash ) ? TURF_SUSPECT_RATE_LIMITED : 0;
+}
+
+/**
  * Records one view of a post or taxonomy term (subject to the usual
  * bot/editor/dedup rules) and returns the resulting view count plus the
  * inserted event row's ID (null if deduped/not counted - there's no new row
@@ -739,15 +756,16 @@ function turf_track_view( $object_id, $object_type = 'post', $extra = array() ) 
 		return array( 'views' => turf_get_views( $object_id, $object_type ), 'event_id' => null );
 	}
 
-	if ( ! empty( $extra['is_pageview'] ) ) {
-		turf_record_raw_hit();
-	}
-
 	global $wpdb;
 	$table        = turf_table();
 	$column       = 'term' === $object_type ? 'term_id' : 'post_id';
 	$visitor_hash = turf_visitor_hash( $user_agent );
 	$window_start = gmdate( 'Y-m-d H:i:s', time() - turf_dedup_window() );
+	$suspect      = turf_view_suspect_flag( $visitor_hash, $extra );
+
+	if ( ! empty( $extra['is_pageview'] ) && ! $suspect ) {
+		turf_record_raw_hit();
+	}
 
 	$recent = $wpdb->get_var( $wpdb->prepare(
 		"SELECT 1 FROM $table WHERE $column = %d AND visitor_hash = %s AND viewed_at >= %s LIMIT 1",
@@ -778,32 +796,17 @@ function turf_track_view( $object_id, $object_type = 'post', $extra = array() ) 
 				'screen_width'   => $extra['screen_width'] ?? null,
 				'screen_height'  => $extra['screen_height'] ?? null,
 				'display_mode'   => $extra['display_mode'] ?? '',
+				'suspect'        => $suspect,
 			),
-			array( '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%d', '%s' )
+			array( '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%d', '%s', '%d' )
 		);
 
 		$event_id = $wpdb->insert_id;
 
-		if ( 'term' === $object_type ) {
-			$updated = $wpdb->query( $wpdb->prepare(
-				"UPDATE $wpdb->termmeta SET meta_value = meta_value + 1 WHERE term_id = %d AND meta_key = %s",
-				$object_id,
-				TURF_META_KEY
-			) );
-
-			if ( ! $updated ) {
-				add_term_meta( $object_id, TURF_META_KEY, 1, true );
-			}
-		} else {
-			$updated = $wpdb->query( $wpdb->prepare(
-				"UPDATE $wpdb->postmeta SET meta_value = meta_value + 1 WHERE post_id = %d AND meta_key = %s",
-				$object_id,
-				TURF_META_KEY
-			) );
-
-			if ( ! $updated ) {
-				add_post_meta( $object_id, TURF_META_KEY, 1, true );
-			}
+		// A suspect view is recorded (so it can be reviewed and unflagged) but
+		// not added to the public running total.
+		if ( ! $suspect ) {
+			turf_adjust_view_totals( array( (object) array( 'object_id' => $object_id, 'n' => 1 ) ), $object_type, 1 );
 		}
 	}
 
@@ -827,15 +830,16 @@ function turf_track_other_view( $page_type, $extra = array() ) {
 		return array( 'event_id' => null );
 	}
 
-	if ( ! empty( $extra['is_pageview'] ) ) {
-		turf_record_raw_hit();
-	}
-
 	global $wpdb;
 	$table        = turf_table();
 	$path         = $extra['path'] ?? '';
 	$visitor_hash = turf_visitor_hash( $user_agent );
 	$window_start = gmdate( 'Y-m-d H:i:s', time() - turf_dedup_window() );
+	$suspect      = turf_view_suspect_flag( $visitor_hash, $extra );
+
+	if ( ! empty( $extra['is_pageview'] ) && ! $suspect ) {
+		turf_record_raw_hit();
+	}
 
 	// Dedup per page_type + path, so the agenda and an archive viewed within
 	// the same window (both page_type 'other') each count once, instead of
@@ -872,8 +876,9 @@ function turf_track_other_view( $page_type, $extra = array() ) {
 			'screen_width'  => $extra['screen_width'] ?? null,
 			'screen_height' => $extra['screen_height'] ?? null,
 			'display_mode'  => $extra['display_mode'] ?? '',
+			'suspect'       => $suspect,
 		),
-		array( '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%d', '%s' )
+		array( '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%d', '%s', '%d' )
 	);
 
 	return array( 'event_id' => $wpdb->insert_id );
