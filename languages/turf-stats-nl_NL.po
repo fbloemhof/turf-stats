@@ -47,7 +47,7 @@ msgid ""
 "%1$d post(s) failed with a request error — run the import again (without "
 "overwrite) to retry them."
 msgstr ""
-"%1$d bericht(en) mislukt door een verzoekfout — voer de import opnieuw uit "
+"%1$d bericht(en) mislukt door een aanvraagfout — voer de import opnieuw uit "
 "(zonder overschrijven) om ze alsnog te proberen."
 
 #. translators: 1: weekday, 2: hour, 3: number of views
@@ -162,8 +162,8 @@ msgid ""
 "A quick review on WordPress.org helps more site owners discover it - and "
 "takes less than a minute. No pressure if now isn't the moment."
 msgstr ""
-"Een korte review op WordPress.org helpt meer site-eigenaren de plugin te "
-"ontdekken - en kost minder dan een minuut. Geen probleem als het nu niet "
+"Een korte beoordeling op WordPress.org helpt meer site-eigenaren de plugin "
+"te ontdekken - en kost minder dan een minuut. Geen probleem als het nu niet "
 "uitkomt."
 
 #: includes/views-admin.php:1149
@@ -201,7 +201,7 @@ msgstr "Auteur"
 
 #: includes/views-admin.php:1696
 msgid "Author archive"
-msgstr "Auteur-archief"
+msgstr "Auteursarchief"
 
 #: includes/views-admin.php:636 includes/views-admin.php:751
 msgid "Avg. load time"
@@ -289,7 +289,7 @@ msgstr "Caching"
 
 #: includes/views-admin.php:91
 msgid "Campaign content (UTM)"
-msgstr "Campagne-inhoud (UTM)"
+msgstr "Campagne-content (UTM)"
 
 #: includes/views-admin.php:88
 msgid "Campaign medium (UTM)"
@@ -326,8 +326,8 @@ msgid ""
 "Clicks on links to other websites - detected automatically, no data-turf-"
 "click needed."
 msgstr ""
-"Klikken op links naar andere websites - automatisch herkend, geen data-turf-"
-"click nodig."
+"Klikken op links naar andere sites - automatisch herkend, geen "
+"data-turf-click nodig."
 
 #: includes/views-admin.php:1097
 msgid ""
@@ -335,8 +335,8 @@ msgid ""
 "WordPress, so it can't be split per layer. Approximate: visitors who block "
 "the tracker are counted as origin renders."
 msgstr ""
-"Gecombineerd over alle caches vóór de site - een cache-hit bereikt WordPress "
-"nooit, dus is niet per laag te splitsen. Benadering: bezoekers die de "
+"Gecombineerd over alle caches vóór de site - een cache hit bereikt WordPress"
+" nooit, dus is niet per laag te splitsen. Benadering: bezoekers die de "
 "tracker blokkeren tellen als origin-renders."
 
 #: includes/comments.php:84 includes/csv-export.php:148
@@ -347,11 +347,11 @@ msgstr "Reacties"
 
 #: includes/woocommerce-admin.php:54
 msgid "Completed at checkout"
-msgstr "Afgerond bij checkout"
+msgstr "Afgerond bij afrekenen"
 
 #: includes/views-admin.php:1503
 msgid "Connector app"
-msgstr "Connector-app"
+msgstr "Connector app"
 
 #: includes/forms-admin.php:41
 msgid "Contact Form 7"
@@ -359,7 +359,7 @@ msgstr "Contact Form 7"
 
 #: includes/views-admin.php:53
 msgid "Content activity"
-msgstr "Content-activiteit"
+msgstr "Content activiteit"
 
 #: includes/forms-admin.php:60
 msgid "Conversion"
@@ -376,8 +376,8 @@ msgid ""
 "deliberately exclude bots)."
 msgstr ""
 "Crawlers en AI-bots draaien meestal geen JavaScript, dus dit telt apart, "
-"server-side - los van de gewone bezoekersstatistieken (die bots juist bewust "
-"uitsluiten)."
+"server-side - los van de gewone bezoekersstatistieken (die bots juist bewust"
+" uitsluiten)."
 
 #: includes/views-admin.php:51
 msgid "Currently viewed"
@@ -429,7 +429,8 @@ msgstr "Klaar."
 
 #: includes/import-admin.php:169
 msgid "Dry run - report what would happen without writing anything"
-msgstr "Droogloop - toon wat er zou gebeuren zonder iets weg te schrijven"
+msgstr ""
+"Testuitvoering - rapporteer wat er zou gebeuren zonder iets weg te schrijven"
 
 #: includes/views-admin.php:1376
 msgid "Dutch"
@@ -502,7 +503,7 @@ msgstr "Frequentie"
 
 #: includes/analytics-admin.php:24
 msgid "Fri"
-msgstr "Vr"
+msgstr "vrij"
 
 #: includes/views-admin.php:1377
 msgid "Frisian"
@@ -560,7 +561,7 @@ msgstr "Importbron"
 
 #: includes/import-admin.php:57
 msgid "Importing…"
-msgstr "Bezig met importeren…"
+msgstr "Aan het importeren..."
 
 #: includes/views-admin.php:1505
 msgid "Internal (own site)"
@@ -631,7 +632,7 @@ msgstr "Laatst"
 
 #: includes/review-notice.php:117
 msgid "Leave a review"
-msgstr "Review schrijven"
+msgstr "Beoordeling schrijven"
 
 #: includes/social-share.php:32
 msgid "LinkedIn"
@@ -750,7 +751,7 @@ msgstr "Opties"
 
 #: includes/views-admin.php:1081
 msgid "Origin renders"
-msgstr "Origin-renders"
+msgstr "Origin renders"
 
 #: includes/views-admin.php:1508 includes/views-admin.php:1700
 msgid "Other"
@@ -827,7 +828,7 @@ msgstr "Ontvangers"
 
 #: includes/csv-export.php:201
 msgid "Referrer host"
-msgstr "Verwijzende host"
+msgstr "Referrer-host"
 
 #: includes/email-report-admin.php:158
 msgid ""
@@ -836,10 +837,10 @@ msgid ""
 "general doesn't reliably arrive from this site, an SMTP plugin fixes that "
 "independently of Turf Stats."
 msgstr ""
-"Werkt via WP-Cron, dat alleen draait bij een paginabezoek - op een site met "
-"weinig verkeer kan de e-mail daardoor een paar uur later aankomen. Komt e-"
-"mail vanaf deze site sowieso onbetrouwbaar aan, dan lost een SMTP-plugin dat "
-"op, los van Turf Stats."
+"Werkt via WP-Cron, dat alleen wordt uitgevoerd bij een pagina-aanvraag - op "
+"een site met weinig verkeer kan de e-mail daardoor een paar uur later "
+"aankomen. Komt e-mail vanaf deze site sowieso onbetrouwbaar aan, dan lost "
+"een SMTP-plugin dat op, los van Turf Stats."
 
 #: includes/views-admin.php:1760
 msgid "Returning visitors"
@@ -884,11 +885,11 @@ msgstr "Zoekterm"
 
 #: includes/analyse-admin.php:39
 msgid "Search terms"
-msgstr "Zoekwoorden"
+msgstr "Zoektermen"
 
 #: includes/csv-export.php:255
 msgid "Searches"
-msgstr "Keer gezocht"
+msgstr "Zoekopdrachten"
 
 #. Description of the plugin
 #: turf-stats.php
@@ -899,14 +900,13 @@ msgid ""
 "and arbitrary UI clicks."
 msgstr ""
 "Zelfgehoste, cookieloze statistieken voor paginaweergaven en klikken in "
-"WordPress - geen Google Analytics, geen Jetpack, geen externe aanroepen "
-"voor het meten. Meet weergaven, archiefpagina's, verwijzers, UTM-"
-"campagnes, scrolldiepte/leestijd, 404's en willekeurige klikken in de "
-"interface."
+"WordPress - geen Google Analytics, geen Jetpack, geen externe aanroepen voor"
+" het volgen. Volgt weergaven, archiefpagina's, referrers, UTM-campagnes, "
+"scrolldiepte/leestijd, 404's en willekeurige klikken in de interface."
 
 #: includes/email-report-admin.php:165
 msgid "Send test email now"
-msgstr "Stuur nu een testmail"
+msgstr "Stuur nu een test-e-mail"
 
 #: includes/email-report-admin.php:135
 msgid "Send the email report on a recurring schedule"
@@ -932,7 +932,7 @@ msgstr "Uit cache geserveerd"
 
 #: includes/sessions-admin.php:68
 msgid "Sessions"
-msgstr "Bezoeken"
+msgstr "Sessies"
 
 #: includes/email-report-admin.php:86
 msgid "Settings saved."
@@ -1008,9 +1008,9 @@ msgid ""
 "through individual visitors' devices - so \"Visitors\" isn't reliable for "
 "them. \"Views\" still is."
 msgstr ""
-"Deze bronnen lopen via een backend-server aan de kant van de connector, niet "
-"via de apparaten van losse bezoekers - \"Bezoekers\" is daardoor niet "
-"betrouwbaar voor die bronnen. \"Weergaven\" wel."
+"Deze bronnen worden uitgevoerd via een back-end-server aan de kant van de "
+"connector, niet via de apparaten van losse bezoekers - \"Bezoekers\" is "
+"daardoor niet betrouwbaar voor die bronnen. \"Weergaven\" wel."
 
 #: includes/analyse-admin.php:39
 msgid "Time/visit trend"
@@ -1018,7 +1018,7 @@ msgstr "Tijd/bezoek-trend"
 
 #: includes/analytics-admin.php:23
 msgid "Thu"
-msgstr "Do"
+msgstr "do"
 
 #: includes/sessions-admin.php:33
 msgid "Times"
@@ -1064,7 +1064,7 @@ msgstr "Toon"
 
 #: includes/clicks-admin.php:32
 msgid "Top clicks"
-msgstr "Top kliks"
+msgstr "Top klikken"
 
 #: includes/email-report.php:171
 msgid "Top pages"
@@ -1072,7 +1072,7 @@ msgstr "Top pagina's"
 
 #: includes/email-report.php:183
 msgid "Top referrers"
-msgstr "Top verwijzers"
+msgstr "Top referrers"
 
 #: includes/views-admin.php:82
 msgid "Top referring sites"
@@ -1084,7 +1084,7 @@ msgstr "Trending"
 
 #: includes/analytics-admin.php:21
 msgid "Tue"
-msgstr "Di"
+msgstr "di"
 
 #. Plugin Name of the plugin
 #: turf-stats.php includes/dashboard.php:22
@@ -1114,7 +1114,7 @@ msgstr "Onbekend (van vóór deze functie)"
 
 #: includes/views-admin.php:1324
 msgid "Unknown (no Cloudflare country detection or own GeoIP integration)"
-msgstr "Onbekend (geen Cloudflare-landdetectie of eigen GeoIP-koppeling)"
+msgstr "Onbekend (geen Cloudflare landdetectie of eigen GeoIP integratie)"
 
 #: includes/views-admin.php:1292
 msgid "Unknown (no screen size recorded)"
@@ -1185,7 +1185,7 @@ msgid ""
 "redirect."
 msgstr ""
 "Wat bezoekers zoeken maar niet vinden - kandidaten voor nieuwe content of "
-"een redirect."
+"een omleiding."
 
 #: includes/social-share.php:25
 msgid "WhatsApp"
@@ -1197,7 +1197,7 @@ msgid ""
 "links."
 msgstr ""
 "Welke niet-bestaande URL's bezoekers raken - handig om kapotte links te "
-"vinden en te fixen."
+"vinden en op te lossen."
 
 #: includes/sessions-admin.php:26
 msgid ""
@@ -1209,7 +1209,7 @@ msgstr ""
 
 #: includes/analyse-admin.php:64
 msgid "WooCommerce funnel"
-msgstr "WooCommerce-funnel"
+msgstr "WooCommerce funnel"
 
 #: includes/social-share.php:21
 msgid "X (Twitter)"
@@ -1236,17 +1236,17 @@ msgstr "entry-views-plugin"
 #. Author of the plugin
 #: turf-stats.php
 msgid "fbloemhof"
-msgstr ""
+msgstr "fbloemhof"
 
 #. Author URI of the plugin
 #: turf-stats.php
 msgid "https://github.com/fbloemhof"
-msgstr ""
+msgstr "https://github.com/fbloemhof"
 
 #. Plugin URI of the plugin
 #: turf-stats.php
 msgid "https://github.com/fbloemhof/turf-stats"
-msgstr ""
+msgstr "https://github.com/fbloemhof/turf-stats"
 
 #: includes/email-report.php:116
 msgid "monthly"
@@ -1278,7 +1278,7 @@ msgstr "Waar getagde links (data-turf-click op een link) bezoekers naartoe stuur
 
 #: includes/views-admin.php:1703
 msgid "Push notifications"
-msgstr "Pushmeldingen"
+msgstr "Push-berichtgevingen"
 
 #: includes/views-admin.php:154
 msgid "Other pages by URL"
@@ -1302,9 +1302,9 @@ msgid ""
 "a browser-like request or from a visitor who also viewed a normal page; "
 "404s recorded before this was tracked count as not human."
 msgstr ""
-"Alleen de namen van parameters worden getoond, nooit hun waarden. "
-"\"Mensen\" telt hits van een browserachtig verzoek of van een bezoeker die "
-"ook een gewone pagina bekeek; 404's van vóór deze registratie tellen als "
+"Alleen de namen van parameters worden getoond, nooit hun waarden. \"Mensen\" "
+"telt hits van een browserachtige aanvraag of van een bezoeker die ook een "
+"gewone pagina bekeek; 404's van vóór deze registratie tellen als "
 "niet-menselijk."
 
 #: includes/404s-admin.php:168 includes/csv-export.php:281
@@ -1348,11 +1348,10 @@ msgid ""
 "minutes): %1$s views. No engagement (%5$d+ views on one day without any "
 "scrolling/reading-time signal): %2$s views."
 msgstr ""
-"Bezoekers met een browser-user-agent die zich als bot gedragen - "
-"uitgesloten van alle statistieken en weergavetellers. Te snel (meer dan "
-"%3$d nieuwe pagina's in %4$d minuten): %1$s weergaven. Geen engagement "
-"(%5$d+ weergaven op één dag zonder enig scroll-/leestijdsignaal): %2$s "
-"weergaven."
+"Bezoekers met een browser-User-Agent die zich als bot gedragen - uitgesloten"
+" van alle statistieken en weergavetellers. Te snel (meer dan %3$d nieuwe "
+"pagina's in %4$d minuten): %1$s weergaven. Geen engagement (%5$d+ weergaven "
+"op één dag zonder enig scroll-/leestijdsignaal): %2$s weergaven."
 
 #: includes/clicks-admin.php:32
 msgid "Funnels"
@@ -1423,11 +1422,11 @@ msgid ""
 "Clicks only count since they record the visitor (Turf Stats 1.30)."
 msgstr ""
 "Eén trechter per regel: een naam, een dubbele punt, dan de stappen "
-"gescheiden door \">\". Stappen: \"click <sleutel>\" (een data-turf-click-"
-"sleutel), \"view <pad>\" (een pagina op deze site), \"form <id>\" of \"form "
+"gescheiden door \">\". Stappen: \"click <key>\" (een data-turf-click-sleutel), "
+"\"view <path>\" (het pad van een pagina op deze site), \"form <id>\" of \"form "
 "<plugin> <id>\" (cf7 of gravityforms). Stappen van één bezoeker tellen als "
-"elke stap binnen een uur na de vorige volgt. Klikken tellen pas mee sinds "
-"ze de bezoeker vastleggen (Turf Stats 1.30)."
+"elke stap binnen een uur na de vorige volgt. Klikken tellen pas mee sinds ze"
+" de bezoeker vastleggen (Turf Stats 1.30)."
 
 #: includes/funnels.php:288
 msgid "Save funnels"
@@ -1476,7 +1475,7 @@ msgid ""
 "synonyms, redirects or clearer titles."
 msgstr ""
 "Zoekopdrachten gevolgd door een zoekopdracht naar iets anders - kandidaten "
-"voor synoniemen, redirects of duidelijkere titels."
+"voor synoniemen, omleidingen of duidelijkere titels."
 
 #: includes/search-admin.php:306
 msgid "First searched for"
