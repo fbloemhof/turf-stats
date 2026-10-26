@@ -33,6 +33,10 @@ function turf_clicks_register_metaboxes() {
 		turf_clicks_render_top_keys( $days );
 	}, $hook, 'normal' );
 
+	add_meta_box( 'turf_clicks_destinations', __( 'Clicked link destinations', 'turf-stats' ), function () use ( $days ) {
+		turf_clicks_render_top_destinations( $days );
+	}, $hook, 'normal' );
+
 	add_meta_box( 'turf_clicks_outbound', __( 'Outbound links', 'turf-stats' ), function () use ( $days ) {
 		turf_clicks_render_top_outbound_links( $days );
 	}, $hook, 'normal' );
@@ -70,6 +74,58 @@ function turf_clicks_get_top_keys( $days ) {
 }
 
 /**
+ * Destinations of data-turf-click links (e.g. which booking page a ticket
+ * button opened), per key. Only rows that recorded a target_url - tagged
+ * buttons that aren't links, and clicks from before targets were recorded
+ * for tagged links, have none and stay out of this list.
+ */
+function turf_clicks_get_top_destinations( $days ) {
+	global $wpdb;
+	$table = turf_clicks_table();
+
+	$where_sql   = '';
+	$date_params = array();
+
+	if ( 0 !== $days ) {
+		list( $where_sql, $date_params ) = turf_period_where_sql( $days, 'clicked_at' );
+	}
+
+	return $wpdb->get_results( $wpdb->prepare(
+		"SELECT click_key, target_url, COUNT(*) AS clicks FROM $table
+		WHERE click_key != %s AND target_url IS NOT NULL $where_sql
+		GROUP BY click_key, target_url ORDER BY clicks DESC LIMIT %d",
+		array_merge( array( TURF_OUTBOUND_CLICK_KEY ), $date_params, array( turf_list_max() ) )
+	) );
+}
+
+/**
+ * NOT LIKE conditions that drop outbound-link rows pointing at the site's own
+ * host (bare vs. www.) - older versions of js/clicks.js compared hostnames
+ * literally and recorded those as outbound, so this cleans up the existing
+ * rows as well as guarding against any still-cached copy of that script.
+ *
+ * @return array{0: string, 1: string[]} [$sql, $params]
+ */
+function turf_clicks_own_host_exclusion() {
+	global $wpdb;
+
+	$sql    = '';
+	$params = array();
+
+	foreach ( turf_own_host_variants() as $host ) {
+		foreach ( array( 'http', 'https' ) as $scheme ) {
+			$prefix   = $scheme . '://' . $host;
+			$sql     .= ' AND target_url != %s AND target_url NOT LIKE %s AND target_url NOT LIKE %s';
+			$params[] = $prefix;
+			$params[] = $wpdb->esc_like( $prefix . '/' ) . '%';
+			$params[] = $wpdb->esc_like( $prefix . '?' ) . '%';
+		}
+	}
+
+	return array( $sql, $params );
+}
+
+/**
  * Top outbound links, broken down by both destination URL and the page the
  * visitor was on when they clicked (context) - so the same external link
  * clicked from two different articles shows as two rows, which is usually the
@@ -79,23 +135,20 @@ function turf_clicks_get_top_outbound_links( $days ) {
 	global $wpdb;
 	$table = turf_clicks_table();
 
-	if ( 0 === $days ) {
-		return $wpdb->get_results( $wpdb->prepare(
-			"SELECT target_url, context, COUNT(*) AS clicks FROM $table
-			WHERE click_key = %s
-			GROUP BY target_url, context ORDER BY clicks DESC LIMIT %d",
-			TURF_OUTBOUND_CLICK_KEY,
-			turf_list_max()
-		) );
-	}
+	list( $own_host_sql, $own_host_params ) = turf_clicks_own_host_exclusion();
 
-	list( $where_sql, $date_params ) = turf_period_where_sql( $days, 'clicked_at' );
+	$where_sql   = '';
+	$date_params = array();
+
+	if ( 0 !== $days ) {
+		list( $where_sql, $date_params ) = turf_period_where_sql( $days, 'clicked_at' );
+	}
 
 	return $wpdb->get_results( $wpdb->prepare(
 		"SELECT target_url, context, COUNT(*) AS clicks FROM $table
-		WHERE click_key = %s $where_sql
+		WHERE click_key = %s $own_host_sql $where_sql
 		GROUP BY target_url, context ORDER BY clicks DESC LIMIT %d",
-		array_merge( array( TURF_OUTBOUND_CLICK_KEY ), $date_params, array( turf_list_max() ) )
+		array_merge( array( TURF_OUTBOUND_CLICK_KEY ), $own_host_params, $date_params, array( turf_list_max() ) )
 	) );
 }
 
@@ -118,6 +171,38 @@ function turf_clicks_render_top_keys( $days ) {
 			<?php foreach ( $rows as $row ) : ?>
 				<tr>
 					<td><code><?php echo esc_html( $row->click_key ); ?></code></td>
+					<td><?php echo (int) $row->clicks; ?></td>
+				</tr>
+			<?php endforeach; ?>
+		</tbody>
+	</table>
+	<?php
+}
+
+function turf_clicks_render_top_destinations( $days ) {
+	$rows = turf_clicks_get_top_destinations( $days );
+
+	if ( ! $rows ) {
+		echo '<p>' . esc_html__( 'No link destinations recorded yet for this period.', 'turf-stats' ) . '</p>';
+		return;
+	}
+	?>
+	<p class="description">
+		<?php esc_html_e( 'Where tagged links (data-turf-click on a link) sent visitors.', 'turf-stats' ); ?>
+	</p>
+	<table class="wp-list-table widefat fixed striped turf-table--label-label-num">
+		<thead>
+			<tr>
+				<th><?php esc_html_e( 'Element', 'turf-stats' ); ?></th>
+				<th><?php esc_html_e( 'Destination', 'turf-stats' ); ?></th>
+				<th><?php esc_html_e( 'Clicks', 'turf-stats' ); ?></th>
+			</tr>
+		</thead>
+		<tbody>
+			<?php foreach ( $rows as $row ) : ?>
+				<tr>
+					<td><code><?php echo esc_html( $row->click_key ); ?></code></td>
+					<td><a href="<?php echo esc_url( $row->target_url ); ?>" target="_blank" rel="noopener noreferrer nofollow"><code><?php echo esc_html( $row->target_url ); ?></code></a></td>
 					<td><?php echo (int) $row->clicks; ?></td>
 				</tr>
 			<?php endforeach; ?>

@@ -5,6 +5,24 @@
 		return;
 	}
 
+	// www.example.com and example.com are the same site - without this, a
+	// bare-domain link on a www site (or vice versa) counts as outbound.
+	function normalizeHost( host ) {
+		return host.toLowerCase().replace( /^www\./, '' );
+	}
+
+	// Absolute http(s) URL of a link, or '' for anything else (mailto:, tel:,
+	// javascript:, a malformed href).
+	function linkUrl( link ) {
+		try {
+			var url = new URL( link.getAttribute( 'href' ) || '', window.location.href );
+
+			return /^https?:$/.test( url.protocol ) ? url.href : '';
+		} catch ( err ) {
+			return '';
+		}
+	}
+
 	function send( key, extra ) {
 		var body = new URLSearchParams();
 		body.set( 'action', 'turf_track_click' );
@@ -31,7 +49,13 @@
 		var tagged = e.target.closest( '[data-turf-click]' );
 
 		if ( tagged ) {
-			send( tagged.getAttribute( 'data-turf-click' ) );
+			// A tagged link (or a tagged element inside one) also records where
+			// it leads, so e.g. a ticket button shows which booking page it sent
+			// the visitor to.
+			var taggedLink = tagged.closest( 'a[href]' );
+			var target     = taggedLink ? linkUrl( taggedLink ) : '';
+
+			send( tagged.getAttribute( 'data-turf-click' ), target ? { target: target } : null );
 			return;
 		}
 
@@ -55,7 +79,7 @@
 		try {
 			var url = new URL( href, window.location.href );
 
-			if ( url.hostname && url.hostname !== window.location.hostname ) {
+			if ( url.hostname && normalizeHost( url.hostname ) !== normalizeHost( window.location.hostname ) ) {
 				// Full destination URL (not just the hostname) so the report can
 				// show exactly which external page was clicked; the source page
 				// the visitor was on is already sent as `context` above.

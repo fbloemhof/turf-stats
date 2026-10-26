@@ -1259,6 +1259,26 @@ msgstr "geen cachelaag gedetecteerd"
 msgid "weekly"
 msgstr "wekelijkse"
 
+#: includes/clicks-admin.php:36
+msgid "Clicked link destinations"
+msgstr "Bestemmingen van aangeklikte links"
+
+#: includes/clicks-admin.php:186
+msgid "No link destinations recorded yet for this period."
+msgstr "Nog geen linkbestemmingen geregistreerd voor deze periode."
+
+#: includes/clicks-admin.php:191
+msgid "Where tagged links (data-turf-click on a link) sent visitors."
+msgstr "Waar getagde links (data-turf-click op een link) bezoekers naartoe stuurden."
+
+#: includes/views-admin.php:1703
+msgid "Push notifications"
+msgstr "Pushmeldingen"
+
+#: includes/views-admin.php:154
+msgid "Other pages by URL"
+msgstr "Overige pagina's per URL"
+
 #~ msgid "%1$02d:00 yesterday — %2$s visitors"
 #~ msgstr "%1$02d:00 gisteren — %2$s bezoekers"
 

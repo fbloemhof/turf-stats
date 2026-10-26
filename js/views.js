@@ -59,6 +59,9 @@
 		body.set( 'post_id', turfViews.postId );
 		body.set( 'object_type', turfViews.objectType );
 		body.set( 'page_type', turfViews.pageType || '' );
+		// Only "other" pages need it: posts and terms are already identified
+		// by postId, but the agenda, archives etc. all share page_type 'other'.
+		body.set( 'path', 'other' === turfViews.objectType ? window.location.pathname : '' );
 		body.set( 'referrer', referrerHost );
 		body.set( 'utm_source', urlParams.get( 'utm_source' ) || '' );
 		body.set( 'utm_medium', urlParams.get( 'utm_medium' ) || '' );

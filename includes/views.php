@@ -21,7 +21,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 define( 'TURF_META_KEY', '_turf_views' );
-define( 'TURF_DB_VERSION', '1.8' );
+define( 'TURF_DB_VERSION', '1.9' );
 
 /**
  * Sentinel referrer_host value for views recorded via the REST API (e.g. a
@@ -89,6 +89,7 @@ function turf_install() {
 		post_id BIGINT UNSIGNED NULL DEFAULT NULL,
 		term_id BIGINT UNSIGNED NULL DEFAULT NULL,
 		page_type VARCHAR(20) NULL DEFAULT NULL,
+		path VARCHAR(255) NOT NULL DEFAULT '',
 		viewed_at DATETIME NOT NULL,
 		visitor_hash CHAR(32) NOT NULL,
 		device_type VARCHAR(10) NOT NULL DEFAULT '',
@@ -116,6 +117,9 @@ function turf_install() {
 		KEY viewed_at_lookup (viewed_at)
 	) $charset_collate;" );
 
+	// path (added in 1.9) is only filled for page_type rows - posts and terms
+	// are already identified by their ID. Rows from before 1.9 keep ''.
+	//
 	// dbDelta doesn't reliably relax an existing NOT NULL column - do that explicitly
 	// (harmless no-op on a fresh install, where it's already nullable).
 	$wpdb->query( "ALTER TABLE $table MODIFY post_id BIGINT UNSIGNED NULL DEFAULT NULL" );
@@ -520,9 +524,41 @@ function turf_sanitize_display_mode( $value ) {
 }
 
 /**
- * Hostname -> traffic-source bucket, for the admin "Herkomst" breakdown.
+ * Lowercased hostname with a leading "www." dropped, so example.com and
+ * www.example.com compare as the same site - a site reachable under both
+ * would otherwise count its own bare-domain links as outbound clicks and its
+ * own bare-domain referrers as "other" traffic.
  */
-function turf_classify_referrer( $host ) {
+function turf_normalize_host( $host ) {
+	return (string) preg_replace( '/^www\./', '', strtolower( (string) $host ) );
+}
+
+/**
+ * Both spellings of the site's own hostname (bare and www.), for exact-match
+ * SQL comparisons where turf_normalize_host() can't be applied to the column.
+ *
+ * @return string[] Empty when home_url() has no parsable host.
+ */
+function turf_own_host_variants() {
+	$bare = turf_normalize_host( wp_parse_url( home_url(), PHP_URL_HOST ) );
+
+	return '' === $bare ? array() : array( $bare, 'www.' . $bare );
+}
+
+function turf_is_own_host( $host ) {
+	return in_array( strtolower( (string) $host ), turf_own_host_variants(), true );
+}
+
+/**
+ * Hostname -> traffic-source bucket, for the admin "Herkomst" breakdown.
+ * A utm_medium of "push" wins over the referrer: a page opened from a push
+ * notification has no referrer at all, so it would otherwise look "direct".
+ */
+function turf_classify_referrer( $host, $utm_medium = '' ) {
+	if ( 0 === strcasecmp( $utm_medium, 'push' ) ) {
+		return 'push';
+	}
+
 	if ( '' === $host ) {
 		return 'direct';
 	}
@@ -535,9 +571,7 @@ function turf_classify_referrer( $host ) {
 		return 'app';
 	}
 
-	$site_host = wp_parse_url( home_url(), PHP_URL_HOST );
-
-	if ( $site_host && 0 === strcasecmp( $host, $site_host ) ) {
+	if ( turf_is_own_host( $host ) ) {
 		return 'intern';
 	}
 
@@ -568,6 +602,25 @@ function turf_sanitize_referrer_host( $host ) {
 	}
 
 	return strtolower( $host );
+}
+
+/**
+ * Defensive re-validation of the URL path the client reports for an "other"
+ * page view (agenda, archives, ...). Query string and fragment are dropped -
+ * they can carry anything, and the path alone is what tells these pages
+ * apart. Pagination (/page/2/) is folded into its archive, so one archive
+ * doesn't fragment into a row per page.
+ */
+function turf_sanitize_path( $path ) {
+	$path = (string) wp_parse_url( sanitize_text_field( $path ), PHP_URL_PATH );
+
+	if ( '' === $path || '/' !== $path[0] ) {
+		return '';
+	}
+
+	$path = (string) preg_replace( '#/page/\d+/?$#', '/', $path );
+
+	return substr( $path, 0, 255 );
 }
 
 /**
@@ -780,12 +833,17 @@ function turf_track_other_view( $page_type, $extra = array() ) {
 
 	global $wpdb;
 	$table        = turf_table();
+	$path         = $extra['path'] ?? '';
 	$visitor_hash = turf_visitor_hash( $user_agent );
 	$window_start = gmdate( 'Y-m-d H:i:s', time() - turf_dedup_window() );
 
+	// Dedup per page_type + path, so the agenda and an archive viewed within
+	// the same window (both page_type 'other') each count once, instead of
+	// the second one being swallowed as a "repeat" of the first.
 	$recent = $wpdb->get_var( $wpdb->prepare(
-		"SELECT 1 FROM $table WHERE page_type = %s AND visitor_hash = %s AND viewed_at >= %s LIMIT 1",
+		"SELECT 1 FROM $table WHERE page_type = %s AND path = %s AND visitor_hash = %s AND viewed_at >= %s LIMIT 1",
 		$page_type,
+		$path,
 		$visitor_hash,
 		$window_start
 	) );
@@ -798,6 +856,7 @@ function turf_track_other_view( $page_type, $extra = array() ) {
 		$table,
 		array(
 			'page_type'     => $page_type,
+			'path'          => $path,
 			'viewed_at'     => current_time( 'mysql', true ),
 			'visitor_hash'  => $visitor_hash,
 			'device_type'   => turf_parse_device_type( $user_agent ),
@@ -814,7 +873,7 @@ function turf_track_other_view( $page_type, $extra = array() ) {
 			'screen_height' => $extra['screen_height'] ?? null,
 			'display_mode'  => $extra['display_mode'] ?? '',
 		),
-		array( '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%d', '%s' )
+		array( '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%d', '%s' )
 	);
 
 	return array( 'event_id' => $wpdb->insert_id );
@@ -849,8 +908,9 @@ function turf_ajax_track_view() {
 	);
 
 	if ( 'other' === $object_type ) {
-		$page_type = isset( $_POST['page_type'] ) ? sanitize_key( $_POST['page_type'] ) : 'other';
-		$result    = turf_track_other_view( $page_type, $extra );
+		$page_type     = isset( $_POST['page_type'] ) ? sanitize_key( $_POST['page_type'] ) : 'other';
+		$extra['path'] = isset( $_POST['path'] ) ? turf_sanitize_path( wp_unslash( $_POST['path'] ) ) : '';
+		$result        = turf_track_other_view( $page_type, $extra );
 
 		wp_send_json_success( array( 'views' => 0, 'event_id' => $result['event_id'] ) );
 	}

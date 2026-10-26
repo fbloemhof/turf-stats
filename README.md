@@ -42,7 +42,8 @@ WordPress 6.0+, PHP 7.4+. No other plugins required.
 - **Page views** for every public post type and taxonomy archive, detected
   automatically. Every *other* real, public, non-404 page (author/date archives,
   search results, the blog index, …) still counts toward the site-wide totals,
-  broken out by type in its own "Other pages" box.
+  broken out by type in its own "Other pages" box, and by URL path in "Other
+  pages by URL" (so e.g. an agenda and a history archive can be told apart).
 - **Deduplicated views** ("Views") — one per visitor per page per rolling window —
   alongside **raw views**, a true count of every browser pageview (repeat hits
   included). Raw views compare apples-to-apples with hit-counting tools like
@@ -64,14 +65,18 @@ WordPress 6.0+, PHP 7.4+. No other plugins required.
 
 ### Acquisition
 
-- **Referrer / traffic source** — direct, internal, search engine, social, or
-  other, plus a "top referring sites" list.
+- **Referrer / traffic source** — direct, internal, search engine, social,
+  push notification, or other, plus a "top referring sites" list. The bare and
+  `www.` spelling of your own domain both count as internal. Visits tagged
+  `utm_medium=push` count as push notifications (add `?utm_source=push&utm_medium=push`
+  to the URL your service worker opens).
 - **UTM campaign parameters** (`utm_source`, `utm_medium`, `utm_campaign`).
 - **Outbound link tracking** — automatic, no markup needed anywhere: any
-  `<a href="…">` pointing at a different hostname is recorded with the full
+  `<a href="…">` pointing at a different hostname (`www.` ignored) is recorded with the full
   destination URL *and* the page the visitor clicked from. An explicit
   `data-turf-click` on a link still takes priority, for sites that want to label
-  specific links their own way.
+  specific links their own way; such a tagged link records its destination URL
+  too (see the "Clicked link destinations" box).
 - **REST API views** — views that come in through `/wp-json/wp/v2/…` instead of
   a normal page load (e.g. a companion app), shown as their own "App / REST API"
   bucket. Only single-item `GET` requests count.

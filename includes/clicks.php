@@ -122,15 +122,23 @@ function turf_clicks_ajax_track() {
 
 	$target_url = null;
 
-	if ( TURF_OUTBOUND_CLICK_KEY === $key && isset( $_POST['target'] ) ) {
-		// Full external URL, validated with esc_url_raw() (only http/https
-		// schemes survive), truncated to the column width.
-		$raw        = esc_url_raw( wp_unslash( $_POST['target'] ) );
+	if ( isset( $_POST['target'] ) ) {
+		// Full destination URL - the external page for outbound links, or
+		// wherever a data-turf-click link leads (so e.g. a ticket button
+		// records which booking page it opened). Validated with
+		// esc_url_raw() (only http/https schemes survive), truncated to the
+		// column width.
+		$raw        = esc_url_raw( wp_unslash( $_POST['target'] ), array( 'http', 'https' ) );
 		$target_url = $raw ? substr( $raw, 0, 512 ) : null;
 	}
 
-	if ( TURF_OUTBOUND_CLICK_KEY === $key && ! $target_url ) {
-		wp_send_json_success(); // No usable destination URL - nothing worth recording.
+	if ( TURF_OUTBOUND_CLICK_KEY === $key ) {
+		// No usable destination, or one on the site's own host (bare vs.
+		// www.) that an older cached copy of js/clicks.js still reports as
+		// outbound - nothing worth recording either way.
+		if ( ! $target_url || turf_is_own_host( wp_parse_url( $target_url, PHP_URL_HOST ) ) ) {
+			wp_send_json_success();
+		}
 	}
 
 	global $wpdb;

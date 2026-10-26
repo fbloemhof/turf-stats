@@ -150,6 +150,13 @@ function turf_lazy_box_definitions() {
 				turf_render_other_pages_breakdown( $days );
 			},
 		),
+		'turf_other_paths'      => array(
+			'title'    => __( 'Other pages by URL', 'turf-stats' ),
+			'context'  => 'turf_compact',
+			'callback' => function ( $days ) {
+				turf_render_other_paths_breakdown( $days );
+			},
+		),
 		'turf_caching'          => array(
 			'title'    => __( 'Caching', 'turf-stats' ),
 			'context'  => 'turf_wide',
@@ -1627,8 +1634,11 @@ function turf_referrer_host_label( $host ) {
  * browser breakdowns already work), not in PHP after the fact, where
  * per-bucket distinct-visitor counts can't be reconstructed correctly.
  */
-function turf_referrer_case_sql( $column = 'v.referrer_host' ) {
-	$site_host = esc_sql( (string) wp_parse_url( home_url(), PHP_URL_HOST ) );
+function turf_referrer_case_sql( $column = 'v.referrer_host', $medium_column = 'v.utm_medium' ) {
+	// Both bare and www. spellings count as internal - see turf_is_own_host().
+	// The '' fallback keeps the IN () list valid when home_url() has no host.
+	$own_hosts = turf_own_host_variants();
+	$own_sql   = "'" . implode( "', '", array_map( 'esc_sql', $own_hosts ? $own_hosts : array( '' ) ) ) . "'";
 
 	$build_likes = function ( array $needles ) use ( $column ) {
 		$conditions = array();
@@ -1647,11 +1657,14 @@ function turf_referrer_case_sql( $column = 'v.referrer_host' ) {
 	$rest_marker      = esc_sql( TURF_REST_SOURCE_MARKER );
 	$connector_marker = esc_sql( TURF_CONNECTOR_APP_SOURCE_MARKER );
 
+	// Push first: a page opened from a push notification has no referrer, so
+	// without this it would land in 'direct' (see turf_classify_referrer()).
 	return "CASE
+		WHEN $medium_column = 'push' THEN 'push'
 		WHEN $column = '' THEN 'direct'
 		WHEN $column = '$connector_marker' THEN 'connector'
 		WHEN $column = '$rest_marker' THEN 'app'
-		WHEN $column = '$site_host' THEN 'intern'
+		WHEN $column IN ($own_sql) THEN 'intern'
 		WHEN $search_sql THEN 'zoekmachine'
 		WHEN $social_sql THEN 'social'
 		ELSE 'overig'
@@ -1687,6 +1700,7 @@ function turf_get_referrer_breakdown( $days ) {
 
 function turf_referrer_bucket_label( $bucket ) {
 	$labels = array(
+		'push'        => __( 'Push notifications', 'turf-stats' ),
 		'direct'      => __( 'Direct', 'turf-stats' ),
 		// Filterable so a site running a specific connector plugin (see
 		// turf_connector_app_route_patterns()) can show that product's own
@@ -1712,7 +1726,11 @@ function turf_get_top_referrer_hosts( $days, $limit = 10 ) {
 
 	$table = turf_table();
 	list( $join, $where, $params ) = turf_site_join_and_where();
-	$site_host = (string) wp_parse_url( home_url(), PHP_URL_HOST );
+
+	// Bare and www. spellings of the own host - the '' fallback keeps both
+	// placeholders filled when home_url() has no host (excluding '' is a
+	// no-op, direct traffic is already filtered out below).
+	$own_hosts = array_pad( turf_own_host_variants(), 2, '' );
 
 	$where_date = '';
 
@@ -1721,7 +1739,8 @@ function turf_get_top_referrer_hosts( $days, $limit = 10 ) {
 		$params = array_merge( $params, $date_params );
 	}
 
-	$params[] = $site_host;
+	$params[] = $own_hosts[0];
+	$params[] = $own_hosts[1];
 	$params[] = TURF_REST_SOURCE_MARKER;
 	$params[] = TURF_CONNECTOR_APP_SOURCE_MARKER;
 	$params[] = $limit;
@@ -1732,7 +1751,7 @@ function turf_get_top_referrer_hosts( $days, $limit = 10 ) {
 			FROM $table v
 			$join
 			WHERE $where $where_date
-			AND v.referrer_host != '' AND v.referrer_host != %s AND v.referrer_host != %s AND v.referrer_host != %s
+			AND v.referrer_host != '' AND v.referrer_host NOT IN (%s, %s) AND v.referrer_host != %s AND v.referrer_host != %s
 			GROUP BY v.referrer_host
 			ORDER BY views DESC
 			LIMIT %d",
@@ -1928,6 +1947,44 @@ function turf_render_other_pages_breakdown( $days ) {
 	$rows = turf_get_other_pages_breakdown( $days );
 
 	turf_render_breakdown_rows( $rows, 'turf_other_page_type_label' );
+}
+
+/**
+ * The same "other" page views, by URL path instead of page_type - so the
+ * agenda, the history archive and every other page that lands in the single
+ * 'other' bucket can be told apart. Rows from before the path column existed
+ * have path '' and are left out (there's nothing to split them by).
+ */
+function turf_get_other_paths_breakdown( $days ) {
+	return turf_stats_cached( array( 'other_paths_breakdown', $days ), function () use ( $days ) {
+		global $wpdb;
+		$table = turf_table();
+
+		$where_sql = '';
+		$params    = array();
+
+		if ( 0 !== $days ) {
+			list( $where_sql, $params ) = turf_period_where_sql( $days, 'viewed_at' );
+		}
+
+		$params[] = turf_list_max();
+
+		return $wpdb->get_results( $wpdb->prepare(
+			"SELECT path AS label, COUNT(*) AS views, COUNT(DISTINCT visitor_hash) AS visitors
+			FROM $table
+			WHERE page_type IS NOT NULL AND path != '' $where_sql
+			GROUP BY path
+			ORDER BY views DESC
+			LIMIT %d",
+			$params
+		) );
+	} );
+}
+
+function turf_render_other_paths_breakdown( $days ) {
+	$rows = turf_get_other_paths_breakdown( $days );
+
+	turf_render_breakdown_rows( $rows, 'strval', 10 );
 }
 
 /**

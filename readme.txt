@@ -4,7 +4,7 @@ Tags: analytics, statistics, privacy, page views, cookieless
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.26.0
+Stable tag: 1.27.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -120,6 +120,23 @@ On the plugin's GitHub repository: https://github.com/fbloemhof/turf-stats/issue
    tracked separately from human visitors, with the pages they crawl most.
 
 == Changelog ==
+
+= 1.27.0 =
+* The bare and www. spelling of the site's own domain now count as the same
+  site: links between them are no longer recorded as outbound clicks, and
+  such referrers count as "Internal". Existing outbound-link rows pointing at
+  the own domain are filtered out of the report too.
+* "Other" page views (pages that aren't a post or taxonomy archive, e.g. an
+  agenda or archive page) now record their URL path, shown in a new "Other
+  pages by URL" box. Pagination is folded into its archive. Repeat-view
+  dedup for these pages now works per path, so two different "other" pages
+  viewed within the dedup window both count.
+* Clicks on a link tagged with data-turf-click now also record the link's
+  destination URL, shown in a new "Clicked link destinations" box on the
+  Clicks page.
+* New "Push notifications" traffic source: visits tagged utm_medium=push
+  (e.g. from a service worker's notification click) are no longer counted
+  as "Direct".
 
 = 1.26.0 =
 * Added "Load time trend" and "Time/visit trend" daily line charts to the
