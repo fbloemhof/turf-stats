@@ -4,7 +4,7 @@ Tags: analytics, statistics, privacy, page views, cookieless
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.32.0
+Stable tag: 1.33.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -121,6 +121,18 @@ On the plugin's GitHub repository: https://github.com/fbloemhof/turf-stats/issue
    tracked separately from human visitors, with the pages they crawl most.
 
 == Changelog ==
+
+= 1.33.0 =
+* The email report has a "Needs attention" section: 404 errors seen by
+  visitors (scanner and bot hits left out), broken internal links and
+  searches without results, each with the change against the previous
+  period, plus the most-hit missing URLs, the pages that link to them and
+  the search terms that found nothing.
+* The email report now names the period it covers and lists the top
+  search terms.
+* Every few months the email report carries a one-line review hint. Like
+  the rest of the report it contains no links. Change or turn off the
+  interval with turf_email_report_review_hint_interval_days.
 
 = 1.32.0 =
 * Views now record the linking page's path when a visitor navigates within
