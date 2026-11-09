@@ -59,14 +59,18 @@ function turf_email_report_maybe_save() {
 	$frequency_before = get_option( 'turf_email_report_frequency', 'weekly' );
 
 	$enabled       = ! empty( $_POST['turf_email_report_enabled'] );
+	$all_admins    = ! empty( $_POST['turf_email_report_all_admins'] );
 	$recipient_raw = isset( $_POST['turf_email_report_recipient'] ) ? sanitize_text_field( wp_unslash( $_POST['turf_email_report_recipient'] ) ) : '';
 	$frequency     = ( isset( $_POST['turf_email_report_frequency'] ) && 'monthly' === $_POST['turf_email_report_frequency'] ) ? 'monthly' : 'weekly';
 
 	$valid_recipients = turf_email_report_valid_recipients( $recipient_raw );
-	$recipient        = $valid_recipients ? implode( ', ', $valid_recipients ) : get_option( 'admin_email' );
+	// With "all administrators" on, the typed addresses are extras and may be
+	// empty; without it, an empty field falls back to the site admin email.
+	$recipient        = $valid_recipients ? implode( ', ', $valid_recipients ) : ( $all_admins ? '' : get_option( 'admin_email' ) );
 
 	update_option( 'turf_email_report_enabled', $enabled ? '1' : '' );
 	update_option( 'turf_email_report_recipient', $recipient );
+	update_option( 'turf_email_report_all_admins', $all_admins ? '1' : '' );
 	update_option( 'turf_email_report_frequency', $frequency );
 
 	// A disable, or a frequency change while enabled, needs the existing
@@ -75,11 +79,7 @@ function turf_email_report_maybe_save() {
 	// schedule, it won't correct one that's already there with the old
 	// frequency, or remove one that should no longer exist at all.
 	if ( $enabled !== $enabled_before || $frequency !== $frequency_before ) {
-		wp_clear_scheduled_hook( 'turf_send_email_report' );
-
-		if ( $enabled ) {
-			wp_schedule_single_event( turf_email_report_next_run_timestamp(), 'turf_send_email_report' );
-		}
+		turf_email_report_reschedule();
 	}
 
 	add_action( 'admin_notices', function () {
@@ -90,7 +90,8 @@ add_action( 'admin_init', 'turf_email_report_maybe_save' );
 
 /**
  * "Send test email now" - sends immediately to whatever address is currently
- * typed in the form (not necessarily the saved option), without touching the
+ * typed in the form (not necessarily the saved option), or to the current
+ * user when the field is empty, without touching the
  * schedule. wp_mail() has no other usage anywhere in this plugin, so this is
  * the way to confirm formatting/delivery without waiting for the real cron.
  */
@@ -100,6 +101,12 @@ function turf_ajax_send_test_email_report() {
 	}
 
 	$recipient_raw = isset( $_POST['recipient'] ) ? sanitize_text_field( wp_unslash( $_POST['recipient'] ) ) : '';
+
+	// An empty field is valid when "all administrators" is on - the test
+	// then goes to the person clicking the button, not to every admin.
+	if ( '' === trim( $recipient_raw ) ) {
+		$recipient_raw = wp_get_current_user()->user_email;
+	}
 
 	if ( ! turf_email_report_valid_recipients( $recipient_raw ) ) {
 		wp_send_json_error( 'invalid email', 400 );
@@ -115,11 +122,25 @@ add_action( 'wp_ajax_turf_send_test_email_report', 'turf_ajax_send_test_email_re
 
 function turf_email_report_render_admin_page() {
 	$enabled   = (bool) get_option( 'turf_email_report_enabled' );
-	$recipient = get_option( 'turf_email_report_recipient' ) ?: get_option( 'admin_email' );
-	$frequency = get_option( 'turf_email_report_frequency', 'weekly' );
+	$all_admins = (bool) get_option( 'turf_email_report_all_admins' );
+	$recipient  = get_option( 'turf_email_report_recipient' ) ?: ( $all_admins ? '' : get_option( 'admin_email' ) );
+	$frequency  = get_option( 'turf_email_report_frequency', 'weekly' );
+	$admins     = turf_email_report_admin_addresses();
+	$next_run   = wp_next_scheduled( 'turf_send_email_report' );
 	?>
 	<div class="wrap">
 		<h1><?php esc_html_e( 'Email report', 'turf-stats' ); ?></h1>
+		<?php if ( ! empty( $_GET['turf_offer_enabled'] ) && $enabled && $next_run ) : ?>
+			<div class="notice notice-success"><p>
+				<?php
+				printf(
+					/* translators: %s: date and time of the first report */
+					esc_html__( 'The email report is on. The first one arrives around %s.', 'turf-stats' ),
+					esc_html( wp_date( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), $next_run ) )
+				);
+				?>
+			</p></div>
+		<?php endif; ?>
 		<p class="description">
 			<?php esc_html_e( 'Get a summary of your site\'s stats by email on a recurring schedule.', 'turf-stats' ); ?>
 		</p>
@@ -137,10 +158,28 @@ function turf_email_report_render_admin_page() {
 					</td>
 				</tr>
 				<tr>
+					<th scope="row"><?php esc_html_e( 'Administrators', 'turf-stats' ); ?></th>
+					<td>
+						<label>
+							<input type="checkbox" name="turf_email_report_all_admins" value="1" <?php checked( $all_admins ); ?> />
+							<?php esc_html_e( 'Send to all administrators of this site', 'turf-stats' ); ?>
+						</label>
+						<p class="description">
+							<?php
+							printf(
+								/* translators: %s: comma-separated email addresses */
+								esc_html__( 'Kept up to date automatically: new administrators get the report, removed ones stop getting it. Now: %s', 'turf-stats' ),
+								esc_html( $admins ? implode( ', ', $admins ) : '-' )
+							);
+							?>
+						</p>
+					</td>
+				</tr>
+				<tr>
 					<th scope="row"><label for="turf-email-report-recipient"><?php esc_html_e( 'Recipients', 'turf-stats' ); ?></label></th>
 					<td>
 						<input type="email" multiple id="turf-email-report-recipient" name="turf_email_report_recipient" value="<?php echo esc_attr( $recipient ); ?>" class="regular-text" />
-						<p class="description"><?php esc_html_e( 'One or more addresses, separated by commas.', 'turf-stats' ); ?></p>
+						<p class="description"><?php esc_html_e( 'One or more addresses, separated by commas. With "all administrators" on, these are extra and may be left empty.', 'turf-stats' ); ?></p>
 					</td>
 				</tr>
 				<tr>
@@ -168,3 +207,92 @@ function turf_email_report_render_admin_page() {
 	</div>
 	<?php
 }
+
+/**
+ * One-time offer to turn the report on, instead of switching it on by
+ * default: an update shouldn't start mailing people who never asked for it.
+ * Shown to administrators on the Dashboard and the Statistics page only,
+ * once the plugin has been in use for a week (so the first report has
+ * something to say), and only on sites where the report settings were never
+ * saved - someone who already chose on or off isn't asked again. It also
+ * waits while the review nudge is up, so the two never stack.
+ */
+function turf_email_report_should_offer() {
+	if ( ! current_user_can( 'manage_options' ) ) {
+		return false;
+	}
+
+	if ( false !== get_option( 'turf_email_report_enabled', false ) || get_option( 'turf_email_report_offer_done' ) ) {
+		return false;
+	}
+
+	$activated = (int) get_option( 'turf_activated_at', 0 );
+	if ( $activated <= 0 || time() - $activated < 7 * DAY_IN_SECONDS ) {
+		return false;
+	}
+
+	$screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
+	if ( ! $screen || ! in_array( $screen->id, array( 'dashboard', 'toplevel_page_turf-stats' ), true ) ) {
+		return false;
+	}
+
+	return ! turf_should_show_review_nudge();
+}
+
+function turf_email_report_render_offer() {
+	if ( ! turf_email_report_should_offer() ) {
+		return;
+	}
+
+	$url = function ( $answer ) {
+		return wp_nonce_url( add_query_arg( 'turf_email_offer', $answer ), 'turf_email_report_offer', 'turf_email_offer_nonce' );
+	};
+	?>
+	<div class="notice notice-info turf-email-report-offer">
+		<p>
+			<strong><?php esc_html_e( 'Weekly stats by email?', 'turf-stats' ); ?></strong><br />
+			<?php esc_html_e( 'Turf Stats can send you a short summary every Monday morning: views, visitors, top pages and what needs attention, such as broken links. The email contains no links. Change or stop it any time under Statistics > Email report.', 'turf-stats' ); ?>
+		</p>
+		<p>
+			<a class="button button-primary" href="<?php echo esc_url( $url( 'on' ) ); ?>"><?php esc_html_e( 'Yes, send it to me', 'turf-stats' ); ?></a>
+			<a class="button-link" href="<?php echo esc_url( $url( 'off' ) ); ?>"><?php esc_html_e( 'No thanks', 'turf-stats' ); ?></a>
+		</p>
+	</div>
+	<?php
+}
+add_action( 'admin_notices', 'turf_email_report_render_offer' );
+
+/**
+ * Handles the offer's two buttons (GET, nonce-protected). Either answer
+ * ends the offer for good. "Yes" turns on the weekly report for the person
+ * who clicked - not for all administrators; that stays an explicit choice
+ * on the settings screen - and opens that screen so they see what they
+ * signed up for.
+ */
+function turf_email_report_handle_offer() {
+	if ( empty( $_GET['turf_email_offer'] ) || empty( $_GET['turf_email_offer_nonce'] ) ) {
+		return;
+	}
+
+	if ( ! current_user_can( 'manage_options' ) || ! wp_verify_nonce( sanitize_key( $_GET['turf_email_offer_nonce'] ), 'turf_email_report_offer' ) ) {
+		return;
+	}
+
+	update_option( 'turf_email_report_offer_done', '1', false );
+
+	if ( 'on' !== sanitize_key( $_GET['turf_email_offer'] ) ) {
+		wp_safe_redirect( remove_query_arg( array( 'turf_email_offer', 'turf_email_offer_nonce' ) ) );
+		exit;
+	}
+
+	$email = wp_get_current_user()->user_email;
+
+	update_option( 'turf_email_report_enabled', '1' );
+	update_option( 'turf_email_report_frequency', 'weekly' );
+	update_option( 'turf_email_report_recipient', is_email( $email ) ? $email : get_option( 'admin_email' ) );
+	turf_email_report_reschedule();
+
+	wp_safe_redirect( admin_url( 'admin.php?page=turf-email-report&turf_offer_enabled=1' ) );
+	exit;
+}
+add_action( 'admin_init', 'turf_email_report_handle_offer' );

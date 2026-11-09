@@ -133,6 +133,13 @@ On the plugin's GitHub repository: https://github.com/fbloemhof/turf-stats/issue
 * Every few months the email report carries a one-line review hint. Like
   the rest of the report it contains no links. Change or turn off the
   interval with turf_email_report_review_hint_interval_days.
+* The email report can go to all administrators of the site. The list
+  follows the users: new administrators get the report, removed ones stop
+  getting it. Extra addresses can still be added.
+* Once the plugin has been in use for a week, administrators who never set
+  up the email report get a one-time offer on the Dashboard to turn it on
+  for themselves. Nothing is sent unless they click yes.
+* Uninstalling now also removes the scheduled email report.
 
 = 1.32.0 =
 * Views now record the linking page's path when a visitor navigates within

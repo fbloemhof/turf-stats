@@ -1596,3 +1596,57 @@ msgstr ""
 "Vind je Turf Stats handig? Een korte review op WordPress.org helpt andere "
 "site-eigenaren de plugin te vinden. Zoek op \"Turf Stats\" in de "
 "plugin-directory - bewust zonder link."
+
+#. translators: %s: date and time of the first report
+#: includes/email-report-admin.php
+msgid "The email report is on. The first one arrives around %s."
+msgstr "Het e-mailrapport staat aan. Het eerste komt rond %s."
+
+#: includes/email-report-admin.php
+msgid "Administrators"
+msgstr "Beheerders"
+
+#: includes/email-report-admin.php
+msgid "Send to all administrators of this site"
+msgstr "Versturen naar alle beheerders van deze site"
+
+#. translators: %s: comma-separated email addresses
+#: includes/email-report-admin.php
+msgid ""
+"Kept up to date automatically: new administrators get the report, removed "
+"ones stop getting it. Now: %s"
+msgstr ""
+"Wordt automatisch bijgehouden: nieuwe beheerders krijgen het rapport, "
+"verwijderde beheerders niet meer. Nu: %s"
+
+#: includes/email-report-admin.php
+msgid ""
+"One or more addresses, separated by commas. With \"all administrators\" on, "
+"these are extra and may be left empty."
+msgstr ""
+"Eén of meer adressen, gescheiden door komma's. Met \"alle beheerders\" aan "
+"komen deze er extra bij en mag het veld leeg blijven."
+
+#: includes/email-report-admin.php
+msgid "Weekly stats by email?"
+msgstr "Elke week je statistieken per e-mail?"
+
+#: includes/email-report-admin.php
+msgid ""
+"Turf Stats can send you a short summary every Monday morning: views, "
+"visitors, top pages and what needs attention, such as broken links. The "
+"email contains no links. Change or stop it any time under Statistics > "
+"Email report."
+msgstr ""
+"Turf Stats kan je elke maandagochtend een korte samenvatting sturen: "
+"weergaven, bezoekers, toppagina's en aandachtspunten, zoals kapotte links. "
+"De e-mail bevat geen links. Wijzigen of stoppen kan altijd onder "
+"Statistieken > E-mailrapport."
+
+#: includes/email-report-admin.php
+msgid "Yes, send it to me"
+msgstr "Ja, stuur het mij"
+
+#: includes/email-report-admin.php
+msgid "No thanks"
+msgstr "Nee, bedankt"

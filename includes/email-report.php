@@ -73,12 +73,68 @@ function turf_email_report_valid_recipients( $raw ) {
 }
 
 /**
+ * Email addresses of everyone who can manage this site (manage_options -
+ * the same capability that sees the Turf Stats screens), read fresh on every
+ * send, so a new administrator starts receiving the report and one who's
+ * removed stops, without anyone editing the recipient list.
+ *
+ * @return string[]
+ */
+function turf_email_report_admin_addresses() {
+	$users = get_users( array(
+		'capability' => 'manage_options',
+		'fields'     => array( 'user_email' ),
+	) );
+
+	return array_values( array_filter( wp_list_pluck( $users, 'user_email' ), 'is_email' ) );
+}
+
+/**
+ * Everyone the scheduled report goes to: the addresses typed on the settings
+ * screen, plus all administrators when that option is on. Without either,
+ * it falls back to the site's admin email (the behaviour before 1.33.0).
+ * Duplicates are dropped case-insensitively, so an administrator who is also
+ * typed in gets one mail.
+ *
+ * @return string[]
+ */
+function turf_email_report_recipients() {
+	$list = turf_email_report_valid_recipients( (string) get_option( 'turf_email_report_recipient', '' ) );
+
+	if ( get_option( 'turf_email_report_all_admins' ) ) {
+		$list = array_merge( $list, turf_email_report_admin_addresses() );
+	} elseif ( ! $list ) {
+		$list = turf_email_report_valid_recipients( get_option( 'admin_email' ) );
+	}
+
+	$unique = array();
+	foreach ( $list as $address ) {
+		$unique[ strtolower( $address ) ] = $address;
+	}
+
+	return array_values( $unique );
+}
+
+/**
+ * Clears the pending report and, if the report is (still) enabled, plans the
+ * next one - for a change made at runtime (settings save, the opt-in notice)
+ * that the lazy turf_email_report_schedule() guard can't correct.
+ */
+function turf_email_report_reschedule() {
+	wp_clear_scheduled_hook( 'turf_send_email_report' );
+
+	if ( get_option( 'turf_email_report_enabled' ) ) {
+		wp_schedule_single_event( turf_email_report_next_run_timestamp(), 'turf_send_email_report' );
+	}
+}
+
+/**
  * Sends the report. For the real recurring cron run, the *next* run is
  * scheduled first, before the risky part (wp_mail()) - so a mid-send failure
  * doesn't break the recurring habit.
  *
  * @param string|null $recipient_override Comma-separated address(es) to send
- *                                         to instead of the saved option, and
+ *                                         to instead of turf_email_report_recipients(), and
  *                                         skip rescheduling - used by the
  *                                         "send test email now" button, which
  *                                         isn't the real cron run.
@@ -94,8 +150,7 @@ function turf_send_email_report( $recipient_override = null, $is_test = false ) 
 		wp_schedule_single_event( turf_email_report_next_run_timestamp(), 'turf_send_email_report' );
 	}
 
-	$to_raw = $recipient_override ? $recipient_override : ( get_option( 'turf_email_report_recipient' ) ?: get_option( 'admin_email' ) );
-	$to     = turf_email_report_valid_recipients( $to_raw );
+	$to = $recipient_override ? turf_email_report_valid_recipients( $recipient_override ) : turf_email_report_recipients();
 
 	if ( ! $to ) {
 		return false;

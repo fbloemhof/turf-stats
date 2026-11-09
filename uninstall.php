@@ -29,6 +29,7 @@ if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
 // this code version).
 wp_clear_scheduled_hook( 'turf_prune_old_events' );
 wp_clear_scheduled_hook( 'turf_suspect_check' );
+wp_clear_scheduled_hook( 'turf_send_email_report' );
 
 $turf_remove_data = ( defined( 'TURF_REMOVE_DATA_ON_UNINSTALL' ) && TURF_REMOVE_DATA_ON_UNINSTALL )
 	|| get_option( 'turf_remove_data_on_uninstall' );
@@ -70,6 +71,12 @@ foreach ( array(
 	'turf_remove_data_on_uninstall',
 	'turf_suspect_last_day',
 	'turf_funnels_definition',
+	'turf_email_report_enabled',
+	'turf_email_report_recipient',
+	'turf_email_report_all_admins',
+	'turf_email_report_frequency',
+	'turf_email_report_offer_done',
+	'turf_email_report_review_hint_at',
 ) as $turf_option ) {
 	delete_option( $turf_option );
 }
