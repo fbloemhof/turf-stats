@@ -324,6 +324,7 @@ is *method* (deduplication) versus real *loss* (ad-blockers, etc.).
 | `turf_cache_environment` | Cloudflare / SiteGround auto-detection | Add/override the caching layers shown as detected on the cache-offload box |
 | `turf_referrer_app_labels` | see `includes/views-admin.php` | Android/iOS app package names mapped to friendly labels in the referrer list |
 | `turf_social_share_networks` | Facebook/X/WhatsApp/LinkedIn/email | Customize or add networks for `turf_social_share_links()` |
+| `turf_email_report_review_hint_interval_days` | `90` | Minimum days between two email reports that carry the one-line review hint (0 turns it off) |
 
 ---
 

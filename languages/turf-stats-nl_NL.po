@@ -1544,3 +1544,55 @@ msgstr "Aangepaste zoektermen"
 
 #~ msgid "vs yesterday"
 #~ msgstr "t.o.v. gisteren"
+
+#: includes/email-report.php
+msgid "404 errors seen by visitors"
+msgstr "404-fouten bij bezoekers"
+
+#: includes/email-report.php
+msgid "Searches without results"
+msgstr "Zoekopdrachten zonder resultaat"
+
+#. translators: 1: first day of the report period, 2: last day
+#: includes/email-report.php
+msgid "%1$s to %2$s, compared with the period before"
+msgstr "%1$s t/m %2$s, vergeleken met de periode ervoor"
+
+#: includes/email-report.php
+msgid "Needs attention"
+msgstr "Aandachtspunten"
+
+#: includes/email-report.php
+msgid "Most-hit missing URLs:"
+msgstr "Meest geraakte ontbrekende URL's:"
+
+#: includes/email-report.php
+msgid "Pages linking to a missing URL:"
+msgstr "Pagina's die naar een ontbrekende URL linken:"
+
+#. translators: 1: path of the page containing the link, 2: the missing URL it links to
+#: includes/email-report.php
+msgid "%1$s links to %2$s"
+msgstr "%1$s linkt naar %2$s"
+
+#: includes/email-report.php
+msgid "Searched for, but nothing found:"
+msgstr "Gezocht, maar niets gevonden:"
+
+#: includes/email-report.php
+msgid "Details in your dashboard under Turf Stats > 404s and Turf Stats > Analysis."
+msgstr "Details in je dashboard onder Turf Stats > 404's en Turf Stats > Analyse."
+
+#: includes/email-report.php
+msgid "Top search terms"
+msgstr "Top zoektermen"
+
+#: includes/email-report.php
+msgid ""
+"Enjoying Turf Stats? A short review on WordPress.org helps other site "
+"owners find it. Look up \"Turf Stats\" in the plugin directory - no link "
+"here, on purpose."
+msgstr ""
+"Vind je Turf Stats handig? Een korte review op WordPress.org helpt andere "
+"site-eigenaren de plugin te vinden. Zoek op \"Turf Stats\" in de "
+"plugin-directory - bewust zonder link."
