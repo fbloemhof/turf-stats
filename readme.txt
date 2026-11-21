@@ -4,7 +4,7 @@ Tags: analytics, statistics, privacy, page views, cookieless
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.33.0
+Stable tag: 1.34.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -121,6 +121,24 @@ On the plugin's GitHub repository: https://github.com/fbloemhof/turf-stats/issue
    tracked separately from human visitors, with the pages they crawl most.
 
 == Changelog ==
+
+= 1.34.0 =
+* Bot detection catches bots spread over several IP addresses: when
+  visitors with the same screen size, country, language, browser and OS
+  together have 30+ views on one day without a single scroll/reading-time
+  signal, all of them are flagged. REST views of a visitor flagged in the
+  past week are flagged as well.
+* 404s from visitors flagged as a bot no longer count as human, so they
+  stay out of the 404 list's human hits and the email report's 404 trend.
+* 404s keep the numeric value of p, page_id and attachment_id (/?p=123),
+  so you can see which ID was asked for. Other parameter values are still
+  never stored. Filter: turf_404s_id_query_keys.
+* New source "AI assistants" (ChatGPT, Perplexity, Claude, Gemini, Copilot,
+  ...), recognized by the referrer or, when there is none, by utm_source -
+  ChatGPT visits often carry only utm_source=chatgpt.com and counted as
+  direct. Filter: turf_ai_assistant_hosts.
+* The Bots page shows the most frequent user-agents behind "Other bot",
+  kept per day (5 by default, filter turf_other_bot_agents_per_day).
 
 = 1.33.0 =
 * The email report has a "Needs attention" section: 404 errors seen by

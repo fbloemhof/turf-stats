@@ -142,7 +142,8 @@ tools. Tracked server-side on every request — most bots, especially LLM
 crawlers, never run JavaScript, so the regular AJAX-based tracking can't see
 them — and kept completely separate from the human-visitor numbers (which
 already deliberately exclude bots). The signature list is filterable
-(`turf_bot_signatures`).
+(`turf_bot_signatures`). For bots outside that list ("Other bot"), the most
+frequent user-agents of each day are kept, so you can see who they are.
 
 Bots that run JavaScript and send a normal browser user-agent get past that
 check, so Turf also flags visitors by **behavior**:
@@ -152,11 +153,15 @@ check, so Turf also flags visitors by **behavior**:
 - **No engagement** — 30+ views on one day without a single scroll/reading-time
   signal (a real browser sends one on practically every page it leaves).
   Checked daily for the previous day; those views are subtracted from the view
-  counts again. Days without any engagement data site-wide are skipped.
+  counts again. Days without any engagement data site-wide are skipped. A bot
+  spread over several IPs is caught too: when visitors with the same screen
+  size, country, language, browser and OS together reach the threshold without
+  a single engagement signal, all of them are flagged. REST views of a visitor
+  flagged in the past week are flagged with it.
 
 Flagged views are kept (not deleted) but excluded from every report, and listed
-in the "Filtered by behavior" box on the Bots page. REST/connector-app views are
-exempt. To apply the daily check to older history, review first, then run it:
+in the "Filtered by behavior" box on the Bots page. 404s from flagged visitors
+don't count as human. REST/connector-app views are otherwise exempt. To apply the daily check to older history, review first, then run it:
 
 ```sh
 wp turf-stats flag-bots --dry-run          # per country/browser, nothing changed
@@ -324,6 +329,9 @@ is *method* (deduplication) versus real *loss* (ad-blockers, etc.).
 | `turf_cache_environment` | Cloudflare / SiteGround auto-detection | Add/override the caching layers shown as detected on the cache-offload box |
 | `turf_referrer_app_labels` | see `includes/views-admin.php` | Android/iOS app package names mapped to friendly labels in the referrer list |
 | `turf_social_share_networks` | Facebook/X/WhatsApp/LinkedIn/email | Customize or add networks for `turf_social_share_links()` |
+| `turf_ai_assistant_hosts` | ChatGPT, Perplexity, Claude, Gemini, Copilot, … | Hosts counted as the "AI assistants" source, matched on the referrer or (without referrer) on `utm_source` |
+| `turf_404s_id_query_keys` | `p`, `page_id`, `attachment_id` | 404 parameters whose numeric value is stored (`/?p=123`) |
+| `turf_other_bot_agents_per_day` | `5` | User-agents of "Other bot" kept per day |
 | `turf_email_report_review_hint_interval_days` | `90` | Minimum days between two email reports that carry the one-line review hint (0 turns it off) |
 
 ---
