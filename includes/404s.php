@@ -30,7 +30,8 @@ function turf_404s_install() {
 
 	// Added in 1.1 (dbDelta adds them in place; older rows keep the defaults):
 	// - query_keys: parameter *names* only (e.g. "status&transaction_id"),
-	//   never values - a payment-return URL can carry anything.
+	//   never values - a payment-return URL can carry anything. Since 1.34
+	//   a numeric ID value is kept ("p=123"), see turf_404s_query_keys().
 	// - referrer_path: the linking page, only for internal referrers, so a
 	//   broken link can be traced to the page that contains it.
 	// - visitor_hash: the same hash views use, so a 404 can be matched to a
@@ -55,22 +56,47 @@ function turf_404s_install() {
 add_action( 'init', 'turf_404s_install' );
 
 /**
+ * Parameters whose value is kept in query_keys when it's a plain number:
+ * WordPress's own post/page/attachment ID links (/?p=123), so a 404 on a
+ * deleted or never-existing ID shows which ID was asked for. A number can't
+ * carry personal data the way free text can. Filterable.
+ *
+ * @return string[]
+ */
+function turf_404s_id_query_keys() {
+	return (array) apply_filters( 'turf_404s_id_query_keys', array( 'p', 'page_id', 'attachment_id' ) );
+}
+
+/**
  * Sorted, de-duplicated parameter names of a query string, joined with "&"
  * (e.g. "status&transaction_id") - the values are dropped on purpose. Names
  * alone are enough to recognize e.g. a payment provider's return URL, without
- * storing whatever personal or transaction data its values hold.
+ * storing whatever personal or transaction data its values hold. The one
+ * exception: a numeric value of an ID parameter (turf_404s_id_query_keys())
+ * is kept, as "p=123".
  */
 function turf_404s_query_keys( $query ) {
-	$keys = array();
+	$keys     = array();
+	$id_names = turf_404s_id_query_keys();
 
 	foreach ( explode( '&', (string) $query ) as $pair ) {
-		$name = urldecode( explode( '=', $pair, 2 )[0] );
-		$name = (string) preg_replace( '/\[.*$/', '', $name ); // a[]=1&a[]=2 -> "a"
-		$name = (string) preg_replace( '/[^A-Za-z0-9_.-]/', '', $name );
+		$parts = explode( '=', $pair, 2 );
+		$name  = urldecode( $parts[0] );
+		$name  = (string) preg_replace( '/\[.*$/', '', $name ); // a[]=1&a[]=2 -> "a"
+		$name  = (string) preg_replace( '/[^A-Za-z0-9_.-]/', '', $name );
 
-		if ( '' !== $name ) {
-			$keys[ substr( $name, 0, 50 ) ] = true;
+		if ( '' === $name ) {
+			continue;
 		}
+
+		$name  = substr( $name, 0, 50 );
+		$value = isset( $parts[1] ) ? urldecode( $parts[1] ) : '';
+
+		if ( in_array( $name, $id_names, true ) && preg_match( '/^[0-9]{1,20}$/', $value ) ) {
+			$name .= '=' . $value;
+		}
+
+		$keys[ $name ] = true;
 	}
 
 	$keys = array_keys( $keys );
