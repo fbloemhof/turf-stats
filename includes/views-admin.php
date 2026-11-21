@@ -1643,33 +1643,41 @@ function turf_referrer_host_label( $host ) {
  * browser breakdowns already work), not in PHP after the fact, where
  * per-bucket distinct-visitor counts can't be reconstructed correctly.
  */
-function turf_referrer_case_sql( $column = 'v.referrer_host', $medium_column = 'v.utm_medium' ) {
+function turf_referrer_case_sql( $column = 'v.referrer_host', $medium_column = 'v.utm_medium', $source_column = 'v.utm_source' ) {
 	// Both bare and www. spellings count as internal - see turf_is_own_host().
 	// The '' fallback keeps the IN () list valid when home_url() has no host.
 	$own_hosts = turf_own_host_variants();
 	$own_sql   = "'" . implode( "', '", array_map( 'esc_sql', $own_hosts ? $own_hosts : array( '' ) ) ) . "'";
 
-	$build_likes = function ( array $needles ) use ( $column ) {
-		$conditions = array();
+	$build_likes = function ( array $needles, $like_column = null ) use ( $column ) {
+		$like_column = $like_column ?? $column;
+		$conditions  = array();
 		foreach ( $needles as $needle ) {
 			// %% (not %) - this string still goes through $wpdb->prepare() by
 			// the caller for the date placeholder, which treats a lone % as
 			// the start of its own placeholder.
-			$conditions[] = "$column LIKE '%%" . esc_sql( $needle ) . "%%'";
+			$conditions[] = "$like_column LIKE '%%" . esc_sql( $needle ) . "%%'";
 		}
-		return implode( ' OR ', $conditions );
+		return $conditions ? implode( ' OR ', $conditions ) : '0';
 	};
 
-	$search_sql = $build_likes( array( 'google.', 'bing.', 'duckduckgo.', 'yahoo.', 'ecosia.', 'startpage.' ) );
-	$social_sql = $build_likes( array( 'facebook.', 'instagram.', 'x.com', 'twitter.', 'linkedin.', 'pinterest.', 't.co', 'whatsapp.' ) );
+	$ai_hosts      = turf_ai_assistant_hosts();
+	$ai_sql        = $build_likes( $ai_hosts );
+	$ai_source_sql = $build_likes( $ai_hosts, $source_column );
+	$search_sql    = $build_likes( array( 'google.', 'bing.', 'duckduckgo.', 'yahoo.', 'ecosia.', 'startpage.' ) );
+	$social_sql    = $build_likes( array( 'facebook.', 'instagram.', 'x.com', 'twitter.', 'linkedin.', 'pinterest.', 't.co', 'whatsapp.' ) );
 
 	$rest_marker      = esc_sql( TURF_REST_SOURCE_MARKER );
 	$connector_marker = esc_sql( TURF_CONNECTOR_APP_SOURCE_MARKER );
 
 	// Push first: a page opened from a push notification has no referrer, so
 	// without this it would land in 'direct' (see turf_classify_referrer()).
+	// Then AI assistants, before direct (ChatGPT sends only utm_source) and
+	// before search/social (gemini.google.com, "chatgpt.com" contains "t.co").
 	return "CASE
 		WHEN $medium_column = 'push' THEN 'push'
+		WHEN $ai_sql THEN 'ai'
+		WHEN $column = '' AND ( $ai_source_sql ) THEN 'ai'
 		WHEN $column = '' THEN 'direct'
 		WHEN $column = '$connector_marker' THEN 'connector'
 		WHEN $column = '$rest_marker' THEN 'app'
@@ -1711,6 +1719,7 @@ function turf_referrer_bucket_label( $bucket ) {
 	$labels = array(
 		'push'        => __( 'Push notifications', 'turf-stats' ),
 		'direct'      => __( 'Direct', 'turf-stats' ),
+		'ai'          => __( 'AI assistants', 'turf-stats' ),
 		// Filterable so a site running a specific connector plugin (see
 		// turf_connector_app_route_patterns()) can show that product's own
 		// name here instead of the generic default.

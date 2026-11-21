@@ -556,13 +556,48 @@ function turf_is_own_host( $host ) {
 }
 
 /**
+ * Hostnames of AI assistants that link to the sites they cite. Matched as a
+ * substring against the referrer host and, for visits without a referrer,
+ * against utm_source: ChatGPT mostly sends no referrer at all, only
+ * ?utm_source=chatgpt.com, so those visits would otherwise count as direct.
+ * Checked before search engines and social media (gemini.google.com would
+ * otherwise be a search engine, and "chatgpt.com" contains "t.co").
+ * Filterable - new assistants show up regularly.
+ *
+ * @return string[]
+ */
+function turf_ai_assistant_hosts() {
+	return (array) apply_filters( 'turf_ai_assistant_hosts', array(
+		'chatgpt.com',
+		'chat.openai.com',
+		'perplexity.ai',
+		'claude.ai',
+		'gemini.google.com',
+		'copilot.microsoft.com',
+		'copilot.com',
+		'chat.mistral.ai',
+		'chat.deepseek.com',
+		'meta.ai',
+		'grok.com',
+	) );
+}
+
+/**
  * Hostname -> traffic-source bucket, for the admin "Herkomst" breakdown.
  * A utm_medium of "push" wins over the referrer: a page opened from a push
  * notification has no referrer at all, so it would otherwise look "direct".
+ * An AI assistant (turf_ai_assistant_hosts()) is recognized by its referrer,
+ * or by utm_source when there is no referrer.
  */
-function turf_classify_referrer( $host, $utm_medium = '' ) {
+function turf_classify_referrer( $host, $utm_medium = '', $utm_source = '' ) {
 	if ( 0 === strcasecmp( $utm_medium, 'push' ) ) {
 		return 'push';
+	}
+
+	foreach ( turf_ai_assistant_hosts() as $needle ) {
+		if ( false !== stripos( $host, $needle ) || ( '' === $host && false !== stripos( $utm_source, $needle ) ) ) {
+			return 'ai';
+		}
 	}
 
 	if ( '' === $host ) {
