@@ -51,6 +51,40 @@ function turf_bots_register_metaboxes() {
 	add_meta_box( 'turf_bots_suspect', __( 'Filtered by behavior', 'turf-stats' ), function () use ( $days ) {
 		turf_bots_render_suspect_breakdown( $days );
 	}, $hook, 'turf_bots_wide' );
+
+	add_meta_box( 'turf_bots_other_agents', __( 'Other bots: user-agents', 'turf-stats' ), function () use ( $days ) {
+		turf_bots_render_other_agents( $days );
+	}, $hook, 'turf_bots_wide' );
+}
+
+/**
+ * The most frequent user-agents behind "Other bot" for the period, summed
+ * from the per-day samples (includes/bots.php). Whole UTC days only, and
+ * since each finished day keeps only its top few user-agents, this is a
+ * sample rather than a complete count.
+ */
+function turf_bots_get_other_agents( $days, $limit = 10 ) {
+	global $wpdb;
+	$table = turf_bot_agents_table();
+
+	list( $where_sql, $date_params ) = turf_period_where_sql( $days, 'day' );
+
+	return $wpdb->get_results( $wpdb->prepare(
+		"SELECT user_agent AS label, SUM(hits) AS total FROM $table WHERE 1=1 $where_sql GROUP BY agent_hash, user_agent ORDER BY total DESC LIMIT %d",
+		array_merge( $date_params, array( $limit ) )
+	) );
+}
+
+function turf_bots_render_other_agents( $days ) {
+	echo '<p class="description">' . esc_html( sprintf(
+		/* translators: %d: number of user-agents kept per day */
+		__( 'Bots that call themselves a bot but aren\'t in the list of known bots. The %d most frequent user-agents are kept per day, so the numbers are a sample.', 'turf-stats' ),
+		turf_other_bot_agents_per_day()
+	) ) . '</p>';
+
+	echo '<div style="word-break:break-all">';
+	turf_bots_render_simple_breakdown( turf_bots_get_other_agents( $days ), 'strval' );
+	echo '</div>';
 }
 
 /**
@@ -68,7 +102,7 @@ function turf_bots_render_suspect_breakdown( $days ) {
 
 	echo '<p class="description">' . esc_html( sprintf(
 		/* translators: 1: number of views flagged for their speed, 2: number of views flagged for having no engagement, 3: views per window threshold, 4: window in minutes, 5: daily views threshold */
-		__( 'Visitors with a browser user-agent that behave like a bot - excluded from all statistics and view counts. Too fast (more than %3$d new pages in %4$d minutes): %1$s views. No engagement (%5$d+ views on one day without any scrolling/reading-time signal): %2$s views.', 'turf-stats' ),
+		__( 'Visitors with a browser user-agent that behave like a bot - excluded from all statistics and view counts. Too fast (more than %3$d new pages in %4$d minutes): %1$s views. No engagement (%5$d+ views on one day without any scrolling/reading-time signal, from one visitor or from several visitors with the same screen size, country, language, browser and OS): %2$s views.', 'turf-stats' ),
 		number_format_i18n( $totals[ TURF_SUSPECT_RATE_LIMITED ] ),
 		number_format_i18n( $totals[ TURF_SUSPECT_NO_ENGAGEMENT ] ),
 		turf_rate_limit_max_views(),

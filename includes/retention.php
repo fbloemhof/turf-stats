@@ -50,6 +50,10 @@ function turf_prune_old_events() {
 		$tables[ turf_woo_table() ] = 'occurred_at';
 	}
 
+	// One row per day and user-agent; the DATE column compares fine
+	// against the datetime cutoff.
+	$tables[ turf_bot_agents_table() ] = 'day';
+
 	foreach ( $tables as $table => $time_column ) {
 		$wpdb->query( $wpdb->prepare(
 			"DELETE FROM {$table} WHERE {$time_column} < %s", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- own-prefix table name and literal column from the fixed list above.

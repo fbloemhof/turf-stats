@@ -1350,12 +1350,15 @@ msgid ""
 "Visitors with a browser user-agent that behave like a bot - excluded from "
 "all statistics and view counts. Too fast (more than %3$d new pages in %4$d "
 "minutes): %1$s views. No engagement (%5$d+ views on one day without any "
-"scrolling/reading-time signal): %2$s views."
+"scrolling/reading-time signal, from one visitor or from several visitors "
+"with the same screen size, country, language, browser and OS): %2$s views."
 msgstr ""
 "Bezoekers met een browser-User-Agent die zich als bot gedragen - uitgesloten"
 " van alle statistieken en weergavetellers. Te snel (meer dan %3$d nieuwe "
 "pagina's in %4$d minuten): %1$s weergaven. Geen engagement (%5$d+ weergaven "
-"op één dag zonder enig scroll-/leestijdsignaal): %2$s weergaven."
+"op één dag zonder enig scroll-/leestijdsignaal, van één bezoeker of van "
+"meerdere bezoekers met hetzelfde schermformaat, land, taal, browser en "
+"besturingssysteem): %2$s weergaven."
 
 #: includes/clicks-admin.php:32
 msgid "Funnels"
@@ -1650,3 +1653,22 @@ msgstr "Ja, stuur het mij"
 #: includes/email-report-admin.php
 msgid "No thanks"
 msgstr "Nee, bedankt"
+
+#: includes/views-admin.php
+msgid "AI assistants"
+msgstr "AI-assistenten"
+
+#: includes/bots-admin.php
+msgid "Other bots: user-agents"
+msgstr "Overige bots: User-Agents"
+
+#. translators: %d: number of user-agents kept per day
+#: includes/bots-admin.php
+#, php-format
+msgid ""
+"Bots that call themselves a bot but aren't in the list of known bots. The "
+"%d most frequent user-agents are kept per day, so the numbers are a sample."
+msgstr ""
+"Bots die zichzelf bot noemen maar niet in de lijst met bekende bots staan. "
+"Per dag worden de %d meest voorkomende User-Agents bewaard, dus de aantallen "
+"zijn een steekproef."

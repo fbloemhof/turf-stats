@@ -47,6 +47,7 @@ foreach ( array(
 	'turf_clicks',
 	'turf_404s',
 	'turf_bots',
+	'turf_bot_agents',
 	'turf_searches',
 	'turf_form_submissions',
 	'turf_woo_events',

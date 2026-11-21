@@ -20,7 +20,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'TURF_BOTS_DB_VERSION', '1.0' );
+define( 'TURF_BOTS_DB_VERSION', '1.1' );
 
 function turf_bots_table() {
 	global $wpdb;
@@ -51,9 +51,86 @@ function turf_bots_install() {
 		KEY category_lookup (bot_category, visited_at)
 	) $charset_collate;" );
 
+	// Added in 1.1: sample user-agents of "Other bot" hits (see
+	// turf_record_other_bot_agent()), one row per UTC day and user-agent.
+	$agents_table = turf_bot_agents_table();
+
+	dbDelta( "CREATE TABLE $agents_table (
+		day DATE NOT NULL,
+		agent_hash CHAR(32) NOT NULL,
+		user_agent VARCHAR(200) NOT NULL DEFAULT '',
+		hits INT UNSIGNED NOT NULL DEFAULT 0,
+		PRIMARY KEY  (day, agent_hash)
+	) $charset_collate;" );
+
 	update_option( 'turf_bots_db_version', TURF_BOTS_DB_VERSION );
 }
 add_action( 'init', 'turf_bots_install' );
+
+function turf_bot_agents_table() {
+	global $wpdb;
+	return $wpdb->prefix . 'turf_bot_agents';
+}
+
+/**
+ * How many user-agents of "Other bot" to keep per day - the most frequent
+ * ones. The rest of a finished day is dropped by turf_trim_other_bot_agents().
+ */
+function turf_other_bot_agents_per_day() {
+	return max( 1, (int) apply_filters( 'turf_other_bot_agents_per_day', 5 ) );
+}
+
+/**
+ * Counts one hit of an "Other bot" user-agent for today, so the Bots page can
+ * show who is behind that bucket. Only the user-agent is stored (cut to 200
+ * characters), never an IP. During the day every distinct user-agent gets a
+ * row; the daily trim keeps the top turf_other_bot_agents_per_day().
+ */
+function turf_record_other_bot_agent( $user_agent ) {
+	global $wpdb;
+	$table      = turf_bot_agents_table();
+	$user_agent = substr( $user_agent, 0, 200 );
+
+	$wpdb->query( $wpdb->prepare(
+		"INSERT INTO $table (day, agent_hash, user_agent, hits) VALUES (%s, %s, %s, 1)
+		ON DUPLICATE KEY UPDATE hits = hits + 1",
+		gmdate( 'Y-m-d' ),
+		md5( $user_agent ),
+		$user_agent
+	) );
+}
+
+/**
+ * Daily: for every finished day that still has more than
+ * turf_other_bot_agents_per_day() user-agents, drops all but the most
+ * frequent ones (ties at the cut-off are kept).
+ */
+function turf_trim_other_bot_agents() {
+	global $wpdb;
+	$table = turf_bot_agents_table();
+	$keep  = turf_other_bot_agents_per_day();
+
+	$days = $wpdb->get_col( $wpdb->prepare(
+		"SELECT day FROM $table WHERE day < %s GROUP BY day HAVING COUNT(*) > %d",
+		gmdate( 'Y-m-d' ),
+		$keep
+	) );
+
+	foreach ( $days as $day ) {
+		$cutoff = (int) $wpdb->get_var( $wpdb->prepare(
+			"SELECT hits FROM $table WHERE day = %s ORDER BY hits DESC LIMIT 1 OFFSET %d",
+			$day,
+			$keep - 1
+		) );
+
+		$wpdb->query( $wpdb->prepare(
+			"DELETE FROM $table WHERE day = %s AND hits < %d",
+			$day,
+			$cutoff
+		) );
+	}
+}
+add_action( 'turf_prune_old_events', 'turf_trim_other_bot_agents' );
 
 /**
  * Known bot/crawler signatures, grouped by category. Filterable - this
@@ -178,5 +255,9 @@ function turf_track_bot_hit() {
 		),
 		array( '%d', '%d', '%s', '%s', '%s' )
 	);
+
+	if ( 'other' === $bot['category'] ) {
+		turf_record_other_bot_agent( $user_agent );
+	}
 }
 add_action( 'template_redirect', 'turf_track_bot_hit', 5 );
