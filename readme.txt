@@ -139,6 +139,14 @@ On the plugin's GitHub repository: https://github.com/fbloemhof/turf-stats/issue
   direct. Filter: turf_ai_assistant_hosts.
 * The Bots page shows the most frequent user-agents behind "Other bot",
   kept per day (5 by default, filter turf_other_bot_agents_per_day).
+* "Today" is compared with yesterday up to the same time of day instead
+  of all of yesterday, so the change badges no longer show a steep drop
+  every morning. Same for the dashboard widget.
+* Raw views count an hour that a comparison window cuts in half pro rata,
+  instead of the whole hour.
+* A change of 0% shows as a neutral grey badge without an arrow.
+* The hourly chart draws the hour in progress as a dotted line to an open
+  dot, so a just-started hour no longer looks like a sudden drop.
 
 = 1.33.0 =
 * The email report has a "Needs attention" section: 404 errors seen by
