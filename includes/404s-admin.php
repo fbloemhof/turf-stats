@@ -50,14 +50,23 @@ function turf_404s_humans_only() {
  * bots that fire the JS are the exception, so that's the strongest signal
  * available without any extra tracking. Rows from before the 404 table had
  * these columns have neither signal and count as not human.
+ *
+ * Either way, a hit never counts as human when the same visitor_hash has a
+ * view flagged as a bot (includes/suspect.php) within a day of it: a
+ * headless browser sends Accept-Language too, and would otherwise swell the
+ * 404 list and the email report's 404 trend.
  */
 function turf_404s_human_sql( $alias = 'f' ) {
 	$views = turf_table();
 
-	return "( $alias.likely_human = 1 OR ( $alias.visitor_hash != '' AND EXISTS (
+	return "( ( $alias.likely_human = 1 OR ( $alias.visitor_hash != '' AND EXISTS (
 		SELECT 1 FROM $views hv
 		WHERE hv.visitor_hash = $alias.visitor_hash AND hv.suspect = 0
 		AND hv.viewed_at BETWEEN $alias.hit_at - INTERVAL 1 DAY AND $alias.hit_at + INTERVAL 1 DAY
+	) ) ) AND NOT ( $alias.visitor_hash != '' AND EXISTS (
+		SELECT 1 FROM $views sv
+		WHERE sv.visitor_hash = $alias.visitor_hash AND sv.suspect != 0
+		AND sv.viewed_at BETWEEN $alias.hit_at - INTERVAL 1 DAY AND $alias.hit_at + INTERVAL 1 DAY
 	) ) )";
 }
 
