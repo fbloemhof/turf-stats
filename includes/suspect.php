@@ -130,11 +130,27 @@ function turf_adjust_view_totals( $rows, $type, $sign ) {
 }
 
 /**
- * The after-the-fact check for one UTC day [$day_start, $day_end): finds
- * visitor_hashes with at least turf_suspect_min_daily_views() views and no
- * engagement beacon on any of them, then (unless $dry_run) flags their
- * still-unflagged rows of that day and subtracts those views from the
- * postmeta/termmeta totals.
+ * The after-the-fact check for one UTC day [$day_start, $day_end). Three
+ * passes, all limited to rows of that day:
+ *
+ * 1. Per visitor: visitor_hashes with at least
+ *    turf_suspect_min_daily_views() views and no engagement beacon on any
+ *    of them.
+ * 2. Per fingerprint (screen size + country + language + browser + OS): a
+ *    bot spread over several IPs stays under the per-visitor threshold with
+ *    each of them, but shares one device fingerprint. When at least two
+ *    visitor_hashes with the same fingerprint together reach the threshold
+ *    and not one view with that fingerprint sent a beacon, all of them are
+ *    flagged. Rows without a screen size (server-side tracking) are left
+ *    out: they have no fingerprint to speak of. A fingerprint that real
+ *    readers share (1920x1080, NL, nl, Chrome, Windows) always has beacons,
+ *    so it never qualifies.
+ * 3. REST views (TURF_REST_SOURCE_MARKER) of visitor_hashes that were
+ *    flagged on this day or the 6 days before - the same client fetching
+ *    posts through the API, which the first two passes don't count.
+ *
+ * Unless $dry_run, the still-unflagged rows of every hash found are flagged
+ * and subtracted from the postmeta/termmeta totals.
  *
  * A day without a single engagement beacon site-wide is skipped: that means
  * engagement wasn't being recorded yet (or the tracking JS was broken), not
@@ -167,7 +183,7 @@ function turf_flag_suspect_visitors( $day_start, $day_end, $dry_run = false ) {
 		return $result;
 	}
 
-	// Counts every row of the day (flagged ones included) towards the
+	// Pass 1. Counts every row of the day (flagged ones included) towards the
 	// threshold, but only the still-unflagged ones are reported/flagged.
 	$candidates = $wpdb->get_results( $wpdb->prepare(
 		"SELECT visitor_hash, MAX(country) AS country, MAX(browser) AS browser, MAX(os) AS os,
@@ -184,6 +200,85 @@ function turf_flag_suspect_visitors( $day_start, $day_end, $dry_run = false ) {
 		$min_views
 	) );
 
+	// Pass 2: the hashes behind qualifying fingerprints, each of which must
+	// itself have no beacon on this day (not even on a row with another
+	// fingerprint).
+	$fingerprint_candidates = $wpdb->get_results( $wpdb->prepare(
+		"SELECT v.visitor_hash, MAX(v.country) AS country, MAX(v.browser) AS browser, MAX(v.os) AS os,
+			SUM(v.suspect = 0) AS views
+		FROM $table v
+		JOIN (
+			SELECT screen_width, screen_height, country, language, browser, os
+			FROM $table
+			WHERE viewed_at >= %s AND viewed_at < %s
+			AND referrer_host NOT IN (%s, %s)
+			AND screen_width IS NOT NULL AND screen_height IS NOT NULL
+			GROUP BY screen_width, screen_height, country, language, browser, os
+			HAVING COUNT(*) >= %d AND COUNT(DISTINCT visitor_hash) >= 2 AND SUM(duration_seconds IS NOT NULL) = 0
+		) fp ON fp.screen_width = v.screen_width AND fp.screen_height = v.screen_height
+			AND fp.country = v.country AND fp.language = v.language
+			AND fp.browser = v.browser AND fp.os = v.os
+		WHERE v.viewed_at >= %s AND v.viewed_at < %s
+		AND v.referrer_host NOT IN (%s, %s)
+		AND NOT EXISTS (
+			SELECT 1 FROM $table e
+			WHERE e.visitor_hash = v.visitor_hash AND e.viewed_at >= %s AND e.viewed_at < %s
+			AND e.duration_seconds IS NOT NULL
+		)
+		GROUP BY v.visitor_hash
+		HAVING views > 0",
+		$day_start,
+		$day_end,
+		TURF_REST_SOURCE_MARKER,
+		TURF_CONNECTOR_APP_SOURCE_MARKER,
+		$min_views,
+		$day_start,
+		$day_end,
+		TURF_REST_SOURCE_MARKER,
+		TURF_CONNECTOR_APP_SOURCE_MARKER,
+		$day_start,
+		$day_end
+	) );
+
+	$seen = array_flip( wp_list_pluck( $candidates, 'visitor_hash' ) );
+
+	foreach ( $fingerprint_candidates as $row ) {
+		if ( ! isset( $seen[ $row->visitor_hash ] ) ) {
+			$candidates[]               = $row;
+			$seen[ $row->visitor_hash ] = true;
+		}
+	}
+
+	// Pass 3: hashes with only REST views left to flag on this day, because
+	// they were caught on this day (already flagged, or found above) or in
+	// the 6 days before. Their views were never counted in passes 1-2, so
+	// only the REST rows are reported here.
+	$rest_candidates = $wpdb->get_results( $wpdb->prepare(
+		"SELECT r.visitor_hash, MAX(r.country) AS country, MAX(r.browser) AS browser, MAX(r.os) AS os,
+			COUNT(*) AS views
+		FROM $table r
+		WHERE r.viewed_at >= %s AND r.viewed_at < %s
+		AND r.referrer_host = %s AND r.suspect = 0
+		AND EXISTS (
+			SELECT 1 FROM $table s
+			WHERE s.visitor_hash = r.visitor_hash AND s.suspect != 0
+			AND s.viewed_at >= %s AND s.viewed_at < %s
+		)
+		GROUP BY r.visitor_hash",
+		$day_start,
+		$day_end,
+		TURF_REST_SOURCE_MARKER,
+		gmdate( 'Y-m-d H:i:s', strtotime( $day_start . ' -6 days' ) ),
+		$day_end
+	) );
+
+	foreach ( $rest_candidates as $row ) {
+		if ( ! isset( $seen[ $row->visitor_hash ] ) ) {
+			$candidates[]               = $row;
+			$seen[ $row->visitor_hash ] = true;
+		}
+	}
+
 	if ( ! $candidates ) {
 		return $result;
 	}
@@ -196,12 +291,29 @@ function turf_flag_suspect_visitors( $day_start, $day_end, $dry_run = false ) {
 		return $result;
 	}
 
-	// Per batch of hashes: subtract from the totals first, then flag - both
-	// keyed on the same "unflagged rows of these hashes on this day" set,
-	// which can't change underneath (it's a past day).
-	foreach ( array_chunk( wp_list_pluck( $candidates, 'visitor_hash' ), 200 ) as $hashes ) {
-		$placeholders = implode( ',', array_fill( 0, count( $hashes ), '%s' ) );
-		$params       = array_merge( array( $day_start, $day_end ), $hashes );
+	turf_flag_visitor_day( wp_list_pluck( $candidates, 'visitor_hash' ), $day_start, $day_end );
+
+	return $result;
+}
+
+/**
+ * Flags every still-unflagged row (REST views included) of these
+ * visitor_hashes in [$day_start, $day_end) as TURF_SUSPECT_NO_ENGAGEMENT,
+ * and subtracts them from the postmeta/termmeta totals.
+ *
+ * Per batch of hashes: subtract from the totals first, then flag - both
+ * keyed on the same "unflagged rows of these hashes on this day" set, which
+ * can't change underneath (it's a past day).
+ *
+ * @param string[] $hashes visitor_hash values.
+ */
+function turf_flag_visitor_day( $hashes, $day_start, $day_end ) {
+	global $wpdb;
+	$table = turf_table();
+
+	foreach ( array_chunk( array_values( array_unique( $hashes ) ), 200 ) as $batch ) {
+		$placeholders = implode( ',', array_fill( 0, count( $batch ), '%s' ) );
+		$params       = array_merge( array( $day_start, $day_end ), $batch );
 		$where        = "viewed_at >= %s AND viewed_at < %s AND suspect = 0 AND visitor_hash IN ($placeholders)";
 
 		foreach ( array( 'post' => 'post_id', 'term' => 'term_id' ) as $type => $column ) {
@@ -220,8 +332,6 @@ function turf_flag_suspect_visitors( $day_start, $day_end, $dry_run = false ) {
 			array_merge( array( TURF_SUSPECT_NO_ENGAGEMENT ), $params )
 		) );
 	}
-
-	return $result;
 }
 
 /**
