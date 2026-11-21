@@ -522,7 +522,9 @@ function turf_single_day_anchor_offset( $days ) {
  *    the past (yesterday / a picked date).
  *  - single day, offset > 0: the same anchor day shifted back by $offset_days
  *    (the previous-period comparison - day before yesterday, or the day before
- *    a picked date). Always a full midnight-to-midnight day.
+ *    a picked date). A full midnight-to-midnight day, except when the anchor
+ *    is today: then it stops at the same time of day as now, so "Vandaag so
+ *    far" is compared with "yesterday up to this time".
  *  - N-day range: the trailing window ending now (offset 0) or shifted back.
  *
  * @param int $days        Resolved period value.
@@ -569,6 +571,12 @@ function turf_period_window( $days, $offset_days = 0 ) {
 		// matches the historical Today behaviour (partial day so far).
 		if ( 0 === $offset_days && 0 === $anchor_offset ) {
 			$end = current_time( 'mysql', true );
+		} elseif ( 0 === $anchor_offset ) {
+			// Comparison for Today: the earlier day only up to the same time
+			// of day, so a partial "so far" is never set against a full day
+			// (at 08:00 that would always show a steep drop).
+			$elapsed = time() - strtotime( turf_local_midnight_utc( 0 ) . ' UTC' );
+			$end     = gmdate( 'Y-m-d H:i:s', strtotime( $start . ' UTC' ) + $elapsed );
 		} else {
 			$end = turf_local_midnight_utc( $anchor_offset + $offset_days - 1 );
 		}
