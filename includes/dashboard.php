@@ -4,7 +4,7 @@
  * Reuses the exact same stat-box markup and change badge as the Turf Stats
  * "Statistieken" overview page: people online now, today's views, today's
  * visitors - each (except the live "online now") with its % change versus
- * yesterday rendered by turf_render_change_badge(). A single "View all
+ * yesterday up to the same time, rendered by turf_render_change_badge(). A single "View all
  * statistics" link drops the user into the full page.
  */
 
@@ -63,7 +63,9 @@ function turf_pct_vs_yesterday( $today, $yesterday ) {
 function turf_render_dashboard_widget() {
 	$now       = turf_get_online_now_count();
 	$today     = turf_get_range_site_totals( TURF_PERIOD_TODAY, 0 );
-	$yesterday = turf_get_range_site_totals( TURF_PERIOD_YESTERDAY, 0 );
+	// Yesterday up to the same time of day, not all of it - otherwise the
+	// badges show a steep drop every morning.
+	$yesterday = turf_get_range_site_totals( TURF_PERIOD_TODAY, 1 );
 
 	?>
 	<div class="turf-dash">

@@ -40,6 +40,12 @@ msgstr "%1$02d:00 %2$s — %3$s bezoekers"
 msgid "%1$02d:00 — %2$s visitors"
 msgstr "%1$02d:00 — %2$s bezoekers"
 
+#. translators: 1: hour of day (0-23), 2: number of visitors
+#: includes/views-admin.php
+#, php-format
+msgid "%1$02d:00 — %2$s visitors so far (hour in progress)"
+msgstr "%1$02d:00 — %2$s bezoekers tot nu toe (lopend uur)"
+
 #. translators: %1$d: number of posts whose import request failed
 #: includes/import-admin.php:54
 #, php-format

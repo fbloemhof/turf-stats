@@ -417,6 +417,14 @@ function turf_get_range_site_totals( $days, $offset_days = 0 ) {
  * numbers always cover the same window. Returns null when there's no raw data
  * for the range at all (e.g. the whole range predates this feature), so the
  * caller can hide the box rather than show a misleading 0.
+ *
+ * Raw hits are stored per whole UTC hour, so a boundary in the middle of an
+ * hour (Today's comparison window ends at "this time yesterday", N-day
+ * windows start and end at the current minute) counts that hour's bucket
+ * pro rata. Without that, "yesterday up to 08:01" would count yesterday's
+ * whole 08:00 hour against one minute of today's. The live window
+ * ($offset_days 0) is the exception at its end: the current hour's bucket only
+ * holds hits up to now, so it counts in full.
  */
 function turf_get_range_raw_views( $days, $offset_days = 0 ) {
 	global $wpdb;
@@ -429,14 +437,26 @@ function turf_get_range_raw_views( $days, $offset_days = 0 ) {
 		$sum = $wpdb->get_var( "SELECT SUM(hits) FROM $table" );
 	} else {
 		list( $start, $end ) = turf_period_window( $days, $offset_days );
+
+		if ( 0 === $offset_days ) {
+			// Round the live end up to the next whole hour, so the current
+			// (partial) bucket counts in full rather than pro rata.
+			$end_ts = strtotime( $end . ' UTC' );
+			$end    = gmdate( 'Y-m-d H:i:s', (int) ceil( $end_ts / HOUR_IN_SECONDS ) * HOUR_IN_SECONDS );
+		}
+
 		$sum = $wpdb->get_var( $wpdb->prepare(
-			"SELECT SUM(hits) FROM $table WHERE hit_hour >= %s AND hit_hour < %s",
+			"SELECT SUM( hits * TIMESTAMPDIFF( SECOND, GREATEST( hit_hour, %s ), LEAST( DATE_ADD( hit_hour, INTERVAL 1 HOUR ), %s ) ) / 3600 )
+			FROM $table
+			WHERE hit_hour > DATE_SUB( %s, INTERVAL 1 HOUR ) AND hit_hour < %s",
+			$start,
+			$end,
 			$start,
 			$end
 		) );
 	}
 
-	return ( null === $sum ) ? null : (int) $sum;
+	return ( null === $sum ) ? null : (int) round( $sum );
 }
 
 /**
@@ -655,6 +675,12 @@ function turf_format_views_per_visitor( $views, $visitors ) {
 function turf_render_change_badge( $change ) {
 	if ( null === $change ) {
 		echo '<span class="bk-stats-box__change bk-stats-box__change--new">' . esc_html__( 'new', 'turf-stats' ) . '</span>';
+		return;
+	}
+
+	if ( 0 === (int) $change ) {
+		// No change (including 0 against 0): no arrow, no up/down colour.
+		echo '<span class="bk-stats-box__change bk-stats-box__change--flat">0%</span>';
 		return;
 	}
 
@@ -1152,6 +1178,19 @@ function turf_render_hourly_visitors_chart( $days = TURF_PERIOD_TODAY ) {
 
 	$today_points     = $build_points( $today );
 	$yesterday_points = $has_yesterday ? $build_points( $yesterday ) : array();
+
+	// On the live day the last point is the hour still in progress: its count
+	// is only "so far", so a solid line to it would read as a sudden drop.
+	// Draw it apart - a dotted segment to an open dot - and keep it out of the
+	// filled area.
+	$partial_point = ( 0 === $anchor_offset && $today_points ) ? array_pop( $today_points ) : null;
+	$partial_line  = '';
+	if ( $partial_point ) {
+		$partial_line = $today_points
+			? $to_line_path( array( $today_points[ count( $today_points ) - 1 ], $partial_point ) )
+			: '';
+	}
+
 	$today_line       = $to_line_path( $today_points );
 	$yesterday_line   = $to_line_path( $yesterday_points );
 	$baseline         = $pad_top + $plot_h;
@@ -1211,6 +1250,23 @@ function turf_render_hourly_visitors_chart( $days = TURF_PERIOD_TODAY ) {
 				</title>
 				</circle>
 			<?php endforeach; ?>
+			<?php if ( $partial_line ) : ?>
+				<path class="bk-stats-hourly__line bk-stats-hourly__line--partial" d="<?php echo esc_attr( $partial_line ); ?>" vector-effect="non-scaling-stroke" />
+			<?php endif; ?>
+			<?php if ( $partial_point ) : ?>
+				<circle class="bk-stats-hourly__dot bk-stats-hourly__dot--partial" cx="<?php echo esc_attr( $partial_point['x'] ); ?>" cy="<?php echo esc_attr( $partial_point['y'] ); ?>" r="2" vector-effect="non-scaling-stroke">
+					<title>
+				<?php
+				printf(
+					/* translators: 1: hour of day (0-23), 2: number of visitors */
+					esc_html__( '%1$02d:00 — %2$s visitors so far (hour in progress)', 'turf-stats' ),
+					(int) $partial_point['hour'],
+					esc_html( number_format_i18n( $partial_point['visitors'] ) )
+				);
+				?>
+				</title>
+				</circle>
+			<?php endif; ?>
 			<?php
 			// Sparse hour axis labels (every 3rd hour + hour 23) so they don't
 			// collide on a narrow box - fixed to the 0-23 scale regardless of
@@ -2126,7 +2182,8 @@ function turf_admin_inline_css() {
 		.bk-stats-box__change { font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; }
 		.bk-stats-box__change--up { color: var(--wp-admin-theme-color, #2271b1); }
 		.bk-stats-box__change--down { color: #d63638; }
-		.bk-stats-box__change--new { color: #646970; }
+		.bk-stats-box__change--new,
+		.bk-stats-box__change--flat { color: #646970; }
 		.bk-stats-overview__legend { display: flex; gap: 16px; margin-bottom: 8px; font-size: 12px; color: #646970; }
 		.bk-stats-legend::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: middle; }
 		/* Deliberately more saturated than the fills they key (12%/22% blends
@@ -2189,6 +2246,8 @@ function turf_admin_inline_css() {
 		.bk-stats-legend--yesterday::before { background: #646970; }
 		.bk-stats-hourly__line--yesterday { fill: none; stroke: #646970; stroke-width: 1.5; stroke-dasharray: 4 3; stroke-linejoin: round; stroke-linecap: round; opacity: 0.45; }
 		.bk-stats-hourly__dot--yesterday { fill: #646970; opacity: 0.45; }
+		.bk-stats-hourly__line--partial { stroke-width: 1.5; stroke-dasharray: 1 4; opacity: 0.7; }
+		.bk-stats-hourly__dot--partial { fill: #fff; stroke: var(--wp-admin-theme-color, #2271b1); stroke-width: 1.5; }
 		.bk-stats-hourly__axis { fill: #646970; font-size: 10px; }
 		.bk-stats-hourly__grid { stroke: #dcdcde; stroke-width: 1; }
 		.bk-stats-cache-env { margin-top: 12px; }
